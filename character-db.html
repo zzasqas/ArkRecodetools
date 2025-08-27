@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArkRecode 角色資料庫 v1.2</title>
+    
+    <!-- 內容安全政策 -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval'; 
+                   style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 圖標樣式 */
+        .lucide-icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        /* 角色卡片動畫 */
+        .character-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* 右鍵菜單樣式 */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border: 1px solid #e5e7eb;
+            z-index: 1000;
+            min-width: 150px;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .context-menu-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .context-menu-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .context-menu-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* 屬性漸層背景 - 調整顏色 */
+        .attribute-fire { 
+            background: linear-gradient(135deg, #fef2f2, #fee2e2); 
+            border-color: #f87171 !important;
+        }
+        .attribute-water { 
+            background: linear-gradient(135deg, #eff8ff, #dbeafe); 
+            border-color: #93c5fd !important;
+        }
+        .attribute-nature { 
+            background: linear-gradient(135deg, #f7fef8, #f0fdf4); 
+            border-color: #86efac !important;
+        }
+        .attribute-light { 
+            background: linear-gradient(135deg, #fffef7, #fefce8); 
+            border-width: 3px !important; 
+            border-color: #facc15 !important;
+        }
+        .attribute-dark { 
+            background: linear-gradient(135deg, #f5f3ff, #e9d5ff); 
+            border-width: 3px !important; 
+            border-color: #a78bfa !important;
+        }
+
+        /* 屬性文字顏色 - 調整顏色 */
+        .text-fire { color: #dc2626 !important; }
+        .text-water { color: #2563eb !important; }
+        .text-nature { color: #16a34a !important; }
+        .text-light { color: #ca8a04 !important; }
+        .text-dark { color: #7c3aed !important; }
+
+        /* 屬性Badge背景顏色 - 調整顏色 */
+        .bg-fire { background-color: #fee2e2 !important; color: #b91c1c !important; }
+        .bg-water { background-color: #eff6ff !important; color: #1e40af !important; }
+        .bg-nature { background-color: #f0fdf4 !important; color: #166534 !important; }
+        .bg-light { background-color: #fefce8 !important; color: #a16207 !important; }
+        .bg-dark { background-color: #f3f4f6 !important; color: #581c87 !important; }
+
+        /* 統計圓形背景 - 調整顏色 */
+        .stat-fire { background-color: #fee2e2; color: #dc2626; }
+        .stat-water { background-color: #eff6ff; color: #2563eb; }
+        .stat-nature { background-color: #f0fdf4; color: #16a34a; }
+        .stat-light { background-color: #fefce8; color: #ca8a04; }
+        .stat-dark { background-color: #f5f3ff; color: #7c3aed; }
+
+        /* 作者信息樣式 */
+        .author-info {
+            position: fixed;
+            bottom: 4px;
+            right: 4px;
+            font-size: 8px;
+            color: #9ca3af;
+            opacity: 0.3;
+            z-index: 10;
+        }
+
+        /* 搜尋區塊調整位置 */
+        .search-section {
+            margin-top: 15vh;
+            min-height: 15vh;
+        }
+
+        /* TAG系統提示 */
+        .tag-hint {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .character-card:hover .tag-hint {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- 作者資訊 -->
+    <div class="author-info">ArkRecode Character DB v1.2 | by zzas</div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useCallback, useEffect } = React;
+
+        // ==================== 角色資料 ====================
+        const CHARACTER_DATA = [
+            { id: 1, nameCN: '烏爾德', nameEN: 'Urd', aliases: ['水奶'], attribute: 'water', job: 'medic', rarity: 5 },
+            { id: 2, nameCN: '艾瑞兒', nameEN: 'Ariel', aliases: ['水馬', '寶馬', '機車女'], attribute: 'water', job: 'defender', rarity: 5 },
+            { id: 3, nameCN: '碧海的諾克琳', nameEN: 'Seaside Noclyn', aliases: ['水扇', '水偶'], attribute: 'water', job: 'sniper', rarity: 5 },
+            { id: 4, nameCN: '守護者艾瑞兒', nameEN: 'Guardian Ariel', aliases: ['光馬', '光寶馬'], attribute: 'light', job: 'defender', rarity: 5 },
+            { id: 5, nameCN: '璀璨誓約的露比', nameEN: 'Radiant Vow Rubi', aliases: ['水拳', '婚紗露比'], attribute: 'water', job: 'defender', rarity: 5 },
+            { id: 6, nameCN: '河北彩伽', nameEN: 'Saika', aliases: ['河北', 'EMT'], attribute: 'water', job: 'medic', rarity: 5 },
+            { id: 7, nameCN: '異變的使徒', nameEN: 'Divergent Apostle', aliases: ['草莓', '魔神女主'], attribute: 'dark', job: 'caster', rarity: 5 },
+            { id: 8, nameCN: '聖誕的蜜拉貝兒', nameEN: 'Christmas Mirabelle', aliases: ['闆娘', '露娜', '火聖誕', '版娘'], attribute: 'fire', job: 'warrior', rarity: 5 },
+            { id: 9, nameCN: '赤鬼伯伯', nameEN: 'Akaoni', aliases: ['赤鬼'], attribute: 'fire', job: 'sniper', rarity: 5 },
+            { id: 10, nameCN: '蓋兒', nameEN: 'Gail', aliases: ['蓋兒', '暗老頭'], attribute: 'dark', job: 'vanguard', rarity: 5 },
+            { id: 11, nameCN: 'Aoi Hinamori', nameEN: 'Aoi Hinamori', aliases: ['AOI'], attribute: 'fire', job: 'warrior', rarity: 5 },
+            { id: 12, nameCN: 'HongKongDoll', nameEN: 'HongKongDoll', aliases: ['HKD', '萌王'], attribute: 'nature', job: 'warrior', rarity: 5 },
+            { id: 13, nameCN: '奧柯絲蒂恩', nameEN: 'Obsidian', aliases: ['LLB', '暗LLB', '暗剪刀'], attribute: 'dark', job: 'warrior', rarity: 5 },
+            { id: 14, nameCN: '複製體芭索羅', nameEN: 'Clone Bartholo', aliases: ['光狗'], attribute: 'light', job: 'warrior', rarity: 4 },
+            { id: 15, nameCN: '複製體瑪蒂爾達', nameEN: 'Clone Matilda', aliases: ['光狙', '光修里'], attribute: 'light', job: 'sniper', rarity: 4 },
+            { id: 16, nameCN: '萊莎曼德', nameEN: 'Laiisma', aliases: ['光鞭', '光弓'], attribute: 'light', job: 'sniper', rarity: 5 },
+            { id: 17, nameCN: '安泰西亞', nameEN: 'Anastasia', aliases: ['火貓', '安泰', '眼罩'], attribute: 'fire', job: 'warrior', rarity: 5 },
+            { id: 18, nameCN: '泳池魅影吉妮茲', nameEN: 'Pool Phantom Janis', aliases: ['泳蘿', '雷姆'], attribute: 'water', job: 'warrior', rarity: 5 },
+            { id: 19, nameCN: '璀璨誓約的伊娥絲', nameEN: 'Radiant Vow Ith', aliases: ['124', '光LL', '光124'], attribute: 'light', job: 'warrior', rarity: 5 },
+            { id: 20, nameCN: '路易絲', nameEN: 'Louis', aliases: ['木刺', '木席德'], attribute: 'nature', job: 'vanguard', rarity: 4 },
+            { id: 21, nameCN: '菲莉西婭', nameEN: 'Felicia', aliases: ['暗拳'], attribute: 'dark', job: 'warrior', rarity: 5 },
+            { id: 22, nameCN: '複製體吉妮茲', nameEN: 'Clone Janis', aliases: ['光蘿'], attribute: 'light', job: 'warrior', rarity: 4 },
+            { id: 23, nameCN: '妮諾凱西', nameEN: 'Nenookaasi', aliases: ['香蕉', '木GAY'], attribute: 'nature', job: 'vanguard', rarity: 5 },
+            { id: 24, nameCN: '夏日的珮忒菈', nameEN: 'Summertime Petra', aliases: ['木瓜', '木鯨魚'], attribute: 'nature', job: 'medic', rarity: 5 },
+            { id: 25, nameCN: '納克莎', nameEN: 'Naksha', aliases: ['光蘇琳', '光大奶'], attribute: 'light', job: 'vanguard', rarity: 5 },
+            { id: 26, nameCN: '奧麗芙', nameEN: 'Olive', aliases: ['光埃及', '光埃'], attribute: 'light', job: 'medic', rarity: 5 },
+            { id: 27, nameCN: '克萊兒', nameEN: 'Claire', aliases: ['光鐮刀', '光鐮'], attribute: 'light', job: 'warrior', rarity: 5 },
+            { id: 28, nameCN: '朱音', nameEN: 'Akane', aliases: ['朱音'], attribute: 'fire', job: 'vanguard', rarity: 5 },
+            { id: 29, nameCN: '莎莉絲特', nameEN: 'Celeste', aliases: ['木串', '木龍'], attribute: 'nature', job: 'warrior', rarity: 5 },
+            { id: 30, nameCN: '東雲 ft.坊橋夜泊', nameEN: 'Shinonome ft. Fang', aliases: ['東云', '東雲'], attribute: 'nature', job: 'sniper', rarity: 5 },
+            { id: 31, nameCN: '伊娃', nameEN: 'Eva', aliases: ['EVA', '史哥'], attribute: 'dark', job: 'warrior', rarity: 5 },
+            { id: 32, nameCN: '絕望的夏妮', nameEN: 'Shani in Despair', aliases: ['暗龍', '熬夜夏尼'], attribute: 'dark', job: 'defender', rarity: 5 },
+            { id: 33, nameCN: '歐貝恩絲', nameEN: 'Aubrynn', aliases: ['暗飛', '暗飛劍'], attribute: 'dark', job: 'sniper', rarity: 5 }
+        ];
+
+        // ==================== ICON 組件 ====================
+        const IconComponents = {
+            Search: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+            ),
+            Globe: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                    <path d="M2 12h20"/>
+                </svg>
+            ),
+            Filter: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/>
+                </svg>
+            ),
+            X: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+            ),
+            Star: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                </svg>
+            ),
+            Plus: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M5 12h14M12 5v14"/>
+                </svg>
+            ),
+            Edit: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                </svg>
+            ),
+            Target: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="6"/>
+                    <circle cx="12" cy="12" r="2"/>
+                </svg>
+            ),
+            BarChart: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <line x1="12" x2="12" y1="20" y2="10"/>
+                    <line x1="18" x2="18" y1="20" y2="4"/>
+                    <line x1="6" x2="6" y1="20" y2="16"/>
+                </svg>
+            )
+        };
+
+        // ==================== 屬性與職業配置 ====================
+        const ATTRIBUTES = {
+            fire: { name: '火', nameEN: 'Fire', icon: '🔥', color: 'red' },
+            water: { name: '水', nameEN: 'Water', icon: '💧', color: 'blue' },
+            nature: { name: '木', nameEN: 'Nature', icon: '🌿', color: 'green' },
+            light: { name: '光', nameEN: 'Light', icon: '☀️', color: 'yellow' },
+            dark: { name: '暗', nameEN: 'Dark', icon: '🌙', color: 'purple' }
+        };
+
+        const JOBS = {
+            warrior: { name: '戰士', nameEN: 'Warrior', icon: '⚔️' },
+            defender: { name: '盾', nameEN: 'Tank', icon: '🛡️' },
+            vanguard: { name: '先鋒', nameEN: 'Vanguard', icon: '🚀' },
+            caster: { name: '術士', nameEN: 'Caster', icon: '🪄' },
+            sniper: { name: '狙擊', nameEN: 'Sniper', icon: '🎯' },
+            medic: { name: '醫療', nameEN: 'Medic', icon: '💚' }
+        };
+
+        // ==================== 右鍵菜單組件 ====================
+        const ContextMenu = ({ x, y, character, onEdit, onClose, onViewTags }) => {
+            useEffect(() => {
+                const handleClick = () => onClose();
+                document.addEventListener('click', handleClick);
+                return () => document.removeEventListener('click', handleClick);
+            }, [onClose]);
+
+            if (!character) return null;
+
+            return (
+                <div 
+                    className="context-menu"
+                    style={{ left: x, top: y }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="context-menu-item" onClick={() => { onViewTags(character); onClose(); }}>
+                        <IconComponents.BarChart size={14} />
+                        TAG分析 (開發中)
+                    </div>
+                    <div className="context-menu-item" onClick={() => { onEdit(character); onClose(); }}>
+                        <IconComponents.Edit size={14} />
+                        編輯角色
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 編輯角色組件 ====================
+        const EditCharacterModal = ({ isOpen, character, onClose, onSave }) => {
+            const [formData, setFormData] = useState({
+                nameCN: '',
+                nameEN: '',
+                aliases: [''],
+                attribute: 'fire',
+                job: 'warrior',
+                rarity: 5
+            });
+
+            React.useEffect(() => {
+                if (character) {
+                    setFormData({
+                        nameCN: character.nameCN || '',
+                        nameEN: character.nameEN || '',
+                        aliases: character.aliases && character.aliases.length > 0 ? [...character.aliases] : [''],
+                        attribute: character.attribute || 'fire',
+                        job: character.job || 'warrior',
+                        rarity: character.rarity || 5
+                    });
+                }
+            }, [character]);
+
+            const handleInputChange = (field, value) => {
+                setFormData(prev => ({
+                    ...prev,
+                    [field]: value
+                }));
+            };
+
+            const handleAliasChange = (index, value) => {
+                const newAliases = [...formData.aliases];
+                newAliases[index] = value;
+                setFormData(prev => ({
+                    ...prev,
+                    aliases: newAliases
+                }));
+            };
+
+            const addAlias = () => {
+                setFormData(prev => ({
+                    ...prev,
+                    aliases: [...prev.aliases, '']
+                }));
+            };
+
+            const removeAlias = (index) => {
+                if (formData.aliases.length > 1) {
+                    const newAliases = formData.aliases.filter((_, i) => i !== index);
+                    setFormData(prev => ({
+                        ...prev,
+                        aliases: newAliases
+                    }));
+                }
+            };
+
+            const handleSubmit = () => {
+                if (!formData.nameCN.trim()) {
+                    alert('請填寫中文名稱');
+                    return;
+                }
+                if (!formData.aliases[0].trim()) {
+                    alert('請至少填寫一個暱稱');
+                    return;
+                }
+
+                const updatedCharacter = {
+                    ...character,
+                    ...formData,
+                    aliases: formData.aliases.filter(alias => alias.trim())
+                };
+
+                onSave(updatedCharacter);
+                onClose();
+            };
+
+            if (!isOpen || !character) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-90vh overflow-y-auto">
+                        <div className="p-6">
+                            <h3 className="text-lg font-semibold mb-4">編輯角色</h3>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">中文名稱 *</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameCN}
+                                        onChange={(e) => handleInputChange('nameCN', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="角色中文名稱"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">英文名稱</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameEN}
+                                        onChange={(e) => handleInputChange('nameEN', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="角色英文名稱"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">暱稱 *</label>
+                                    {formData.aliases.map((alias, index) => (
+                                        <div key={index} className="flex gap-2 mb-2">
+                                            <input
+                                                type="text"
+                                                value={alias}
+                                                onChange={(e) => handleAliasChange(index, e.target.value)}
+                                                className="flex-1 border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                                placeholder={index === 0 ? "主要暱稱" : "其他暱稱"}
+                                            />
+                                            {index > 0 && (
+                                                <button
+                                                    onClick={() => removeAlias(index)}
+                                                    className="px-2 py-2 text-red-500 hover:text-red-700"
+                                                >
+                                                    <IconComponents.X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={addAlias}
+                                        className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
+                                    >
+                                        <IconComponents.Plus size={14} />
+                                        新增暱稱
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">屬性</label>
+                                    <select
+                                        value={formData.attribute}
+                                        onChange={(e) => handleInputChange('attribute', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {Object.entries(ATTRIBUTES).map(([key, attr]) => (
+                                            <option key={key} value={key}>
+                                                {attr.icon} {attr.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">職業</label>
+                                    <select
+                                        value={formData.job}
+                                        onChange={(e) => handleInputChange('job', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {Object.entries(JOBS).map(([key, job]) => (
+                                            <option key={key} value={key}>
+                                                {job.icon} {job.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6 pt-4 border-t">
+                                <button
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    保存修改
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AddCharacterModal = ({ isOpen, onClose, onSave }) => {
+            const [formData, setFormData] = useState({
+                nameCN: '',
+                nameEN: '',
+                aliases: [''],
+                attribute: 'fire',
+                job: 'warrior',
+                rarity: 5
+            });
+
+            const handleInputChange = (field, value) => {
+                setFormData(prev => ({
+                    ...prev,
+                    [field]: value
+                }));
+            };
+
+            const handleAliasChange = (index, value) => {
+                const newAliases = [...formData.aliases];
+                newAliases[index] = value;
+                setFormData(prev => ({
+                    ...prev,
+                    aliases: newAliases
+                }));
+            };
+
+            const addAlias = () => {
+                setFormData(prev => ({
+                    ...prev,
+                    aliases: [...prev.aliases, '']
+                }));
+            };
+
+            const removeAlias = (index) => {
+                if (formData.aliases.length > 1) {
+                    const newAliases = formData.aliases.filter((_, i) => i !== index);
+                    setFormData(prev => ({
+                        ...prev,
+                        aliases: newAliases
+                    }));
+                }
+            };
+
+            const handleSubmit = () => {
+                if (!formData.nameCN.trim()) {
+                    alert('請填寫中文名稱');
+                    return;
+                }
+                if (!formData.aliases[0].trim()) {
+                    alert('請至少填寫一個暱稱');
+                    return;
+                }
+
+                const newCharacter = {
+                    id: Date.now(),
+                    ...formData,
+                    aliases: formData.aliases.filter(alias => alias.trim())
+                };
+
+                onSave(newCharacter);
+                setFormData({
+                    nameCN: '',
+                    nameEN: '',
+                    aliases: [''],
+                    attribute: 'fire',
+                    job: 'warrior',
+                    rarity: 5
+                });
+                onClose();
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-90vh overflow-y-auto">
+                        <div className="p-6">
+                            <h3 className="text-lg font-semibold mb-4">新增角色</h3>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">中文名稱 *</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameCN}
+                                        onChange={(e) => handleInputChange('nameCN', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="角色中文名稱"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">英文名稱</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameEN}
+                                        onChange={(e) => handleInputChange('nameEN', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="角色英文名稱"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">暱稱 *</label>
+                                    {formData.aliases.map((alias, index) => (
+                                        <div key={index} className="flex gap-2 mb-2">
+                                            <input
+                                                type="text"
+                                                value={alias}
+                                                onChange={(e) => handleAliasChange(index, e.target.value)}
+                                                className="flex-1 border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                                placeholder={index === 0 ? "主要暱稱" : "其他暱稱"}
+                                            />
+                                            {index > 0 && (
+                                                <button
+                                                    onClick={() => removeAlias(index)}
+                                                    className="px-2 py-2 text-red-500 hover:text-red-700"
+                                                >
+                                                    <IconComponents.X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={addAlias}
+                                        className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
+                                    >
+                                        <IconComponents.Plus size={14} />
+                                        新增暱稱
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">屬性</label>
+                                    <select
+                                        value={formData.attribute}
+                                        onChange={(e) => handleInputChange('attribute', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {Object.entries(ATTRIBUTES).map(([key, attr]) => (
+                                            <option key={key} value={key}>
+                                                {attr.icon} {attr.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">職業</label>
+                                    <select
+                                        value={formData.job}
+                                        onChange={(e) => handleInputChange('job', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {Object.entries(JOBS).map(([key, job]) => (
+                                            <option key={key} value={key}>
+                                                {job.icon} {job.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6 pt-4 border-t">
+                                <button
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    新增角色
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CharacterCard = ({ character, showEnglish, onContextMenu, onNavigateToTags }) => {
+            const attribute = ATTRIBUTES[character.attribute];
+            const job = JOBS[character.job];
+            
+            const displayName = showEnglish ? character.nameEN : character.nameCN;
+            const mainAlias = character.aliases[0];
+
+            const handleClick = () => {
+                onNavigateToTags(character);
+            };
+
+            const handleContextMenu = (e) => {
+                e.preventDefault();
+                onContextMenu(e, character);
+            };
+            
+            return (
+                <div 
+                    className={`character-card p-4 rounded-lg border-2 attribute-${character.attribute} border-${attribute.color}-200 relative`}
+                    onClick={handleClick}
+                    onContextMenu={handleContextMenu}
+                >
+                    {/* TAG系統提示 */}
+                    <div className="tag-hint">
+                        點擊查看TAG分析
+                    </div>
+
+                    {/* 屬性與職業 */}
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                            <div className={`px-2 py-1 rounded-lg bg-${attribute.color}-100 text-${attribute.color}-700 flex items-center gap-1 text-sm font-bold`}>
+                                <span className="text-base">{attribute.icon}</span>
+                                <span>{showEnglish ? attribute.nameEN : attribute.name}</span>
+                            </div>
+                            <div className="px-2 py-1 rounded-lg bg-gray-100 text-gray-700 flex items-center gap-1 text-sm font-bold">
+                                <span className="text-base">{job.icon}</span>
+                                <span>{showEnglish ? job.nameEN : job.name}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 角色名稱 */}
+                    <div className="mb-3">
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">{displayName}</h3>
+                        {!showEnglish && (
+                            <div className="text-sm text-gray-600">
+                                <span className="font-bold text-blue-600">{mainAlias}</span>
+                                {character.aliases.length > 1 && (
+                                    <span className="ml-1">
+                                        {character.aliases.slice(1).join('、')}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {showEnglish && (
+                            <div className="text-sm text-gray-600">
+                                暱稱：<span className="font-bold text-blue-600">{character.aliases.join('、')}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 篩選組件 ====================
+        const FilterPanel = ({ filters, onFilterChange, showEnglish }) => {
+            const [isOpen, setIsOpen] = useState(false);
+
+            return (
+                <div className="relative">
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${
+                            isOpen ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                        <IconComponents.Filter size={14} />
+                        篩選
+                    </button>
+
+                    {isOpen && (
+                        <div className="absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border p-4 z-10 min-w-80">
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* 屬性篩選 */}
+                                <div>
+                                    <h4 className="font-medium text-gray-700 mb-2">屬性篩選</h4>
+                                    <div className="space-y-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.attributes.length === 0}
+                                                onChange={() => onFilterChange('attributes', [])}
+                                                className="rounded"
+                                            />
+                                            <span className="text-sm">全部</span>
+                                        </label>
+                                        {Object.entries(ATTRIBUTES).map(([key, attr]) => (
+                                            <label key={key} className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filters.attributes.includes(key)}
+                                                    onChange={() => {
+                                                        const newAttrs = filters.attributes.includes(key)
+                                                            ? filters.attributes.filter(a => a !== key)
+                                                            : [...filters.attributes, key];
+                                                        onFilterChange('attributes', newAttrs);
+                                                    }}
+                                                    className="rounded"
+                                                />
+                                                <span className="text-sm flex items-center gap-1">
+                                                    {attr.icon} {showEnglish ? attr.nameEN : attr.name}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 職業篩選 */}
+                                <div>
+                                    <h4 className="font-medium text-gray-700 mb-2">職業篩選</h4>
+                                    <div className="space-y-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.jobs.length === 0}
+                                                onChange={() => onFilterChange('jobs', [])}
+                                                className="rounded"
+                                            />
+                                            <span className="text-sm">全部</span>
+                                        </label>
+                                        {Object.entries(JOBS).map(([key, job]) => (
+                                            <label key={key} className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filters.jobs.includes(key)}
+                                                    onChange={() => {
+                                                        const newJobs = filters.jobs.includes(key)
+                                                            ? filters.jobs.filter(j => j !== key)
+                                                            : [...filters.jobs, key];
+                                                        onFilterChange('jobs', newJobs);
+                                                    }}
+                                                    className="rounded"
+                                                />
+                                                <span className="text-sm flex items-center gap-1">
+                                                    {job.icon} {showEnglish ? job.nameEN : job.name}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t flex justify-end">
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                >
+                                    關閉
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==================== 主應用 ====================
+        const App = () => {
+            const [characters, setCharacters] = useState(CHARACTER_DATA);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [showEnglish, setShowEnglish] = useState(false);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [showEditModal, setShowEditModal] = useState(false);
+            const [editingCharacter, setEditingCharacter] = useState(null);
+            const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, character: null });
+            const [filters, setFilters] = useState({
+                attributes: [],
+                jobs: [],
+                rarity: []
+            });
+
+            const handleFilterChange = useCallback((type, value) => {
+                setFilters(prev => ({
+                    ...prev,
+                    [type]: value
+                }));
+            }, []);
+
+            const handleAddCharacter = useCallback((newCharacter) => {
+                setCharacters(prev => [...prev, newCharacter]);
+            }, []);
+
+            const handleEditCharacter = useCallback((character) => {
+                setEditingCharacter(character);
+                setShowEditModal(true);
+            }, []);
+
+            const handleSaveEditCharacter = useCallback((updatedCharacter) => {
+                setCharacters(prev => prev.map(char => 
+                    char.id === updatedCharacter.id ? updatedCharacter : char
+                ));
+                setShowEditModal(false);
+                setEditingCharacter(null);
+            }, []);
+
+            const handleContextMenu = useCallback((e, character) => {
+                setContextMenu({
+                    show: true,
+                    x: e.clientX,
+                    y: e.clientY,
+                    character
+                });
+            }, []);
+
+            const handleCloseContextMenu = useCallback(() => {
+                setContextMenu({ show: false, x: 0, y: 0, character: null });
+            }, []);
+
+            const handleNavigateToTags = useCallback((character) => {
+                // 這裡將來會導向TAG系統頁面
+                alert(`即將導向 ${character.nameCN} 的TAG分析頁面（開發中）`);
+            }, []);
+
+            // 生成篩選條件說明
+            const filterDescription = useMemo(() => {
+                const conditions = [];
+                
+                if (filters.attributes.length > 0) {
+                    const attrNames = filters.attributes.map(attr => 
+                        showEnglish ? ATTRIBUTES[attr].nameEN : ATTRIBUTES[attr].name
+                    );
+                    conditions.push(`屬性: ${attrNames.join('、')}`);
+                }
+                
+                if (filters.jobs.length > 0) {
+                    const jobNames = filters.jobs.map(job => 
+                        showEnglish ? JOBS[job].nameEN : JOBS[job].name
+                    );
+                    conditions.push(`職業: ${jobNames.join('、')}`);
+                }
+                
+                return conditions.length > 0 ? ` (${conditions.join(' | ')})` : '';
+            }, [filters, showEnglish]);
+
+            const filteredCharacters = useMemo(() => {
+                return characters.filter(character => {
+                    if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        const nameMatch = character.nameCN.toLowerCase().includes(searchLower) ||
+                                         character.nameEN.toLowerCase().includes(searchLower);
+                        const aliasMatch = character.aliases.some(alias => 
+                            alias.toLowerCase().includes(searchLower)
+                        );
+                        
+                        if (!nameMatch && !aliasMatch) {
+                            return false;
+                        }
+                    }
+
+                    if (filters.attributes.length > 0 && !filters.attributes.includes(character.attribute)) {
+                        return false;
+                    }
+
+                    if (filters.jobs.length > 0 && !filters.jobs.includes(character.job)) {
+                        return false;
+                    }
+
+                    return true;
+                });
+            }, [characters, searchTerm, filters]);
+
+            const clearSearch = useCallback(() => {
+                setSearchTerm('');
+            }, []);
+
+            const toggleLanguage = useCallback(() => {
+                setShowEnglish(prev => !prev);
+            }, []);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        {/* 頁面標題 */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                                ArkRecode 角色資料庫
+                            </h1>
+                            <p className="text-gray-600">共收錄 {CHARACTER_DATA.length} 個常用角色</p>
+                        </div>
+
+                        {/* 控制面板 - 調整位置和高度 */}
+                        <div className="search-section bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                                {/* 搜尋框和語言切換 */}
+                                <div className="flex gap-3 flex-1 max-w-xl">
+                                    <div className="relative flex-1">
+                                        <IconComponents.Search 
+                                            size={20} 
+                                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="搜尋角色名稱或暱稱..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                onClick={clearSearch}
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            >
+                                                <IconComponents.X size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    {/* 語言切換按鈕 - 移到搜尋框旁邊 */}
+                                    <button
+                                        onClick={toggleLanguage}
+                                        className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-all text-sm ${
+                                            showEnglish 
+                                                ? 'bg-green-500 text-white border-green-500' 
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <IconComponents.Globe size={14} />
+                                        {showEnglish ? 'EN' : '中文'}
+                                    </button>
+                                </div>
+
+                                {/* 右側按鈕群組 */}
+                                <div className="flex items-center gap-3">
+                                    <FilterPanel 
+                                        filters={filters}
+                                        onFilterChange={handleFilterChange}
+                                        showEnglish={showEnglish}
+                                    />
+
+                                    <button
+                                        onClick={() => setShowAddModal(true)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-sm"
+                                    >
+                                        <IconComponents.Plus size={14} />
+                                        新增角色
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 篩選結果摘要 - 加上篩選條件 */}
+                            <div className="mt-4 pt-4 border-t text-sm text-gray-600 flex items-center justify-between">
+                                <div>
+                                    顯示 {filteredCharacters.length}/{characters.length} 個角色
+                                    {filterDescription}
+                                    {searchTerm && <span className="ml-2 text-blue-600">搜尋: "{searchTerm}"</span>}
+                                </div>
+                                {(filters.attributes.length > 0 || filters.jobs.length > 0) && (
+                                    <button
+                                        onClick={() => setFilters({ attributes: [], jobs: [], rarity: [] })}
+                                        className="text-red-500 hover:text-red-700 text-xs"
+                                    >
+                                        清除篩選
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 角色列表 */}
+                        {filteredCharacters.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {filteredCharacters.map(character => (
+                                    <CharacterCard
+                                        key={character.id}
+                                        character={character}
+                                        showEnglish={showEnglish}
+                                        onContextMenu={handleContextMenu}
+                                        onNavigateToTags={handleNavigateToTags}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <div className="text-6xl mb-4">🔍</div>
+                                <h3 className="text-xl font-medium text-gray-700 mb-2">找不到符合條件的角色</h3>
+                                <p className="text-gray-500 mb-4">
+                                    {searchTerm ? '請嘗試其他搜尋關鍵字' : '請調整篩選條件'}
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setFilters({ attributes: [], jobs: [], rarity: [] });
+                                    }}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                                >
+                                    清除所有篩選
+                                </button>
+                            </div>
+                        )}
+
+                        {/* 統計資訊 */}
+                        <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+                            <h3 className="text-lg font-semibold mb-4">資料庫統計</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                {Object.entries(ATTRIBUTES).map(([key, attr]) => {
+                                    const count = characters.filter(c => c.attribute === key).length;
+                                    return (
+                                        <div key={key} className="text-center">
+                                            <div className={`mx-auto w-12 h-12 rounded-full stat-${key} flex items-center justify-center text-xl mb-2`}>
+                                                {attr.icon}
+                                            </div>
+                                            <div className="text-sm font-medium">{showEnglish ? attr.nameEN : attr.name}</div>
+                                            <div className="text-lg font-bold text-gray-800">{count}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-6 pt-6 border-t">
+                                <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
+                                    {Object.entries(JOBS).map(([key, job]) => {
+                                        const count = characters.filter(c => c.job === key).length;
+                                        return (
+                                            <div key={key}>
+                                                <div className="text-lg mb-1">{job.icon}</div>
+                                                <div className="text-xs font-medium">{showEnglish ? job.nameEN : job.name}</div>
+                                                <div className="text-sm font-bold text-gray-800">{count}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 返回連結 */}
+                        <div className="text-center mt-8">
+                            <a 
+                                href="index.html" 
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                ← 返回對戰記錄器
+                            </a>
+                        </div>
+
+                        {/* 右鍵菜單 */}
+                        {contextMenu.show && (
+                            <ContextMenu
+                                x={contextMenu.x}
+                                y={contextMenu.y}
+                                character={contextMenu.character}
+                                onEdit={handleEditCharacter}
+                                onClose={handleCloseContextMenu}
+                                onViewTags={handleNavigateToTags}
+                            />
+                        )}
+
+                        {/* 新增角色Modal */}
+                        <AddCharacterModal
+                            isOpen={showAddModal}
+                            onClose={() => setShowAddModal(false)}
+                            onSave={handleAddCharacter}
+                        />
+
+                        {/* 編輯角色Modal */}
+                        <EditCharacterModal
+                            isOpen={showEditModal}
+                            character={editingCharacter}
+                            onClose={() => {
+                                setShowEditModal(false);
+                                setEditingCharacter(null);
+                            }}
+                            onSave={handleSaveEditCharacter}
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        // 初始化應用
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
