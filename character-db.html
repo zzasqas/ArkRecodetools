@@ -45,7 +45,7 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
 
-        /* 右鍵菜單樣式 */
+        /* 右鍵選單樣式 */
         .context-menu {
             position: fixed;
             background: white;
@@ -171,9 +171,9 @@
 
         // ==================== 角色資料 ====================
         const CHARACTER_DATA = [
-            { id: 1, nameCN: '烏爾德', nameEN: 'Urd', aliases: ['水琴'], attribute: 'water', job: 'medic', rarity: 5 },
+            { id: 1, nameCN: '烏爾德', nameEN: 'Urd', aliases: ['水紅'], attribute: 'water', job: 'medic', rarity: 5 },
             { id: 2, nameCN: '艾瑞兒', nameEN: 'Ariel', aliases: ['水馬', '寶馬', '機車女'], attribute: 'water', job: 'defender', rarity: 5 },
-            { id: 3, nameCN: '碧海的諾克琳', nameEN: 'Seaside Noclyn', aliases: ['水扇', '水偶'], attribute: 'water', job: 'sniper', rarity: 5 },
+            { id: 3, nameCN: '碧海的諾克琳', nameEN: 'Seaside Noclyn', aliases: ['水扇', '水夜'], attribute: 'water', job: 'sniper', rarity: 5 },
             { id: 4, nameCN: '守護者艾瑞兒', nameEN: 'Guardian Ariel', aliases: ['光馬', '光寶馬'], attribute: 'light', job: 'defender', rarity: 5 },
             { id: 5, nameCN: '璀璨誓約的露比', nameEN: 'Radiant Vow Rubi', aliases: ['水拳', '婚紗露比'], attribute: 'water', job: 'defender', rarity: 5 },
             { id: 6, nameCN: '河北彩伽', nameEN: 'Saika', aliases: ['河北', 'EMT'], attribute: 'water', job: 'medic', rarity: 5 },
@@ -182,28 +182,28 @@
             { id: 9, nameCN: '赤鬼伯伯', nameEN: 'Akaoni', aliases: ['赤鬼'], attribute: 'fire', job: 'sniper', rarity: 5 },
             { id: 10, nameCN: '蓋兒', nameEN: 'Gail', aliases: ['蓋兒', '暗老頭'], attribute: 'dark', job: 'vanguard', rarity: 5 },
             { id: 11, nameCN: 'Aoi Hinamori', nameEN: 'Aoi Hinamori', aliases: ['AOI'], attribute: 'fire', job: 'warrior', rarity: 5 },
-            { id: 12, nameCN: 'HongKongDoll', nameEN: 'HongKongDoll', aliases: ['HKD', '萌王'], attribute: 'nature', job: 'warrior', rarity: 5 },
+            { id: 12, nameCN: 'HongKongDoll', nameEN: 'HongKongDoll', aliases: ['HKD', '茶王'], attribute: 'nature', job: 'warrior', rarity: 5 },
             { id: 13, nameCN: '奧柯絲蒂恩', nameEN: 'Obsidian', aliases: ['LLB', '暗LLB', '暗剪刀'], attribute: 'dark', job: 'warrior', rarity: 5 },
             { id: 14, nameCN: '複製體芭索羅', nameEN: 'Clone Bartholo', aliases: ['光狗'], attribute: 'light', job: 'warrior', rarity: 4 },
             { id: 15, nameCN: '複製體瑪蒂爾達', nameEN: 'Clone Matilda', aliases: ['光狙', '光修里'], attribute: 'light', job: 'sniper', rarity: 4 },
-            { id: 16, nameCN: '萊莎曼德', nameEN: 'Laiisma', aliases: ['光鞭', '光弓'], attribute: 'light', job: 'sniper', rarity: 5 },
+            { id: 16, nameCN: '芭莎曼德', nameEN: 'Laiisma', aliases: ['光弓', '光弓'], attribute: 'light', job: 'sniper', rarity: 5 },
             { id: 17, nameCN: '安泰西亞', nameEN: 'Anastasia', aliases: ['火貓', '安泰', '眼罩'], attribute: 'fire', job: 'warrior', rarity: 5 },
-            { id: 18, nameCN: '泳池魅影吉妮茲', nameEN: 'Pool Phantom Janis', aliases: ['泳蘿', '雷姆'], attribute: 'water', job: 'warrior', rarity: 5 },
-            { id: 19, nameCN: '璀璨誓約的伊娥絲', nameEN: 'Radiant Vow Ith', aliases: ['124', '光LL', '光124'], attribute: 'light', job: 'warrior', rarity: 5 },
+            { id: 18, nameCN: '泳池魅影珍妮茲', nameEN: 'Pool Phantom Janis', aliases: ['泳蘿', '雷姆'], attribute: 'water', job: 'warrior', rarity: 5 },
+            { id: 19, nameCN: '璀璨誓約的伊娃絲', nameEN: 'Radiant Vow Ith', aliases: ['124', '光LL', '光124'], attribute: 'light', job: 'warrior', rarity: 5 },
             { id: 20, nameCN: '路易絲', nameEN: 'Louis', aliases: ['木刺', '木席德'], attribute: 'nature', job: 'vanguard', rarity: 4 },
-            { id: 21, nameCN: '菲莉西婭', nameEN: 'Felicia', aliases: ['暗拳'], attribute: 'dark', job: 'warrior', rarity: 5 },
-            { id: 22, nameCN: '複製體吉妮茲', nameEN: 'Clone Janis', aliases: ['光蘿'], attribute: 'light', job: 'warrior', rarity: 4 },
+            { id: 21, nameCN: '貝莉西婭', nameEN: 'Felicia', aliases: ['暗拳'], attribute: 'dark', job: 'warrior', rarity: 5 },
+            { id: 22, nameCN: '複製體珍妮茲', nameEN: 'Clone Janis', aliases: ['光蘿'], attribute: 'light', job: 'warrior', rarity: 4 },
             { id: 23, nameCN: '妮諾凱西', nameEN: 'Nenookaasi', aliases: ['香蕉', '木GAY'], attribute: 'nature', job: 'vanguard', rarity: 5 },
-            { id: 24, nameCN: '夏日的珮忒菈', nameEN: 'Summertime Petra', aliases: ['木瓜', '木鯨魚'], attribute: 'nature', job: 'medic', rarity: 5 },
-            { id: 25, nameCN: '納克莎', nameEN: 'Naksha', aliases: ['光蘇琳', '光大奶'], attribute: 'light', job: 'vanguard', rarity: 5 },
+            { id: 24, nameCN: '夏日的珮忒舍', nameEN: 'Summertime Petra', aliases: ['木瓜', '木鯨魚'], attribute: 'nature', job: 'medic', rarity: 5 },
+            { id: 25, nameCN: '納克莎', nameEN: 'Naksha', aliases: ['光蘇菇', '光大奶'], attribute: 'light', job: 'vanguard', rarity: 5 },
             { id: 26, nameCN: '奧麗芙', nameEN: 'Olive', aliases: ['光埃及', '光埃'], attribute: 'light', job: 'medic', rarity: 5 },
-            { id: 27, nameCN: '克萊兒', nameEN: 'Claire', aliases: ['光鐮刀', '光鐮'], attribute: 'light', job: 'warrior', rarity: 5 },
+            { id: 27, nameCN: '克萊兒', nameEN: 'Claire', aliases: ['光鍵刀', '光鍵'], attribute: 'light', job: 'warrior', rarity: 5 },
             { id: 28, nameCN: '朱音', nameEN: 'Akane', aliases: ['朱音'], attribute: 'fire', job: 'vanguard', rarity: 5 },
             { id: 29, nameCN: '莎莉絲特', nameEN: 'Celeste', aliases: ['木串', '木龍'], attribute: 'nature', job: 'warrior', rarity: 5 },
-            { id: 30, nameCN: '東雲 ft.坊橋夜泊', nameEN: 'Shinonome ft. Fang', aliases: ['東云', '東雲'], attribute: 'nature', job: 'sniper', rarity: 5 },
+            { id: 30, nameCN: '東雲 ft.半橋夜泊', nameEN: 'Shinonome ft. Fang', aliases: ['東云', '東雲'], attribute: 'nature', job: 'sniper', rarity: 5 },
             { id: 31, nameCN: '伊娃', nameEN: 'Eva', aliases: ['EVA', '史哥'], attribute: 'dark', job: 'warrior', rarity: 5 },
             { id: 32, nameCN: '絕望的夏妮', nameEN: 'Shani in Despair', aliases: ['暗龍', '熬夜夏尼'], attribute: 'dark', job: 'defender', rarity: 5 },
-            { id: 33, nameCN: '歐貝恩絲', nameEN: 'Aubrynn', aliases: ['暗飛', '暗飛劍'], attribute: 'dark', job: 'sniper', rarity: 5 }
+            { id: 33, nameCN: '歌貝恩絲', nameEN: 'Aubrynn', aliases: ['暗飛', '暗飛刀'], attribute: 'dark', job: 'sniper', rarity: 5 }
         ];
 
         // ==================== ICON 組件 ====================
@@ -260,6 +260,12 @@
                     <line x1="18" x2="18" y1="20" y2="4"/>
                     <line x1="6" x2="6" y1="20" y2="16"/>
                 </svg>
+            ),
+            Home: ({ size = 16, className = "" }) => (
+                <svg className={`lucide-icon ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                </svg>
             )
         };
 
@@ -281,7 +287,7 @@
             medic: { name: '醫療', nameEN: 'Medic', icon: '💚' }
         };
 
-        // ==================== 右鍵菜單組件 ====================
+        // ==================== 右鍵選單組件 ====================
         const ContextMenu = ({ x, y, character, onEdit, onClose, onViewTags }) => {
             useEffect(() => {
                 const handleClick = () => onClose();
@@ -745,6 +751,63 @@
             );
         };
 
+        // ==================== 排序組件 ====================
+        const SortPanel = ({ sortBy, onSortChange, showEnglish }) => {
+            const [isOpen, setIsOpen] = useState(false);
+
+            const sortOptions = [
+                { value: 'default', label: '預設排序', labelEN: 'Default' },
+                { value: 'attribute', label: '依屬性排序', labelEN: 'By Attribute' },
+                { value: 'job', label: '依職業排序', labelEN: 'By Job' }
+            ];
+
+            const currentSort = sortOptions.find(option => option.value === sortBy);
+
+            return (
+                <div className="relative">
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-all text-sm ${
+                            isOpen ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                        <span>{showEnglish ? (currentSort?.labelEN || 'Sort') : '排序'}</span>
+                    </button>
+
+                    {isOpen && (
+                        <div className="absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border p-4 z-10 min-w-48">
+                            <div className="space-y-1">
+                                {sortOptions.map((option) => (
+                                    <label key={option.value} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="sort"
+                                            value={option.value}
+                                            checked={sortBy === option.value}
+                                            onChange={(e) => onSortChange(e.target.value)}
+                                            className="rounded"
+                                        />
+                                        <span className="text-sm">
+                                            {showEnglish ? option.labelEN : option.label}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t flex justify-end">
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                >
+                                    關閉
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         // ==================== 篩選組件 ====================
         const FilterPanel = ({ filters, onFilterChange, showEnglish }) => {
             const [isOpen, setIsOpen] = useState(false);
@@ -753,7 +816,7 @@
                 <div className="relative">
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${
+                        className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-all text-sm ${
                             isOpen ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                         }`}
                     >
@@ -905,6 +968,17 @@
                 alert(`即將導向 ${character.nameCN} 的TAG分析頁面（開發中）`);
             }, []);
 
+            const handleBackToMain = useCallback(() => {
+                // 使用相對路徑，適配 GitHub Pages 部署
+                if (window.location.hostname.includes('github.io')) {
+                    // GitHub Pages 環境
+                    window.location.href = './';
+                } else {
+                    // 本地或其他環境
+                    window.location.href = './';
+                }
+            }, []);
+
             // 生成篩選條件說明
             const filterDescription = useMemo(() => {
                 const conditions = [];
@@ -952,7 +1026,7 @@
                     return true;
                 });
 
-                // 排序邏輯
+                // 排序邏輯 - 確保功能正常
                 if (sortBy === 'attribute') {
                     const attributeOrder = ['fire', 'water', 'nature', 'light', 'dark'];
                     filtered.sort((a, b) => {
@@ -1034,6 +1108,13 @@
                                         <IconComponents.Globe size={14} />
                                         {showEnglish ? 'EN' : '中文'}
                                     </button>
+
+                                    {/* 排序面板 - 精緻化設計 */}
+                                    <SortPanel 
+                                        sortBy={sortBy}
+                                        onSortChange={setSortBy}
+                                        showEnglish={showEnglish}
+                                    />
                                 </div>
 
                                 {/* 右側按鈕群組 */}
@@ -1046,7 +1127,7 @@
 
                                     <button
                                         onClick={() => setShowAddModal(true)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-sm"
+                                        className="flex items-center gap-2 px-3 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-sm"
                                     >
                                         <IconComponents.Plus size={14} />
                                         新增角色
@@ -1138,17 +1219,18 @@
                             </div>
                         </div>
 
-                        {/* 返回連結 */}
+                        {/* 返回連結 - 優化 GitHub Pages 兼容性 */}
                         <div className="text-center mt-8">
-                            <a 
-                                href="index.html" 
+                            <button 
+                                onClick={handleBackToMain}
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                             >
-                                ← 返回對戰記錄器
-                            </a>
+                                <IconComponents.Home size={16} />
+                                返回對戰記錄器
+                            </button>
                         </div>
 
-                        {/* 右鍵菜單 */}
+                        {/* 右鍵選單 */}
                         {contextMenu.show && (
                             <ContextMenu
                                 x={contextMenu.x}
@@ -1187,4 +1269,3 @@
     </script>
 </body>
 </html>
-
