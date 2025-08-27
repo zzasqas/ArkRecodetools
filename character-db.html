@@ -1009,6 +1009,17 @@
                                         <IconComponents.Globe size={14} />
                                         {showEnglish ? 'EN' : '中文'}
                                     </button>
+
+                                    {/* 排序選擇器 */}
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                                    >
+                                        <option value="default">預設排序</option>
+                                        <option value="attribute">依屬性排序</option>
+                                        <option value="job">依職業排序</option>
+                                    </select>                                  
                                 </div>
 
                                 {/* 右側按鈕群組 */}
@@ -1161,4 +1172,5 @@
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
+
 </html>
