@@ -861,6 +861,7 @@
                 jobs: [],
                 rarity: []
             });
+            const [sortBy, setSortBy] = useState('default'); // default, attribute, job
 
             const handleFilterChange = useCallback((type, value) => {
                 setFilters(prev => ({
@@ -926,7 +927,7 @@
             }, [filters, showEnglish]);
 
             const filteredCharacters = useMemo(() => {
-                return characters.filter(character => {
+                let filtered = characters.filter(character => {
                     if (searchTerm) {
                         const searchLower = searchTerm.toLowerCase();
                         const nameMatch = character.nameCN.toLowerCase().includes(searchLower) ||
@@ -950,7 +951,31 @@
 
                     return true;
                 });
-            }, [characters, searchTerm, filters]);
+
+                // 排序邏輯
+                if (sortBy === 'attribute') {
+                    const attributeOrder = ['fire', 'water', 'nature', 'light', 'dark'];
+                    filtered.sort((a, b) => {
+                        const aIndex = attributeOrder.indexOf(a.attribute);
+                        const bIndex = attributeOrder.indexOf(b.attribute);
+                        if (aIndex !== bIndex) return aIndex - bIndex;
+                        return a.nameCN.localeCompare(b.nameCN, 'zh-TW');
+                    });
+                } else if (sortBy === 'job') {
+                    const jobOrder = ['warrior', 'defender', 'vanguard', 'caster', 'sniper', 'medic'];
+                    filtered.sort((a, b) => {
+                        const aIndex = jobOrder.indexOf(a.job);
+                        const bIndex = jobOrder.indexOf(b.job);
+                        if (aIndex !== bIndex) return aIndex - bIndex;
+                        return a.nameCN.localeCompare(b.nameCN, 'zh-TW');
+                    });
+                } else {
+                    // 預設排序：按ID順序
+                    filtered.sort((a, b) => a.id - b.id);
+                }
+
+                return filtered;
+            }, [characters, searchTerm, filters, sortBy]);
 
             const clearSearch = useCallback(() => {
                 setSearchTerm('');
@@ -1009,6 +1034,7 @@
                                         <IconComponents.Globe size={14} />
                                         {showEnglish ? 'EN' : '中文'}
                                     </button>
+                                </div>
 
                                 {/* 右側按鈕群組 */}
                                 <div className="flex items-center gap-3">
@@ -1160,6 +1186,4 @@
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
-
 </html>
-
