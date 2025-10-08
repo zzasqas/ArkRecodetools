@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArkRecode 對戰紀錄器 v2.5.1</title>
+    <title>ArkRecode 對戰紀錄器 v2.5.3</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
@@ -157,7 +157,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.5.1</div>
+    <div class="author-info">by zzas | v2.5.3</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -320,7 +320,7 @@
                                 <p>如有問題或建議，歡迎回饋：</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• 開發者：zzas</li>
-                                    <li>• 版本：v2.5.1</li>
+                                    <li>• 版本：v2.5.3</li>
                                     <li>• 更新日期：{new Date().toLocaleDateString('zh-TW')}</li>
                                 </ul>
                             </div>
@@ -745,10 +745,10 @@
                     const exportData = {
                         ...data,
                         exportDate: new Date().toISOString(),
-                        version: '2.5.1',
+                        version: '2.5.3',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.5.1'
+                            exported_by: 'ArkRecode_v2.5.3'
                         }
                     };
                     
@@ -1225,7 +1225,10 @@
             sortBy,
             onSortChange,
             characterOptions,
-            convertAlias
+            convertAlias,
+            // 新增這兩個 props
+            onSetFormData,
+            onSetCurrentView
         }) => {
             // 搜索狀態
             const [searchOpponents, setSearchOpponents] = useState(['', '', '', '']);
@@ -1527,14 +1530,63 @@
                         </div>
                         
                         {/* 搜索提示 */}
-                        <div className="text-xs text-gray-600 mb-2">
-                            💡 <strong>使用方式：</strong>
-                            {searchOpponents.filter(c => c.trim()).length < 3 ? (
-                                <span>至少輸入 3 個角色，然後點擊「立即搜索」或切換到其他欄位自動搜索</span>
-                            ) : searchOpponents.filter(c => c.trim()).length === 4 ? (
-                                <span>已輸入 4 個角色，將只顯示完全匹配(4/4)的記錄</span>
-                            ) : (
-                                <span>已輸入 {searchOpponents.filter(c => c.trim()).length} 個角色，將顯示高度匹配(3/4)和完全匹配(4/4)的記錄</span>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="text-xs text-gray-600">
+                                💡 <strong>使用方式：</strong>
+                                {searchOpponents.filter(c => c.trim()).length < 3 ? (
+                                    <span>至少輸入 3 個角色，然後點擊「立即搜索」或切換到其他欄位自動搜索</span>
+                                ) : searchOpponents.filter(c => c.trim()).length === 4 ? (
+                                    <span>已輸入 4 個角色，將只顯示完全匹配(4/4)的記錄</span>
+                                ) : (
+                                    <span>已輸入 {searchOpponents.filter(c => c.trim()).length} 個角色，將顯示高度匹配(3/4)和完全匹配(4/4)的記錄</span>
+                                )}
+                            </div>
+                            
+                            {/* 快速開始記錄按鈕 */}
+                            {lastSearchTerms.filter(c => c).length >= 3 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        console.log('快速記錄按鈕被點擊');
+                                        
+                                        try {
+                                            // 取得搜尋的對手組合
+                                            const searchTeam = lastSearchTerms
+                                                .map(char => char ? fastConvertAlias(SecurityUtils.cleanInput(char)) : '')
+                                                .filter(char => char);
+                                            
+                                            if (searchTeam.length === 0) {
+                                                alert('❌ 無法取得搜尋組合，請重新搜尋');
+                                                return;
+                                            }
+                                            
+                                            // 確保有4個位置
+                                            const opponentTeam = [
+                                                searchTeam[0] || '',
+                                                searchTeam[1] || '',
+                                                searchTeam[2] || '',
+                                                searchTeam[3] || ''
+                                            ];
+                                            
+                                            // 使用傳入的 props 函數
+                                            onSetFormData(prev => ({
+                                                ...prev,
+                                                opponentTeam: opponentTeam
+                                            }));
+                                            
+                                            // 跳轉到記錄頁面
+                                            onSetCurrentView('record');
+                                            
+                                        } catch (error) {
+                                            console.error('快速記錄功能錯誤:', error);
+                                            alert('❌ 操作失敗，請重試');
+                                        }
+                                    }}
+                                    className="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 flex items-center gap-1 transition-colors"
+                                >
+                                    <IconComponents.Plus size={12} />
+                                    快速開始記錄
+                                </button>
                             )}
                         </div>
                         
@@ -1647,6 +1699,8 @@
                                 </div>
                             </div>
                         )}
+
+
                     </div>
                     
                     {records.length === 0 ? (
@@ -1929,7 +1983,9 @@
                 { name: '水盾', aliases: ['水盾', '小水盾'] },
                 { name: '東云', aliases: ['東云', '東雲'] },
                 { name: '光埃', aliases: ['光埃', '光唉'] },
-                { name: '光狼', aliases: ['光狼', '天宮'] },
+                { name: '天宮', aliases: ['光狼', '天宮'] },
+                { name: '貓祭', aliases: ['貓娘', '貓祭'] },
+                { name: '小總理', aliases: ['小總理', '利希', '小公主'] },
                 { name: '新角色', aliases: ['新角色'] },
                 { name: '暗熊', aliases: ['暗熊'] }
             ]);
@@ -2625,7 +2681,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert('✅ 歡迎使用 ArkRecode v2.5.1！您的資料將存儲在本機瀏覽器中。');
+                alert('✅ 歡迎使用 ArkRecode v2.5.3！您的資料將存儲在本機瀏覽器中。');
             }, []);
 
             // 拒絕免責聲明
@@ -2662,9 +2718,9 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (dataVersion !== '2.5.1') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.5.1`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.5.1');
+                            if (dataVersion !== '2.5.3') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.5.3`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.5.3');
                             }
                             
                         } catch (parseError) {
@@ -2689,11 +2745,11 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.5.1！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.5.3！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
-                        localStorage.setItem('arkrecode_dataVersion', '2.5.1');
+                        localStorage.setItem('arkrecode_dataVersion', '2.5.3');
                     }
                     
                     if (savedAliases) {
@@ -2841,7 +2897,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    ArkRecode 對戰紀錄器 v2.5.1
+                                    ArkRecode 對戰紀錄器 v2.5.3
                                 </h1>
                                 <div className="flex gap-1">
                                     <button
@@ -2944,6 +3000,9 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 onSortChange={setSortBy}
                                 characterOptions={characterOptions}
                                 convertAlias={convertAlias}
+                                // 新增這兩行
+                                onSetFormData={setFormData}
+                                onSetCurrentView={setCurrentView}
                             />
                         )}
 
@@ -3032,7 +3091,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                                                     result: '勝',
                                                                     rank: '測試排位',
                                                                     opponentName: '測試對手',
-                                                                    notes: `v2.5.1測試 - ${new Date().toLocaleString('zh-TW')}`
+                                                                    notes: `v2.5.3測試 - ${new Date().toLocaleString('zh-TW')}`
                                                                 };
                                                                 uploadToCommunity(testRecord);
                                                                 alert('測試上傳完成！請到您的私人Google Sheets確認');
@@ -3454,17 +3513,51 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                     </div>
                                 </div>
 
+                                {/* 相關工具 */}
+                                <div className="bg-white rounded-lg shadow-lg p-4 mb-4">
+                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                        <IconComponents.FileText className="text-blue-500" size={20} />
+                                        相關工具
+                                    </h2>
+                                    
+                                    <div className="space-y-3">
+                                        <div className="p-4 bg-blue-50 rounded-lg">
+                                            <h3 className="font-medium text-blue-800 mb-2">🔍 角色資料庫</h3>
+                                            <div className="text-sm text-blue-700 space-y-2">
+                                                <p>完整的角色查詢系統，包含:</p>
+                                                <ul className="ml-4 space-y-1 text-xs">
+                                                    <li>• 中英文角色名稱對照</li>
+                                                    <li>• 屬性、職業分類篩選</li>
+                                                    <li>• 角色暱稱搜尋功能</li>
+                                                    <li>• 未來將整合TAG培養系統</li>
+                                                </ul>
+                                            </div>
+                                            <div className="mt-3">
+                                                <a 
+                                                    href="character-db.html"
+                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                                                >
+                                                    <IconComponents.FileText size={16} />
+                                                    前往角色資料庫
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* 版本說明 */}
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        v2.5.1 更新說明
+                                        v2.5.3 更新說明
                                     </h2>
                                     
                                     <div className="space-y-3">
                                         <div className="p-3 bg-green-50 rounded-lg">
-                                            <h4 className="font-medium text-green-800 mb-2">🔧 v2.5.1 新功能與優化</h4>
+                                            <h4 className="font-medium text-green-800 mb-2">🔧 v2.5.3 新功能與優化</h4>
                                             <ul className="text-sm text-green-700 space-y-1">
+                                                <li>• <strong>加快搜尋後紀錄步驟</strong>：優化搜索功能，提升記錄效率</li>
+                                                <li>• <strong>角色資料庫連結</strong>：新增相關工具區塊，快速連結角色資料庫</li>
                                                 <li>• <strong>日期批次刪除</strong>：得以選擇日期批次刪除該日期前(不含)之紀錄</li>
                                                 <li>• <strong>歷史搜索新功能</strong>：輸入對手陣容快速找到相關記錄和我方勝場策略</li>
                                                 <li>• <strong>匹配系統</strong>：自動顯示完全/高度匹配記錄，高亮匹配角色</li>
@@ -3499,12 +3592,12 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">📞 技術資訊</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>版本</strong>：v2.5.1</div>
+                                                <div>• <strong>版本</strong>：v2.5.3</div>
                                                 <div>• <strong>發布日期</strong>：{new Date().toLocaleDateString('zh-TW')}</div>
                                                 <div>• <strong>安全等級</strong>：高度 🛡️</div>
                                                 <div>• <strong>適用環境</strong>：離線使用，私人部署</div>
                                                 <div>• <strong>開發者</strong>：zzas</div>
-                                                <div>• <strong>主要改進</strong>：新增歷史搜索功能與策略推薦</div>
+                                                <div>• <strong>主要改進</strong>：加快搜尋後紀錄步驟，新增角色資料庫連結</div>
                                             </div>
                                         </div>
                                     </div>
@@ -3513,7 +3606,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 對戰紀錄器 v2.5.1 | 離線使用 | 歷史搜索功能 + 策略推薦
+                            ArkRecode 對戰紀錄器 v2.5.3 | 離線使用 | 歷史搜索功能 + 策略推薦
                         </div>
                     </div>
                 </div>
