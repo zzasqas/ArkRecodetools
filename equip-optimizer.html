@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>配裝計算器 - ArkRecode Tools</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{margin:0;padding:0;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect, useCallback, useRef } = React;
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊"};
+const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRate:"生命%",DefenceValue:"防禦",DefenceRate:"防禦%",SpeedValue:"速度",CriticalRate:"爆率",CriticalDamageRate:"爆傷",EffectHitRate:"命中",HitRate:"命中",ResistanceRate:"抗性"};
+const RELIABLE_PFX=new Set(["E010","E016","E022","E028","E034","E038","E040","E041","E087","E200","E300","E302"]);
+const SET_EFFECTS={"速度":{type:"four",effect:{"速度%_base":0.16}},"攻擊":{type:"four",effect:{"攻擊%":0.45}},"爆傷":{type:"four",effect:{"爆傷":0.50}},"生命":{type:"two",effect:{"生命%":0.20}},"防禦":{type:"two",effect:{"防禦%":0.20}},"命中":{type:"two",effect:{"命中":0.20}},"抗性":{type:"two",effect:{"抗性":0.20}},"暴擊":{type:"two",effect:{"爆率":0.12}},"吸血":{type:"four_trait",effect:{}},"免疫":{type:"two_trait",effect:{}},"反擊":{type:"four_trait",effect:{}},"復仇":{type:"four_trait",effect:{}},"貫穿":{type:"two_trait",effect:{}},"夾擊":{type:"two_trait",effect:{}},"暴怒":{type:"four_trait",effect:{}},"創傷":{type:"four_trait",effect:{}}};
+const getSetPcs=n=>{const e=SET_EFFECTS[n];return(!e)?4:(e.type==="two"||e.type==="two_trait")?2:4;};
+const getSetColor=n=>{const p=getSetPcs(n);return p===4?"#F87171":"#4ADE80";};
+const ALL_SETS=Object.keys(SET_EFFECTS);
+const EC={火:"#F87171",水:"#60A5FA",木:"#4ADE80",光:"#FBBF24",暗:"#C084FC"};
+const ELEM_LIST=["⭐","火","水","木","光","暗"];
+const JC={戰士:"#F87171",術師:"#C084FC",狙擊:"#FB923C",先鋒:"#60A5FA",重裝:"#94A3B8",醫療:"#4ADE80"};
+const SK_NON_SPD=["生命","防禦","攻擊","爆率","爆傷","命中","抗性"];
+const SK=["生命","防禦","攻擊","速度","爆率","爆傷","命中","抗性"];
+const SLOTS=["武器","頭盔","鎧甲","項鍊","戒指","鞋子"];
+const PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
+const BREAK_PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
+const DS=()=>({生命:{min:0,max:false,w:0.5},防禦:{min:0,max:false,w:0.3},攻擊:{min:0,max:false,w:0.3},速度:{min:0,spdMax:0,pursueMax:false,spdShoe:false},爆率:{min:0,max:false,w:0.2},爆傷:{min:0,max:false,w:0.1},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}});
+const TEMPLATES=[
+  {name:"🛡️坦克",sets:[],stats:{生命:{min:0,max:true,w:1},防禦:{min:0,max:true,w:0.5},攻擊:{min:0,max:false,w:0},速度:{min:180,spdMax:0,pursueMax:false},爆率:{min:0,max:false,w:0},爆傷:{min:0,max:false,w:0},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}},goal:"坦度"},
+  {name:"💥爆發",sets:["爆傷"],stats:{生命:{min:0,max:false,w:0},防禦:{min:0,max:false,w:0},攻擊:{min:0,max:true,w:0.8},速度:{min:0,spdMax:0,pursueMax:false},爆率:{min:85,max:true,w:1},爆傷:{min:0,max:true,w:0.8},命中:{min:0,max:false,w:0},抗性:{min:0,max:false,w:0}},goal:"傷害"},
+  {name:"🏃極速",sets:["速度"],stats:{生命:{min:0,max:false,w:0.1},防禦:{min:0,max:false,w:0},攻擊:{min:0,max:false,w:0},速度:{min:0,spdMax:0,pursueMax:true},爆率:{min:0,max:false,w:0},爆傷:{min:0,max:false,w:0},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0}},goal:""},
+];
+
+// Mode B defaults
+const MODE_B_GOALS=[
+  {key:"坦度",label:"🛡️ Max 坦度",desc:"生命+防禦×10"},
+  {key:"傷害",label:"⚔️ Max 傷害",desc:"期望傷害值"},
+  {key:"生命",label:"💚 Max 生命",desc:""},
+  {key:"攻擊",label:"🗡️ Max 攻擊",desc:""},
+  {key:"防禦",label:"🛡 Max 防禦",desc:""},
+  {key:"爆傷",label:"💥 Max 爆傷",desc:""},
+  {key:"命中",label:"🎯 Max 命中",desc:""},
+  {key:"抗性",label:"🌿 Max 抗性",desc:""},
+];
+const MODE_B_CONSTRAINT_OPTS=["生命","防禦","攻擊","爆率","爆傷","命中","抗性"];
+const DB=()=>({goal:"坦度",spdMin:0,spdMax:0,spdShoe:false,constraints:[],sets:[]});
+
+// ============================================================
+// BUILT-IN DEMO CHARACTERS (from CSV)
+// ============================================================
+const DEMO_CHARS=[
+  {name:"艾瑞兒",star:5,element:"水",job:"重裝",base_atk:689,base_def:690,base_hp:5647,base_spd:100,bonus_atk:150,bonus_def:62,bonus_hp:759,bonus_spd:0,innate_cr:0,innate_cd:0,innate_hit:0,innate_res:0.18,passive:"生命力%"},
+  {name:"璀璨誓約的露比",star:5,element:"水",job:"重裝",base_atk:671,base_def:648,base_hp:5809,base_spd:106,bonus_atk:150,bonus_def:39,bonus_hp:943,bonus_spd:4,innate_cr:0,innate_cd:0,innate_hit:0.06,innate_res:0,passive:"防禦力%"},
+  {name:"繼任者彌卡伊勒",star:5,element:"水",job:"戰士",base_atk:735,base_def:613,base_hp:5405,base_spd:115,bonus_atk:150,bonus_def:37,bonus_hp:906,bonus_spd:6,innate_cr:0,innate_cd:0,innate_hit:0,innate_res:0,passive:"生命力%"},
+  {name:"奧柏絲蒂恩",star:5,element:"暗",job:"戰士",base_atk:825,base_def:599,base_hp:5769,base_spd:106,bonus_atk:150,bonus_def:53,bonus_hp:1285,bonus_spd:0,innate_cr:0,innate_cd:0,innate_hit:0,innate_res:0,passive:"暴擊率"},
+  {name:"望月",star:5,element:"暗",job:"術師",base_atk:989,base_def:662,base_hp:3950,base_spd:121,bonus_atk:239,bonus_def:0,bonus_hp:420,bonus_spd:4,innate_cr:0.12,innate_cd:0,innate_hit:0,innate_res:0,passive:"暴擊率"},
+  {name:"複製體迪爾德麗",star:4,element:"暗",job:"先鋒",base_atk:907,base_def:462,base_hp:5001,base_spd:111,bonus_atk:231,bonus_def:0,bonus_hp:870,bonus_spd:0,innate_cr:0.08,innate_cd:0,innate_hit:0,innate_res:0,passive:"攻擊力%"}
+];
+
+// ============================================================
+// PARSERS
+// ============================================================
+function parseEquipJSON(raw){
+  // ★ 強化等級 ≤9 的裝備不匯入（屬性太弱，配裝時也不會選到，過濾可簡化裝備庫）
+  return(Array.isArray(raw)?raw:[]).filter(i=>i.LV>9).map(i=>{
+    const sid=i.StaticID||"",pfx=sid.slice(0,-1),last=sid.slice(-1);
+    const me=i.MainProp?.PropertyType||"",mt=PROP_MAP[me]||me,mv=i.MainProp?.Value||0;
+    let slot;
+    if(RELIABLE_PFX.has(pfx)&&"123456".includes(last))slot={1:"武器",2:"頭盔",3:"鎧甲",4:"項鍊",5:"戒指",6:"鞋子"}[last];
+    else if(me==="AttackValue")slot="武器";else if(me==="HPValue")slot="頭盔";else if(me==="DefenceValue")slot="鎧甲";
+    else if(me==="SpeedValue")slot="鞋子";else if(["CriticalRate","CriticalDamageRate"].includes(me))slot="項鍊";
+    else if(["EffectHitRate","ResistanceRate"].includes(me))slot="戒指";else slot="項鍊";
+    const subs={};(i.SubProps?.SourceValues||[]).forEach(s=>{const st=PROP_MAP[s.PropertyType]||s.PropertyType;subs[st]=(subs[st]||0)+s.Value;});
+    return{oid:i._id?.$oid||("m"+Math.random().toString(36).slice(2)),sid,slot,set:SET_MAP[i.Set]||i.Set,lv:i.LV,mt,mv,subs};
+  });
+}
+function parseCharCSV(text){
+  // 過濾空行和 version: 開頭的備註行
+  const lines=text.split(/\r?\n/).filter(l=>l.trim()&&!/^version[:\s]/i.test(l.trim()));
+  if(lines.length<2)return[];
+  return lines.slice(1).map(line=>{
+    const c=line.split(",");if(c.length<16)return null;
+    const rawCr=+c[16]||0,rawCd=+c[17]||0;
+    return{name:c[0],star:+c[1],element:c[2],job:c[3],
+      base_atk:+c[4],base_def:+c[5],base_hp:+c[6],base_spd:+c[7],
+      bonus_atk:+c[8],bonus_def:+c[9],bonus_hp:+c[10],bonus_spd:+c[11],
+      innate_cr:(rawCr-15)/100,innate_cd:(rawCd-150)/100,
+      innate_hit:(+c[18]||0)/100,innate_res:(+c[19]||0)/100,
+      passive:(c.slice(20)||[]).join(",").replace(/"/g,"").trim()};
+  }).filter(Boolean);
+}
+
+// ============================================================
+// CALC
+// ============================================================
+function calcSetBonus(equips){
+  const cnt={};equips.forEach(e=>{cnt[e.set]=(cnt[e.set]||0)+1;});
+  const bonus={},active=[];
+  Object.entries(cnt).forEach(([sn,c])=>{
+    const ef=SET_EFFECTS[sn];if(!ef)return;
+    if((ef.type==="four"||ef.type==="four_trait")&&c>=4){Object.entries(ef.effect).forEach(([k,v])=>{bonus[k]=(bonus[k]||0)+v;});active.push(sn+"(4)");}
+    else if(ef.type==="two"||ef.type==="two_trait"){const p=Math.floor(c/2);Object.entries(ef.effect).forEach(([k,v])=>{bonus[k]=(bonus[k]||0)+v*p;});for(let i=0;i<p;i++)active.push(sn+"(2)");}
+  });return{bonus,active};
+}
+function calcFinal(char,equips,bondAtk=0,bondHp=0,breakBonus={}){
+  const t={};
+  equips.forEach(eq=>{t[eq.mt]=(t[eq.mt]||0)+eq.mv;Object.entries(eq.subs).forEach(([k,v])=>{t[k]=(t[k]||0)+v;});});
+  const{bonus,active}=calcSetBonus(equips);
+  Object.entries(breakBonus).forEach(([k,v])=>{t[k]=(t[k]||0)+v;});
+  const pA=(t["攻擊%"]||0)+(bonus["攻擊%"]||0);
+  const pD=(t["防禦%"]||0)+(bonus["防禦%"]||0);
+  const pH=(t["生命%"]||0)+(bonus["生命%"]||0);
+  const sPct=bonus["速度%_base"]||0;
+  const atk=Math.floor(char.base_atk*(1+pA)+char.bonus_atk+(t["攻擊"]||0)+bondAtk);
+  const def=Math.floor(char.base_def*(1+pD)+char.bonus_def+(t["防禦"]||0));
+  const hp=Math.floor(char.base_hp*(1+pH)+char.bonus_hp+(t["生命"]||0)+bondHp);
+  const spd=Math.floor(char.base_spd*(1+sPct)+char.bonus_spd+(t["速度"]||0));
+  const cr=Math.floor((0.15+char.innate_cr+(t["爆率"]||0)+(bonus["爆率"]||0))*1000)/10;
+  const cd=Math.floor((1.5+char.innate_cd+(t["爆傷"]||0)+(bonus["爆傷"]||0))*1000)/10;
+  const hit=Math.floor((char.innate_hit+(t["命中"]||0)+(bonus["命中"]||0))*1000)/10;
+  const res=Math.floor((char.innate_res+(t["抗性"]||0)+(bonus["抗性"]||0))*1000)/10;
+  const tank=Math.floor(hp+def*10);
+  // ★ 傷害指數：期望傷害，爆率依機率加權
+  const crRate=Math.min(cr,100)/100;
+  const dmg=Math.floor(atk*(crRate*(cd/100)+(1-crRate)*1));
+  return{攻擊:atk,防禦:def,生命:hp,速度:spd,爆率:cr,爆傷:cd,命中:hit,抗性:res,套裝:active,坦度:tank,傷害指數:dmg};
+}
+
+// ============================================================
+// HIGHLIGHTS
+// ============================================================
+function getHighlights(stats,allStats){
+  const tags=[];
+  const keys=["攻擊","生命","防禦","速度","爆率","爆傷","命中","抗性","坦度","傷害指數"];
+  const labels={攻擊:"最高攻擊",生命:"最高生命",防禦:"最高防禦",速度:"最快速度",爆率:"最高爆率",爆傷:"最高爆傷",命中:"最高命中",抗性:"最高抗性",坦度:"最大坦度",傷害指數:"最高傷害"};
+  const colors={攻擊:"#F87171",生命:"#4ADE80",防禦:"#60A5FA",速度:"#FBBF24",爆率:"#FB923C",爆傷:"#F87171",命中:"#A78BFA",抗性:"#34D399",坦度:"#FBBF24",傷害指數:"#F87171"};
+  keys.forEach(k=>{
+    const myVal=stats[k]??0;
+    const maxVal=Math.max(...allStats.map(s=>s[k]??0));
+    const minVal=Math.min(...allStats.map(s=>s[k]??0));if(allStats.length>1&&myVal===maxVal&&myVal>0&&maxVal!==minVal)tags.push({label:labels[k],color:colors[k],key:k});
+  });
+  return tags.slice(0,3);
+}
+
+// ============================================================
+// OPTIMIZER — async time-sliced (non-blocking UI)
+// ============================================================
+function buildCandidates(char,allEquips,config){
+  const{constraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],excludedIds=new Set(),topK=8,goalType="",spdShoe=false,isModeB=false}=config;
+  const reqCounts={};requiredSets.forEach(s=>{reqCounts[s]=(reqCounts[s]||0)+getSetPcs(s);});
+  const bySlot={};SLOTS.forEach(s=>{bySlot[s]=[];});
+  allEquips.forEach(eq=>{if(!excludedIds.has(eq.oid)&&bySlot[eq.slot])bySlot[eq.slot].push(eq);});
+  if(spdShoe)bySlot["鞋子"]=bySlot["鞋子"].filter(e=>e.mt==="速度");
+  for(const slot of SLOTS){
+    if(!bySlot[slot].length)return{error:`沒有「${slot}」部位的裝備，無法配裝`};
+  }
+
+  const scoreEqForCandidate=eq=>{
+    const s={[eq.mt]:eq.mv};Object.entries(eq.subs).forEach(([k,v])=>{s[k]=(s[k]||0)+v;});
+    let sc=0;
+      // ★ 乘數設計目標：w=1 時，一件頂尖裝備（副屬全壓最高值）得分約 1000
+    //   依副屬實測範圍（Legendary 5次全壓上限）正規化：
+    //   速度上限≈20（max roll 4，×5次）→ ×50  爆率上限≈25% → ×40  爆傷上限≈35% → ×30
+    //   命中/抗性上限≈40% → ×25  攻固上限≈230 → ×4.5  防固上限≈175 → ×6  血固上限≈1010 → ×1
+    Object.entries(opt).forEach(([tgt,w])=>{if(w<=0)return;
+      if(tgt==="生命"){sc+=(s["生命"]||0)*w;sc+=(s["生命%"]||0)*char.base_hp*w;}
+      else if(tgt==="防禦"){sc+=(s["防禦"]||0)*w*6;sc+=(s["防禦%"]||0)*char.base_def*w*6;}
+      else if(tgt==="攻擊"){sc+=(s["攻擊"]||0)*w*4.5;sc+=(s["攻擊%"]||0)*char.base_atk*w*4.5;}
+      else if(tgt==="速度")sc+=(s["速度"]||0)*w*50;
+      else if(tgt==="爆率")sc+=(s["爆率"]||0)*w*40;
+      else if(tgt==="爆傷")sc+=(s["爆傷"]||0)*w*30;
+      else if(tgt==="命中")sc+=(s["命中"]||0)*w*25;
+      else if(tgt==="抗性")sc+=(s["抗性"]||0)*w*25;
+    });
+    if(goalType==="傷害"){sc+=(s["攻擊"]||0)*3;sc+=(s["攻擊%"]||0)*char.base_atk*3;sc+=(s["爆率"]||0)*30;sc+=(s["爆傷"]||0)*20;}
+    if(goalType==="坦度"){sc+=(s["生命"]||0)*0.5;sc+=(s["生命%"]||0)*char.base_hp*0.5;sc+=(s["防禦"]||0)*4;sc+=(s["防禦%"]||0)*char.base_def*4;}
+    if(goalType==="生命"){sc+=(s["生命"]||0)*1;sc+=(s["生命%"]||0)*char.base_hp*1;}
+    if(goalType==="攻擊"){sc+=(s["攻擊"]||0)*4.5;sc+=(s["攻擊%"]||0)*char.base_atk*4.5;}
+    if(goalType==="防禦"){sc+=(s["防禦"]||0)*6;sc+=(s["防禦%"]||0)*char.base_def*6;}
+    if(goalType==="爆傷"){sc+=(s["爆傷"]||0)*30;}
+    if(goalType==="命中"){sc+=(s["命中"]||0)*25;}
+    if(goalType==="抗性"){sc+=(s["抗性"]||0)*25;}
+    // Boost for required set membership
+    if(reqCounts[eq.set]){const ef=SET_EFFECTS[eq.set];
+      if(ef){Object.entries(ef.effect).forEach(([ek,ev])=>{if(ek==="生命%")sc+=ev*char.base_hp*0.5;else if(ek==="防禦%")sc+=ev*char.base_def*2.5;else if(ek==="攻擊%")sc+=ev*char.base_atk*0.5;});}
+      if(ef?.type?.includes("trait"))sc+=5000;
+    }else if(SET_EFFECTS[eq.set]?.type==="two"){const ef=SET_EFFECTS[eq.set];
+      Object.entries(ef.effect).forEach(([ek,ev])=>{if(ek==="生命%"&&(opt["生命"]||0)>0)sc+=ev*char.base_hp*0.15;if(ek==="防禦%"&&(opt["防禦"]||0)>0)sc+=ev*char.base_def*0.8;});
+    }
+    return sc;
+  };
+
+  const numConstraints=Object.keys(constraints).length+(spdMax>0?1:0)+Object.keys(reqCounts).length;
+  const poolSize=isModeB?Math.max(30,numConstraints>=3?20:numConstraints>=2?14:topK):Math.max(topK,numConstraints>=3?20:numConstraints>=2?14:topK);
+
+  const candidates={};
+  SLOTS.forEach(slot=>{
+    const all=bySlot[slot];
+    const sorted=all.slice().sort((a,b)=>scoreEqForCandidate(b)-scoreEqForCandidate(a));
+    const combined=sorted.slice(0,poolSize);
+    const seen=new Set(combined.map(e=>e.oid));
+    if(Object.keys(reqCounts).length){
+      // ★ 按套裝分組，每個必要套裝在此 slot 各補前 N 件（確保每個 slot 都有足夠的套裝裝備進池）
+      //   原邏輯 slice(0,6) 是全局取前6，可能6件都在同一個 slot，其他 slot 的套裝裝備就沒進池
+      const setNeed={};
+      Object.entries(reqCounts).forEach(([setName,need])=>{
+        // 4件套需要每 slot 至少4件候選，2件套至少2件
+        setNeed[setName]=need>=4?8:4;
+      });
+      Object.entries(setNeed).forEach(([setName,n])=>{
+        all.filter(e=>e.set===setName).sort((a,b)=>scoreEqForCandidate(b)-scoreEqForCandidate(a)).slice(0,n)
+          .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+      });
+    }
+    const statGetters={
+      速度:e=>(e.subs["速度"]||0)+(e.mt==="速度"?e.mv:0),
+      命中:e=>(e.subs["命中"]||0)+(e.mt==="命中"?e.mv:0),
+      防禦:e=>(e.subs["防禦"]||0)+(e.subs["防禦%"]||0)*char.base_def+(e.mt==="防禦"?e.mv:0)+(e.mt==="防禦%"?e.mv*char.base_def:0),
+      生命:e=>(e.subs["生命"]||0)+(e.subs["生命%"]||0)*char.base_hp+(e.mt==="生命"?e.mv:0)+(e.mt==="生命%"?e.mv*char.base_hp:0),
+      爆率:e=>(e.subs["爆率"]||0)+(e.mt==="爆率"?e.mv:0),
+      爆傷:e=>(e.subs["爆傷"]||0)+(e.mt==="爆傷"?e.mv:0),
+    };
+    const guaranteeN={速度:6,命中:4,防禦:5,生命:4,爆率:4,爆傷:4};
+    Object.keys(constraints).forEach(stat=>{
+      const getter=statGetters[stat];if(!getter)return;
+      all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,guaranteeN[stat]||4)
+        .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+    });
+    if(hasSpdConstraint||spdPursueMax){
+      const getter=statGetters["速度"];
+      // High-speed equips for reaching spdMin / pursueMax
+      // 注意：只設 spdMax（無 spdMin）時這批高速裝備仍會進池，
+      // 但後續 pruning 會靠 slotMinSpd 做上界剪枝過濾，候選池效率略低但結果仍正確。
+      // 若未來想精確優化，可改為 (spdPursueMax || spdMinVal > 0) 才補高速。
+      all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,6)
+        .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+      // ★ Low-speed equips for staying under spdMax
+      if(spdMax>0){
+        all.slice().sort((a,b)=>getter(a)-getter(b)).slice(0,4)
+          .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+      }
+    }
+    // ★ Mode B 單目標：確保目標屬性最高的裝備進池
+    //   goalType 驅動排序，scoreEqForCandidate 對某些屬性加分偏低，需額外補充
+    if(goalType&&["生命","防禦","爆率","爆傷","命中","抗性"].includes(goalType)){
+      const getter=statGetters[goalType];
+      if(getter){
+        all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,6)
+          .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+      }
+    }
+    if(goalType==="攻擊"){
+      // 攻擊需同時考慮攻擊固定值和攻擊%主屬
+      ['攻擊','攻擊%'].forEach(mt=>{
+        all.filter(e=>e.mt===mt).sort((a,b)=>scoreEqForCandidate(b)-scoreEqForCandidate(a)).slice(0,6)
+          .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+      });
+      const getter=statGetters["攻擊"];
+      if(getter) all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,6)
+        .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+    }
+    candidates[slot]=combined;
+  });
+
+  // Pre-compute per-equip speed contribution for fast pruning
+  const eqSpd=new Map();
+  SLOTS.forEach(slot=>{candidates[slot].forEach(eq=>{
+    eqSpd.set(eq,(eq.subs["速度"]||0)+(eq.mt==="速度"?eq.mv:0));
+  });});
+
+  // Pre-compute per-slot max speed for upper-bound pruning
+  const slotMaxSpd=SLOTS.map(s=>Math.max(...candidates[s].map(e=>eqSpd.get(e)||0)));
+  // Pre-compute per-slot min speed for lower-bound pruning (spdMax)
+  const slotMinSpd=SLOTS.map(s=>Math.min(...candidates[s].map(e=>eqSpd.get(e)||0)));
+
+  return{candidates,reqCounts,eqSpd,slotMaxSpd,slotMinSpd};
+}
+
+function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef,progressCb,onDone,maxTime=75000){
+  const{constraints={},upperConstraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],topK=8,goalType=""}=config;
+  // Show preparing message immediately
+  if(progressCb)progressCb({checked:0,total:1,found:0,elapsed:0,phase:"建立候選池..."});
+  // Defer heavy work to next tick so UI can render the message
+  setTimeout(()=>{
+    if(!cancelRef.current){onDone({results:[],checked:0,poolInfo:{},cancelled:true});return;}
+    const prep=buildCandidates(char,allEquips,config);
+    if(prep.error){onDone({results:[],checked:0,error:prep.error});return;}
+    const{candidates,reqCounts,eqSpd,slotMaxSpd,slotMinSpd}=prep;
+
+  const spdBase=char.base_spd+char.bonus_spd;
+  // With speed set bonus, max possible addition is 16%
+  const spdSetMax=Math.ceil(char.base_spd*0.16);
+  const pool=SLOTS.map(s=>candidates[s]);
+  const totalEst=pool.reduce((a,p)=>a*p.length,1);
+  const poolInfo=SLOTS.reduce((acc,s)=>{acc[s]=candidates[s].length;return acc;},{});
+  const results=[];
+  let checked=0,minScore=-Infinity,totalFound=0;
+  const startTime=Date.now();
+
+  // Flatten outer loop indices for time-slicing
+  const n0=pool[0].length;
+  let i0=0;
+  const BATCH_TIME=40; // ms per batch, then yield to UI
+
+  function scoreFn(stats){
+    let score=0;
+
+    if(goalType==="傷害")score+=stats.傷害指數*2;
+    else if(goalType==="坦度")score+=stats.坦度*2;
+    else if(goalType==="生命")score+=stats.生命*2;
+    else if(goalType==="攻擊")score+=stats.攻擊*2;
+    else if(goalType==="防禦")score+=stats.防禦*20;
+    else if(goalType==="爆傷")score+=stats.爆傷*10;
+    else if(goalType==="命中")score+=stats.命中*10;
+    else if(goalType==="抗性")score+=stats.抗性*10;
+    Object.entries(opt).forEach(([tgt,w])=>{if(w<=0)return;
+      if(tgt==="生命")score+=stats.生命*w;
+      else if(tgt==="防禦")score+=stats.防禦*w*10;
+      else if(tgt==="攻擊")score+=stats.攻擊*w;
+      else if(tgt==="速度"){
+        if(spdPursueMax){score+=stats.速度*w*100;}
+        else if(hasSpdConstraint){score+=Math.min(stats.速度,spdMinVal||spdMax||stats.速度)*w*100;}
+        else{score+=stats.速度*w*100;}
+      }
+      else if(tgt==="爆率")score+=stats.爆率*w*10;
+      else if(tgt==="爆傷")score+=stats.爆傷*w*5;
+      else if(tgt==="命中")score+=stats.命中*w*10;
+      else if(tgt==="抗性")score+=stats.抗性*w*5;
+    });
+    // ★ 零權重屬性微扣分：權重設0表示「不需要此屬性」
+    //   裝備的此類屬性佔用了副屬欄位卻對配裝目標無貢獻，視作輕微浪費
+    //   扣分比例很小（約等效0.02~0.05的權重），不影響主要排序邏輯，只在分數接近時偏好更純粹的配裝
+    if(Object.keys(opt).length>0){
+      const ZERO_PENALTY={生命:0.02,防禦:0.2,攻擊:0.02,爆率:0.2,爆傷:0.1,命中:0.2,抗性:0.1};
+      Object.entries(opt).forEach(([tgt,w])=>{
+        if(w>0)return;
+        const pen=ZERO_PENALTY[tgt];if(!pen)return;
+        const val=stats[tgt]||0;if(val<=0)return;
+        // 正規化基準依副屬實測上限（5次全壓 Legendary）
+        const base={生命:1010,防禦:175,攻擊:230,爆率:25,爆傷:35,命中:40,抗性:40}[tgt]||1;
+        score-=(val/base)*pen*10;
+      });
+    }
+    return score;
+  }
+
+  const reqCountEntries=Object.entries(reqCounts);
+  const constraintEntries=Object.entries(constraints);
+  const hasReqSets=reqCountEntries.length>0;
+
+  function runBatch(){
+    if(!cancelRef.current||i0>=n0){
+      const cancelled=!cancelRef.current;
+      onDone({results,checked,poolInfo,cancelled,totalFound});
+      return;
+    }
+    const batchStart=Date.now();
+    while(i0<n0&&cancelRef.current){
+      const e0=pool[0][i0];
+      const s0=eqSpd.get(e0)||0;
+      for(let i1=0;i1<pool[1].length;i1++){
+        const e1=pool[1][i1];
+        const s01=s0+(eqSpd.get(e1)||0);
+        for(let i2=0;i2<pool[2].length;i2++){
+          const e2=pool[2][i2];
+          const s012=s01+(eqSpd.get(e2)||0);
+
+          // ★ Speed upper-bound pruning: remaining 3 slots can add at most slotMaxSpd[3]+[4]+[5]
+          if(spdMinVal>0){
+            const bestPossibleSpd=spdBase+s012+slotMaxSpd[3]+slotMaxSpd[4]+slotMaxSpd[5]+spdSetMax;
+            if(bestPossibleSpd<spdMinVal)continue;
+          }
+          // ★ Speed lower-bound pruning (too fast): remaining slots add at least slotMinSpd
+          if(spdMax>0){
+            const slowestPossible=spdBase+s012+slotMinSpd[3]+slotMinSpd[4]+slotMinSpd[5];
+            if(slowestPossible>spdMax+spdSetMax+5)continue;
+          }
+
+          for(let i3=0;i3<pool[3].length;i3++){
+            const e3=pool[3][i3];
+            const s0123=s012+(eqSpd.get(e3)||0);
+
+            // ★ Tighter prune with 2 slots remaining
+            if(spdMinVal>0){
+              const bestSpd2=spdBase+s0123+slotMaxSpd[4]+slotMaxSpd[5]+spdSetMax;
+              if(bestSpd2<spdMinVal)continue;
+            }
+            if(spdMax>0){
+              const slowest2=spdBase+s0123+slotMinSpd[4]+slotMinSpd[5];
+              if(slowest2>spdMax+spdSetMax+5)continue;
+            }
+
+            for(let i4=0;i4<pool[4].length;i4++){
+              const e4=pool[4][i4];
+              const s01234=s0123+(eqSpd.get(e4)||0);
+
+              // ★ Prune with 1 slot remaining
+              if(spdMinVal>0){
+                const bestSpd1=spdBase+s01234+slotMaxSpd[5]+spdSetMax;
+                if(bestSpd1<spdMinVal)continue;
+              }
+              // Upper bound prune (too fast)
+              if(spdMax>0){
+                const minSpd1=spdBase+s01234; // even if last slot adds 0 speed
+                if(minSpd1>spdMax+spdSetMax+10)continue;
+              }
+
+              for(let i5=0;i5<pool[5].length;i5++){
+                const e5=pool[5][i5];
+                checked++;
+                const combo=[e0,e1,e2,e3,e4,e5];
+
+                // Speed raw prune
+                if(hasSpdConstraint||spdPursueMax){
+                  const rawSpd=spdBase+s01234+(eqSpd.get(e5)||0);
+                  if(spdMinVal>0&&rawSpd<spdMinVal-spdSetMax-2)continue;
+                  if(spdMax>0&&rawSpd>spdMax+spdSetMax+10)continue;
+                }
+                // Required sets check
+                if(hasReqSets){
+                  const sc={};for(let ci=0;ci<6;ci++)sc[combo[ci].set]=(sc[combo[ci].set]||0)+1;
+                  let ok=true;for(const[sn,need]of reqCountEntries)if((sc[sn]||0)<need){ok=false;break;}
+                  if(!ok)continue;
+                }
+                const stats=calcFinal(char,combo,bondAtk,bondHp,breakBonus);
+                // Hard lower constraints (≥)
+                let fail=false;
+                for(const[k,v]of constraintEntries)if((stats[k]||0)<v){fail=true;break;}
+                if(fail)continue;
+                if(spdMax>0&&stats.速度>spdMax)continue;
+                // Hard upper constraints (≤)
+                const upperEntries=Object.entries(upperConstraints);
+                if(upperEntries.length>0){
+                  let failU=false;
+                  for(const[k,v]of upperEntries)if((stats[k]||0)>v){failU=true;break;}
+                  if(failU)continue;
+                }
+
+                const score=scoreFn(stats);
+                totalFound++;
+                if(results.length>=topK&&score<=minScore)continue;
+                results.push({combo,stats,score});
+                results.sort((a,b)=>b.score-a.score);
+                if(results.length>topK)results.length=topK;
+                minScore=results.length>0?results[results.length-1].score:-Infinity;
+              }
+            }
+          }
+        }
+      }
+      i0++;
+
+      // Check time budget — yield if exceeded
+      if(Date.now()-batchStart>BATCH_TIME)break;
+    }
+
+    // Report progress & schedule next batch
+    const elapsed=Date.now()-startTime;
+
+    // ★ Time-decay: auto-stop logic
+    if(elapsed>60000&&results.length>=3){
+      if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:`已找到 ${totalFound} 組合格（60s 提前結束）`});
+      onDone({results,checked,poolInfo,cancelled:false,timedOut:true,totalFound});
+      return;
+    }
+    if(elapsed>maxTime){
+      if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:"超時自動停止"});
+      onDone({results,checked,poolInfo,cancelled:false,timedOut:true,totalFound});
+      return;
+    }
+
+    if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:elapsed>30000?`搜索中（${Math.floor(elapsed/1000)}s，將於75s自動停止）`:"搜索中"});
+
+    if(i0<n0&&cancelRef.current){
+      setTimeout(runBatch,0);
+    }else{
+      const cancelled=!cancelRef.current;
+      onDone({results,checked,poolInfo,cancelled,totalFound});
+    }
+  }
+
+  // Emit pool info and start first batch
+  if(progressCb)progressCb({checked:0,total:totalEst,found:0,totalFound:0,elapsed:0,phase:`候選池就緒（${Object.values(poolInfo).join("×")}），開始搜索...`});
+  setTimeout(runBatch,0);
+  },0); // end of deferred setTimeout
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+const fN=n=>n!=null?Math.floor(n).toLocaleString():"0";
+const fP=n=>`${n!=null?Math.floor(n*10)/10:0}%`;
+const fS=(k,v)=>["爆率","爆傷","命中","抗性"].includes(k)?fP(v):k==="速度"?String(Math.floor(v??0)):fN(v);
+const fE=(k,v)=>["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(k)?`${Math.floor((v??0)*100)}%`:String(Math.floor(v??0));
+const Bg=({children,color="#6B7280"})=><span className="px-1.5 py-0.5 rounded text-[12px] font-bold" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
+const fmtSubs=subs=>Object.entries(subs).map(([k,v])=>`${k}${fE(k,v)}`).join("  ·  ");
+
+// ============================================================
+// APP
+// ============================================================
+function App(){
+  const[chars,setChars]=useState(DEMO_CHARS);
+  const[equips,setEquips]=useState([]);
+  const[selChar,setSelChar]=useState(null);
+  const[elemTab,setElemTab]=useState("水");
+  const[search,setSearch]=useState("");
+  const[favs,setFavs]=useState(["望月"]);
+  const[hidden,setHidden]=useState(DEMO_CHARS.filter(c=>c.star<=4).map(c=>c.name));
+  const[showHid,setShowHid]=useState(false);
+  const[bondAtk,setBondAtk]=useState(0);
+  const[bondHp,setBondHp]=useState(0);
+  const[breaks,setBreaks]=useState([]);
+  const[sc,setSc]=useState(DS);
+  const[selSets,setSelSets]=useState([]);
+  const[res,setRes]=useState(null);
+  const[running,setRunning]=useState(false);
+  const[runError,setRunError]=useState(null);
+  const[locked,setLocked]=useState({});
+  const[tab,setTab]=useState("config");
+  const[eqF,setEqF]=useState({slot:"",set:"",q:"",sort:""});
+  const[newEq,setNewEq]=useState(false);
+  const[showHelp,setShowHelp]=useState(false);
+  const[progress,setProgress]=useState(null);
+  const[calcMode,setCalcMode]=useState("A"); // "A" or "B"
+  const[mb,setMb]=useState(DB()); // Mode B state
+  const[tipIdx,setTipIdx]=useState(null);
+  const[lockErr,setLockErr]=useState("");
+  const[searchDur,setSearchDur]=useState(75); // 30 / 75 / 180 秒
+  const[navOpen,setNavOpen]=useState(false); // hamburger menu
+  const cancelRef=useRef(true);
+  const resultRefs=useRef({});
+  const lockedCharRefs=useRef({});
+
+  // ★ 角色切換時儲存/載入 Mode A 設定（sc 權重 + selSets 套裝）
+  const saveCharConfig=useCallback((charName)=>{
+    if(!charName)return;
+    try{localStorage.setItem(`arkrecode_charConfig_${charName}`,JSON.stringify({sc,selSets}));}catch(e){}
+  },[sc,selSets]);
+
+  const loadCharConfig=useCallback((charName)=>{
+    if(!charName)return;
+    try{
+      const raw=localStorage.getItem(`arkrecode_charConfig_${charName}`);
+      if(raw){const{sc:s,selSets:ss}=JSON.parse(raw);if(s)setSc(s);if(ss)setSelSets(ss);}
+    }catch(e){}
+  },[]);
+
+  // ★ 自動從 repo 載入 chars.csv，版本不同時靜默更新
+  //   CSV 第一列第一欄若包含 "version:" 則視為版本號（如 version:20260312）
+  //   localStorage key: arkrecode_chars_version / arkrecode_chars_data
+  useEffect(()=>{
+    const CACHE_KEY="arkrecode_chars_data";
+    const VER_KEY="arkrecode_chars_version";
+    async function tryFetch(){
+      try{
+        const res=await fetch("./chars.csv?_="+Date.now());
+        if(!res.ok)return;
+        const text=await res.text();
+        const firstLine=text.split(/\r?\n/)[0]||"";
+        const verMatch=firstLine.match(/version[:\s]+([^\s,]+)/i);
+        const remoteVer=verMatch?verMatch[1]:"";
+        const localVer=localStorage.getItem(VER_KEY)||"";
+        if(remoteVer&&remoteVer===localVer){
+          // 版本相同，從快取載入
+          const cached=localStorage.getItem(CACHE_KEY);
+          if(cached){const parsed=JSON.parse(cached);if(parsed.length){setChars(parsed);setHidden(parsed.filter(c=>c.star<=4).map(c=>c.name));return;}}
+        }
+        // 版本不同或無快取，解析並儲存
+        const parsed=parseCharCSV(text);
+        if(parsed.length){
+          setChars(parsed);setHidden(parsed.filter(c=>c.star<=4).map(c=>c.name));
+          try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));if(remoteVer)localStorage.setItem(VER_KEY,remoteVer);}catch(e){}
+        }
+      }catch(e){/* fetch 失敗（本地開發/無網路）沿用 DEMO_CHARS */}
+    }
+    tryFetch();
+  },[]);
+
+  useEffect(()=>{setBreaks([]);},[selChar?.name]);
+
+  const tsp=calcMode==="A"?selSets.reduce((a,s)=>a+getSetPcs(s),0):mb.sets.reduce((a,s)=>a+getSetPcs(s),0);
+  const tspSets=calcMode==="A"?selSets:mb.sets;
+  const setTspSets=calcMode==="A"?setSelSets:(fn)=>setMb(m=>({...m,sets:typeof fn==="function"?fn(m.sets):fn}));
+  const breakBonus=useMemo(()=>{const b={};breaks.forEach(({prop,val})=>{if(prop&&val)b[prop]=(b[prop]||0)+val;});return b;},[breaks]);
+  // lockedIds：排除其他角色的裝備，同角色方案內裝備不排除（可重複鎖定比較）
+  const lockedIds=useMemo(()=>{
+    const ids=new Set();
+    Object.entries(locked).forEach(([charName,data])=>{
+      if(charName===selChar?.name)return;
+      (data.plans||[]).forEach(plan=>plan.eids?.forEach(id=>ids.add(id)));
+    });
+    return ids;
+  },[locked,selChar]);
+
+  const fChars=useMemo(()=>{
+    let list=chars;if(!showHid)list=list.filter(c=>!hidden.includes(c.name));
+    if(search){const q=search.toLowerCase();list=list.filter(c=>c.name.toLowerCase().includes(q));}
+    if(elemTab==="⭐")list=list.filter(c=>favs.includes(c.name));
+    else if(elemTab)list=list.filter(c=>c.element===elemTab);
+    return list.sort((a,b)=>{const af=favs.includes(a.name)?0:1,bf=favs.includes(b.name)?0:1;if(af!==bf)return af-bf;return b.star-a.star;});
+  },[chars,search,elemTab,favs,hidden,showHid]);
+
+  const fEquips=useMemo(()=>{
+    let l=equips;if(eqF.slot)l=l.filter(e=>e.slot===eqF.slot);if(eqF.set)l=l.filter(e=>e.set===eqF.set);
+    if(eqF.q){const q=eqF.q.toLowerCase();l=l.filter(e=>e.mt.includes(q)||e.set.includes(q)||Object.keys(e.subs).some(k=>k.includes(q)));}
+    if(eqF.sort){
+      const k=eqF.sort;
+      l=[...l].sort((a,b)=>{
+        const va=a.subs[k]||0;
+        const vb=b.subs[k]||0;
+        return vb-va;
+      });
+    }
+    return l;
+  },[equips,eqF]);
+
+  const allHighlights=useMemo(()=>{
+    if(!res?.results?.length)return[];
+    const allStats=res.results.map(r=>r.stats);
+    return res.results.map(r=>getHighlights(r.stats,allStats));
+  },[res]);
+
+  // Collect all unique highlights across results for quick-jump
+  // Always show speed; expand related stats based on goal
+  const uniqueHighlights=useMemo(()=>{
+    if(!allHighlights.length||!res?.results?.length)return[];
+    // Always-show keys
+    const activeKeys=new Set(["速度"]);
+    if(calcMode==="B"){
+      const g=mb.goal;
+      if(g==="坦度"){activeKeys.add("坦度");activeKeys.add("生命");activeKeys.add("防禦");}
+      else if(g==="傷害"){activeKeys.add("傷害指數");activeKeys.add("攻擊");activeKeys.add("爆傷");}
+      else if(g==="生命"||g==="防禦"){activeKeys.add(g);activeKeys.add("坦度");}
+      else if(g==="攻擊"){activeKeys.add("攻擊");activeKeys.add("傷害指數");activeKeys.add("爆傷");}
+      else if(g==="爆傷"){activeKeys.add("爆傷");activeKeys.add("傷害指數");activeKeys.add("攻擊");}
+      else activeKeys.add(g);
+      mb.constraints.forEach(c=>{if(c.stat&&c.val>0)activeKeys.add(c.stat);});
+    }else{
+      Object.entries(sc).forEach(([k,v])=>{
+        if(k==="速度")return;
+        if(v.max||v.w>0.3)activeKeys.add(k);
+        if((k==="生命"||k==="防禦")&&(v.max||v.w>0.3))activeKeys.add("坦度");
+        if((k==="攻擊"||k==="爆傷")&&(v.max||v.w>0.3))activeKeys.add("傷害指數");
+      });
+    }
+    const allStats=res.results.map(r=>r.stats);
+    const map={};
+    allHighlights.forEach((hs,idx)=>{
+      hs.forEach(h=>{
+        if(activeKeys.has(h.key)&&!map[h.key]){
+          const val=allStats[idx][h.key];
+          map[h.key]={...h,idx,val};
+        }
+      });
+    });
+    return Object.values(map);
+  },[allHighlights,calcMode,mb,sc,res]);
+
+  const scrollToResult=(idx)=>{
+    const el=resultRefs.current[idx];
+    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+
+  const run=useCallback(()=>{
+    if(!selChar){setRunError("請先選擇角色");return;}
+    if(!equips.length){setRunError("請先匯入裝備");return;}
+    setRunning(true);setRes(null);setRunError(null);setTab("results");
+    cancelRef.current=true;
+    setProgress({checked:0,total:1,found:0,elapsed:0,phase:"準備候選池..."});
+    const _ba=bondAtk,_bh=bondHp,_bb={...breakBonus},_ch={...selChar},_eq=[...equips],_li=new Set(lockedIds);
+
+    setTimeout(()=>{
+      if(!cancelRef.current){setRunning(false);setProgress(null);return;}
+      let config;
+
+      if(calcMode==="B"){
+        // ── Mode B: pure constraint + single goal ──
+        // ★ 單位說明：速度填整數(如 170)；爆率/爆傷/命中/抗性填最終%值(如 85 = 85%)
+        //   calcFinal 回傳的 cr/cd/hit/res 已是乘以100後的%數值，與 constraints 比較單位一致。
+        //   若未來修改 calcFinal 輸出格式，constraints 的輸入值需一併調整。
+        const constraints={};
+        const upperConstraints={};
+        const _mb={...mb};
+        if(_mb.spdMin>0)constraints["速度"]=_mb.spdMin;
+        _mb.constraints.forEach(c=>{
+          if(c.stat&&c.val>0){
+            if(c.dir==="≤") upperConstraints[c.stat]=c.val;
+            else constraints[c.stat]=c.val;
+          }
+        });
+        // Score = purely the goal stat, speed never scores
+        const optT={};
+        // goalType drives scoreFn inside optimizeAsync
+        config={
+          constraints,
+          upperConstraints,
+          spdMax:_mb.spdMax||0,
+          spdMinVal:_mb.spdMin||0,
+          hasSpdConstraint:(_mb.spdMin>0)||(_mb.spdMax>0),
+          spdPursueMax:false,
+          optimize:optT, // empty — scoring is purely by goalType
+          requiredSets:_mb.sets,
+          excludedIds:_li,
+          topK:8,
+          goalType:_mb.goal,
+          spdShoe:_mb.spdShoe||false,
+          isModeB:true,
+        };
+      }else{
+        // ── Mode A: original weighted ──
+        const _sc={...sc},_ss=[...selSets];
+        const constraints={},optT={};
+        const spdCfg=_sc["速度"];
+        const spdMaxVal=spdCfg?.spdMax||0;
+        const spdMinVal=spdCfg?.min||0;
+        const spdPursueMax=spdCfg?.pursueMax||false;
+        const hasSpdConstraint=spdMinVal>0||spdMaxVal>0;
+        Object.entries(_sc).forEach(([k,v])=>{
+          if(k==="速度"){
+            if(spdMinVal>0)constraints["速度"]=spdMinVal;
+            if(spdPursueMax||(spdMinVal>0&&spdMaxVal===0)) optT["速度"]=1.0;
+          } else {
+            if(v.min>0)constraints[k]=v.min;
+            if(v.max||v.w>0)optT[k]=v.w;
+          }
+        });
+        config={constraints,spdMax:spdMaxVal,spdMinVal,hasSpdConstraint,spdPursueMax,optimize:optT,requiredSets:_ss,excludedIds:_li,topK:8,goalType:"",spdShoe:_sc["速度"]?.spdShoe||false};
+      }
+
+      optimizeAsync(_ch,_eq,config,_ba,_bh,_bb,cancelRef,
+        (p)=>setProgress(p),
+        (r)=>{
+          if(r.error)setRunError(r.error);
+          if(r.timedOut&&r.results.length>0)setRunError(`搜索超時，從 ${(r.totalFound||r.results.length).toLocaleString()} 組合格中取最佳 ${r.results.length} 個方案`);
+          else if(r.timedOut&&r.results.length===0)setRunError(`搜索超過 ${searchDur} 秒未找到結果，請放寬速度區間或減少約束條件`);
+          else if(r.cancelled&&r.results.length>0)setRunError(`已手動停止（已找到 ${r.results.length} 個方案）`);
+          else if(r.cancelled&&r.results.length===0)setRunError("已手動停止，尚未找到符合條件的組合");
+          setRes(r);
+          setRunning(false);
+          setProgress(null);
+        },
+        searchDur*1000
+      );
+    },30);
+  },[selChar,equips,bondAtk,bondHp,breakBonus,sc,selSets,lockedIds,calcMode,mb,searchDur]);
+
+  const stopRun=useCallback(()=>{cancelRef.current=false;},[]);
+
+  // ★ 每個角色最多鎖定 3 組方案，方便進遊戲比較驗證
+  //   同角色不同方案間裝備可重複（同角色鎖定不互相排除）
+  //   跨角色裝備仍互相排除（lockedIds 只收非當前角色的裝備）
+  const lockRes=idx=>{if(!res||!selChar)return;const r=res.results[idx];
+    setLocked(p=>{
+      const prev=p[selChar.name]||{plans:[]};
+      const plans=prev.plans||[];
+      if(plans.length>=3){setLockErr("同一角色最多鎖定 3 組方案，請先解鎖其中一組");setTimeout(()=>setLockErr(""),3000);return p;}
+      setLockErr("");
+      const newPlan={eids:r.combo.map(e=>e.oid),ba:bondAtk,bh:bondHp,stats:r.stats,combo:r.combo};
+      return{...p,[selChar.name]:{plans:[...plans,newPlan]}};
+    });
+  };
+  const unlockChar=n=>setLocked(p=>{const x={...p};delete x[n];return x;});
+  const unlockPlan=(cn,planIdx)=>setLocked(p=>{
+    const plans=(p[cn]?.plans||[]).filter((_,i)=>i!==planIdx);
+    if(!plans.length){const x={...p};delete x[cn];return x;}
+    return{...p,[cn]:{plans}};
+  });
+
+  const canRun=selChar&&equips.length>0&&!running;
+  const iCls="rounded-lg px-2 py-1 text-[12px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
+  const iSty={background:"#151D2E",color:"#CBD5E1"};
+  const spdV=sc["速度"];
+
+  // Per-% value display for selected character
+  const perPctInfo=useMemo(()=>{
+    if(!selChar)return null;
+    return{
+      "攻擊%":(selChar.base_atk*0.01).toFixed(1),
+      "防禦%":(selChar.base_def*0.01).toFixed(1),
+      "生命%":(selChar.base_hp*0.01).toFixed(1),
+    };
+  },[selChar]);
+
+  return(
+    <div className="min-h-screen text-slate-200" style={{fontFamily:"'Noto Sans TC',system-ui,sans-serif",background:"#0B0F1A"}}>
+      {/* HEADER */}
+      <div className="border-b border-slate-800/60 px-4 py-2 flex items-center justify-between" style={{background:"#0F1628"}}>
+        <div className="flex items-center gap-3">
+
+          {/* ── Hamburger Nav Menu ── */}
+          <div className="relative">
+            <button onClick={()=>setNavOpen(o=>!o)}
+              className="flex flex-col justify-center items-center w-8 h-8 rounded-lg border border-slate-700/50 hover:border-blue-700/50 transition-colors gap-1"
+              style={{background:"#151D2E"}}
+              title="選單 Menu">
+              <span className="block w-4 h-0.5 rounded" style={{background:navOpen?"#93C5FD":"#64748B"}}/>
+              <span className="block w-4 h-0.5 rounded" style={{background:navOpen?"#93C5FD":"#64748B"}}/>
+              <span className="block w-4 h-0.5 rounded" style={{background:navOpen?"#93C5FD":"#64748B"}}/>
+            </button>
+            {navOpen&&(
+              <>
+                {/* 點外部關閉 */}
+                <div className="fixed inset-0 z-[9990]" onClick={()=>setNavOpen(false)}/>
+                <div className="absolute left-0 top-full mt-2 z-[9999] rounded-xl border border-slate-600 overflow-hidden shadow-2xl"
+                  style={{background:"#0F1628",minWidth:"200px"}}>
+                  <div className="px-3 py-2 border-b border-slate-700/50">
+                    <div className="text-[11px] text-slate-500 font-semibold tracking-widest uppercase">ArkRecode Tools</div>
+                  </div>
+                  {[
+                    {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./index.html"},
+                    {icon:"👤",zh:"角色資料庫",en:"Character DB",href:"./character-db.html"},
+                    {icon:"⚙️",zh:"配裝計算器",en:"Equip Optimizer",href:"./equip-optimizer.html",active:true},
+                  ].map(item=>(
+                    <a key={item.href} href={item.href}
+                      onClick={e=>{if(item.active){e.preventDefault();setNavOpen(false);}}}
+                      className="flex items-center gap-3 px-3 py-2.5 transition-colors"
+                      style={item.active
+                        ?{background:"#1E3A5F",color:"#93C5FD",cursor:"default"}
+                        :{color:"#94A3B8"}}>
+                      <span className="text-base w-5 text-center shrink-0">{item.icon}</span>
+                      <div>
+                        <div className="text-[13px] font-medium">{item.zh}</div>
+                        <div className="text-[10px] opacity-50">{item.en}</div>
+                      </div>
+                      {item.active&&<span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{background:"#3B82F622",color:"#93C5FD",border:"1px solid #3B82F644"}}>目前頁面</span>}
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span></h1>
+            <span className="text-[10px] text-slate-600 border border-slate-800 px-1.5 py-0.5 rounded-full">v1.0.0</span>
+          </div>
+          <button onClick={()=>setShowHelp(!showHelp)} className="text-[12px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
+            {showHelp?"✕ 關閉":"? 說明"}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-[13px]">
+          <label className="cursor-pointer flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-300 transition-colors">
+            <span>👤</span><span>角色CSV</span>
+            <input type="file" accept=".csv" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{const parsed=parseCharCSV(r.result);const list=parsed.length?parsed:DEMO_CHARS;setChars(list);setHidden(list.filter(c=>c.star<=4).map(c=>c.name));};r.readAsText(f);}}}/>
+          </label>
+          <label className="cursor-pointer flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-300 transition-colors">
+            <span>📦</span><span>裝備JSON</span>
+            <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{try{setEquips(parseEquipJSON(JSON.parse(r.result)))}catch(err){alert("JSON解析錯誤: "+err.message)}};r.readAsText(f);}e.target.value="";}}/>
+          </label>
+          {equips.length>0&&<button onClick={()=>setEquips([])} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
+          <div className="text-slate-500 text-[12px] border border-slate-800 px-2 py-1 rounded-lg">
+            <span style={{color:"#93C5FD"}}>{chars.length}</span> 角 · <span style={{color:"#4ADE80"}}>{equips.length}</span> 裝
+          </div>
+        </div>
+      </div>
+
+      {showHelp&&(
+        <div className="border-b border-slate-800 px-5 py-4 text-sm text-slate-300 space-y-2" style={{background:"#0F1628"}}>
+          <div className="font-bold text-blue-400 mb-1">📖 使用說明</div>
+          <div className="grid grid-cols-4 gap-4 text-[13px]">
+            <div><div className="text-blue-300 font-semibold mb-1">① 匯入資料</div><p className="text-slate-400">匯入角色 CSV 和裝備 JSON，或手動新增裝備。已內建測試角色。</p></div>
+            <div><div className="text-blue-300 font-semibold mb-1">② 速度設定</div><p className="text-slate-400">設最低/最高速度後，速度只做門檻篩選，<b className="text-slate-200">不影響排序分數</b>。勾「追求最快」才讓速度參與排序。</p></div>
+            <div><div className="text-blue-300 font-semibold mb-1">③ 其他屬性</div><p className="text-slate-400"><b className="text-slate-200">下限</b>=硬性門檻。<b className="text-slate-200">MAX+權重</b>=排序優先度。</p></div>
+            <div><div className="text-blue-300 font-semibold mb-1">④ 配裝 &amp; 鎖定</div><p className="text-slate-400">Top 8 組合，可停止搜索。鎖定後裝備不被其他角色配走。</p></div>
+          </div>
+          <p className="text-slate-500 text-[12px]">套裝：<span style={{color:"#F87171"}}>■ 紅=四件套</span>　<span style={{color:"#4ADE80"}}>■ 綠=二件套</span>　· 傷害指數 = 攻擊×(1+爆率×爆傷)</p>
+        </div>
+      )}
+
+      <div className="flex" style={{height:`calc(100vh - ${showHelp?148:49}px)`}}>
+        {/* LEFT — Character List */}
+        <div className="flex flex-col border-r border-slate-800/60" style={{width:"19%",minWidth:"170px",background:"#0D1220"}}>
+          <div className="p-2">
+            <input className="w-full rounded-lg px-2.5 py-1.5 text-sm placeholder-slate-600 border border-slate-700/50 focus:outline-none focus:border-blue-700 transition-colors"
+              style={{background:"#151D2E",color:"#CBD5E1"}} placeholder="🔍 搜尋角色..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          </div>
+          <div className="flex px-1.5 gap-0.5 text-[12px] pb-1">
+            {ELEM_LIST.map(el=>(
+              <button key={el} onClick={()=>setElemTab(el)} className="flex-1 py-1 rounded text-center transition-all"
+                style={elemTab===el?{background:el==="⭐"?"#1E293B":EC[el]+"28",color:el==="⭐"?"#FCD34D":EC[el],fontWeight:700,borderBottom:`2px solid ${el==="⭐"?"#FCD34D":EC[el]}`}:{color:"#475569"}}>
+                {el}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto px-1.5 space-y-0.5">
+            {!chars.length&&<div className="text-slate-600 text-[12px] py-8 text-center leading-relaxed">請匯入角色 CSV<br/><span className="text-slate-700">↑ 右上角</span></div>}
+            {fChars.map(c=>(
+              <div key={c.name} onClick={()=>{
+                // 儲存前一個角色的設定
+                if(selChar&&selChar.name!==c.name)saveCharConfig(selChar.name);
+                setSelChar(c);
+                setBondAtk(locked[c.name]?.plans?.[0]?.ba||0);
+                setBondHp(locked[c.name]?.plans?.[0]?.bh||0);
+                // 載入新角色的設定記憶
+                loadCharConfig(c.name);
+                // 若該角色有鎖定方案，跳到鎖定 tab 並 scroll 到對應位置
+                if(locked[c.name]){
+                  setTab("locked");
+                  setTimeout(()=>{
+                    const el=lockedCharRefs.current[c.name];
+                    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+                  },50);
+                }
+              }}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${selChar?.name===c.name?"border border-blue-700/60":"border border-transparent hover:border-slate-700/40"} ${hidden.includes(c.name)?"opacity-25":""}`}
+                style={selChar?.name===c.name?{background:"#1E3A5F"}:{}}>
+                <button onClick={e=>{e.stopPropagation();setFavs(f=>f.includes(c.name)?f.filter(x=>x!==c.name):[...f,c.name])}} className="text-[12px] shrink-0 hover:scale-125 transition-transform">
+                  {favs.includes(c.name)?"⭐":"☆"}
+                </button>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{background:EC[c.element]||"#94A3B8"}}/>
+                <span className="flex-1 truncate text-[13px] text-slate-200">{c.name}</span>
+                <Bg color={JC[c.job]||"#94A3B8"}>{c.job}</Bg>
+                {locked[c.name]&&<span className="text-[10px]">🔒</span>}
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-slate-800/60 px-2 py-1">
+            <button onClick={()=>setShowHid(!showHid)} className="w-full text-[12px] text-slate-600 hover:text-slate-400 py-0.5 transition-colors">
+              {showHid?"隱藏屏蔽":"顯示屏蔽"} ({hidden.length})
+            </button>
+          </div>
+          {selChar&&(
+            <div className="border-t border-slate-800/60 p-2.5 space-y-2" style={{background:"#0B0F1A"}}>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{background:EC[selChar.element]||"#94A3B8"}}/>
+                <span className="font-bold text-sm flex-1 truncate text-slate-100">{selChar.name}</span>
+                <span className="text-yellow-400 text-[12px]">{"★".repeat(selChar.star)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Bg color={JC[selChar.job]||"#94A3B8"}>{selChar.job}</Bg>
+                <button onClick={()=>setHidden(h=>h.includes(selChar.name)?h.filter(x=>x!==selChar.name):[...h,selChar.name])}
+                  className="text-[10px] px-1.5 py-0.5 rounded border transition-colors"
+                  style={hidden.includes(selChar.name)?{borderColor:"#22C55E44",color:"#22C55E"}:{borderColor:"#334155",color:"#64748B"}}>
+                  {hidden.includes(selChar.name)?"👁 顯示":"🚫 隱藏"}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[12px]">
+                {[["攻",selChar.base_atk,selChar.bonus_atk],["防",selChar.base_def,selChar.bonus_def],["血",selChar.base_hp,selChar.bonus_hp],["速",selChar.base_spd,selChar.bonus_spd]].map(([l,b,bo])=>(
+                  <span key={l} className="text-slate-400">{l}<span className="text-slate-200 font-mono">{b}</span><span className="text-slate-600">+{bo}</span></span>
+                ))}
+                <span className="text-slate-400">爆率<span className="text-rose-300 font-mono">{Math.floor((0.15+selChar.innate_cr)*100)}%</span></span>
+                <span className="text-slate-400">爆傷<span className="text-orange-300 font-mono">{Math.floor((1.5+selChar.innate_cd)*100)}%</span></span>
+                {selChar.innate_hit>0&&<span className="text-slate-400">命中<span className="text-slate-200 font-mono">{Math.floor(selChar.innate_hit*100)}%</span></span>}
+                {selChar.innate_res>0&&<span className="text-slate-400">抗性<span className="text-slate-200 font-mono">{Math.floor(selChar.innate_res*100)}%</span></span>}
+              </div>
+              {/* ★ Per-% value display */}
+              {perPctInfo&&(
+                <div className="flex gap-2 text-[10px] text-slate-600 bg-slate-800/30 rounded-lg px-2 py-1">
+                  <span>1%攻=<span className="text-rose-400 font-mono">{perPctInfo["攻擊%"]}</span></span>
+                  <span>1%防=<span className="text-blue-400 font-mono">{perPctInfo["防禦%"]}</span></span>
+                  <span>1%血=<span className="text-green-400 font-mono">{perPctInfo["生命%"]}</span></span>
+                </div>
+              )}
+              <div className="flex gap-2 text-[12px] flex-wrap">
+                <label className="flex items-center gap-1 text-slate-500">羈絆攻<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondAtk||""} onChange={e=>setBondAtk(+e.target.value||0)}/></label>
+                <label className="flex items-center gap-1 text-slate-500">羈絆血<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondHp||""} onChange={e=>setBondHp(+e.target.value||0)}/></label>
+
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] text-slate-500 font-semibold">🔓 突破加成</span>
+                  <button onClick={()=>setBreaks(b=>[...b,{prop:"攻擊",val:0}])} className="text-[10px] px-2 py-1 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
+                </div>
+                {breaks.length===0&&<div className="text-[10px] text-slate-700">無突破加成</div>}                {breaks.map((br,i)=>(
+                  <div key={i} className="flex items-center gap-1">
+                    <select className={`${iCls} flex-1`} style={iSty} value={br.prop} onChange={e=>setBreaks(b=>b.map((x,j)=>j===i?{...x,prop:e.target.value}:x))}>
+                      {BREAK_PROPS.map(p=><option key={p}>{p}</option>)}
+                    </select>
+                    <input type="number" step="1" className={`w-14 ${iCls}`} style={iSty}
+                      placeholder={["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"如 5":"如 500"}
+                      value={br.valStr??""} onChange={e=>{
+                        const raw=e.target.value;
+                        const num=parseFloat(raw);
+                        const isPct=["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop);
+                        const val=isNaN(num)?0:isPct?num/100:num;
+                        setBreaks(b=>b.map((x,j)=>j===i?{...x,valStr:raw,val}:x));
+                      }}/>
+                    <span className="text-[10px] text-slate-600 shrink-0 w-4">{["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"%":""}</span>/>
+                    <button onClick={()=>setBreaks(b=>b.filter((_,j)=>j!==i))} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
+                  </div>
+                ))}
+              </div>
+              {selChar.passive&&<div className="text-[10px] text-slate-600 truncate" title={selChar.passive}>{selChar.passive}</div>}
+            </div>
+          )}
+        </div>
+
+        {/* MID — Config/Equips/Locked */}
+        <div className="flex flex-col border-r border-slate-800/60 overflow-hidden" style={{width:"40%",background:"#0D1220"}}>
+          <div className="flex border-b border-slate-800/60 text-[13px] shrink-0">
+            {[["config","⚙️ 配裝設定"],["equips","📦 裝備庫"],["locked","🔒 鎖定"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setTab(k)}
+                className={`px-4 py-2 transition-colors ${tab===k?"text-blue-400 border-b-2 border-blue-500":"text-slate-500 hover:text-slate-300"}`}
+                style={tab===k?{background:"#101828"}:{}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {tab==="config"&&(
+              <div className="p-3 space-y-4">
+                {/* ── MODE SWITCHER ── */}
+                <div>
+                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">計算模式</div>
+                  <div className="flex gap-0 rounded-lg border border-slate-700/50 overflow-hidden">
+                    {[
+                      ["A","⚙️ 自由配置","權重+多目標","設定各屬性的「下限門檻」與「優化權重」，系統計算加權綜合分後排名。適合平衡型配裝或多目標探索。速度可選擇「追求最快」參與排序。"],
+                      ["B","🎯 目標鎖速","約束+單目標","先設速度區間與其他硬性門檻，過濾合格組合後純粹最大化單一指標。適合速度已確定、只想最大化特定屬性的情境。"]
+                    ].map(([m,title,desc,tip],mi)=>(
+                      <div key={m} className="flex-1">
+                        <button onClick={()=>setCalcMode(m)}
+                          className="w-full py-2 px-3 text-[13px] transition-all text-left"
+                          style={calcMode===m?{background:"#1E3A5F",color:"#93C5FD"}:{background:"#151D2E",color:"#64748B"}}>
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold">{title}</span>
+                            <span
+                              className="text-[10px] rounded-full border px-1 opacity-50 hover:opacity-100 transition-opacity cursor-help"
+                              style={{borderColor:"currentColor"}}
+                              onMouseEnter={e=>{
+                                const r=e.currentTarget.getBoundingClientRect();
+                                const tipW=288; // w-72
+                                const x=r.right+8+tipW>window.innerWidth ? r.left-tipW-8 : r.right+8;
+                                setTipIdx({idx:mi,x,y:r.top});
+                              }}
+                              onMouseLeave={()=>setTipIdx(null)}>?</span>
+                          </div>
+                          <div className="text-[10px] opacity-70 mt-0.5">{desc}</div>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {tipIdx&&(
+                    <div className="fixed z-[9999] w-72 rounded-lg border border-slate-400 p-3 text-[12px] leading-relaxed shadow-2xl pointer-events-none"
+                      style={{background:"#1A2540",color:"#CBD5E1",left:tipIdx.x,top:tipIdx.y}}>
+                      {["設定各屬性的「下限門檻」與「優化權重」，系統計算加權綜合分後排名。適合平衡型配裝或多目標探索。速度可選擇「追求最快」參與排序。",
+                        "先設速度區間與其他硬性門檻，過濾合格組合後純粹最大化單一指標。適合速度已確定、只想最大化特定屬性的情境。"][tipIdx.idx]}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── SHARED: Sets ── */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">套裝需求</div>
+                    <span className={`text-[12px] font-mono ${tsp>=6?"text-amber-400":"text-slate-500"}`}>{tsp}/6 件</span>
+                  </div>
+                  {tspSets.length>0&&(
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {tspSets.map((s,i)=>(
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-bold border"
+                          style={{background:getSetColor(s)+"15",color:getSetColor(s),borderColor:getSetColor(s)+"44"}}>
+                          {s}({getSetPcs(s)})<button onClick={()=>setTspSets(x=>x.filter((_,j)=>j!==i))} className="hover:opacity-60 ml-0.5 font-normal">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {ALL_SETS.filter(s=>tsp+getSetPcs(s)<=6).map(s=>(
+                      <button key={s} onClick={()=>setTspSets(x=>[...x,s])}
+                        className="text-[12px] px-2 py-0.5 rounded-full border transition-all hover:opacity-90"
+                        style={{background:getSetColor(s)+"10",color:getSetColor(s),borderColor:getSetColor(s)+"33"}}>
+                        {s}<span className="opacity-50 ml-0.5">({getSetPcs(s)})</span>
+                      </button>
+                    ))}
+                    {tsp>=6&&<span className="text-[12px] text-amber-500 self-center ml-1">已滿</span>}
+                  </div>
+                </div>
+
+                {/* ════════════ MODE A ════════════ */}
+                {calcMode==="A"&&(<>
+                {/* Templates */}
+                <div>
+                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">快速模板</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TEMPLATES.map(t=>(
+                      <button key={t.name} onClick={()=>{setSc({...t.stats});setSelSets([...t.sets]);}}
+                        className="text-[13px] px-2.5 py-1 rounded-lg border transition-all hover:border-blue-700/50 hover:text-blue-300"
+                        style={{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Stat targets */}
+                <div>
+                  <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase mb-1.5">屬性目標</div>
+                  <div className="rounded-xl border border-slate-800/60 overflow-hidden" style={{background:"#0B0F1A"}}>
+
+                    {/* ── SPEED ROW (special) ── */}
+                    {(()=>{
+                      const v=sc["速度"];
+                      const active=v.min>0||v.spdMax>0;
+                      return(
+                        <div className={`px-3 py-2 border-b border-slate-800/30 ${active?"bg-blue-950/20":""}`}>
+                          <div className="flex items-center gap-2 text-[13px]">
+                            <span className={`w-7 font-semibold shrink-0 whitespace-nowrap ${active?"text-blue-300":"text-slate-300"}`}>速度</span>
+                            <div className="flex items-center gap-1">
+                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border ${v.min>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                                style={{background:"#151D2E",color:"#CBD5E1"}}
+                                placeholder="最低" value={v.min||""} onChange={e=>setSc(s=>({...s,速度:{...v,min:+e.target.value||0}}))}/>
+                              <span className="text-slate-600 text-[12px]">~</span>
+                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border ${v.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                                style={{background:"#151D2E",color:"#CBD5E1"}}
+                                placeholder="最高" value={v.spdMax||""} onChange={e=>setSc(s=>({...s,速度:{...v,spdMax:+e.target.value||0}}))}/>
+                            </div>
+                            <div className="flex items-center gap-2 ml-auto">
+                              <label className="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" checked={v.spdShoe||false}
+                                  onChange={e=>setSc(s=>({...s,速度:{...v,spdShoe:e.target.checked}}))}
+                                  className="accent-blue-500 w-3 h-3"/>
+                                <span className={`text-[12px] ${v.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
+                              </label>
+                              <label className="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" checked={v.pursueMax||false}
+                                  onChange={e=>setSc(s=>({...s,速度:{...v,pursueMax:e.target.checked}}))}
+                                  className="accent-blue-500 w-3 h-3"/>
+                                <span className={`text-[12px] ${v.pursueMax?"text-blue-300":"text-slate-500"}`}>追求最快</span>
+                              </label>
+                            </div>
+                          </div>
+                          <div className="mt-1 pl-9 text-[10px] flex flex-wrap gap-x-2">
+                            {v.pursueMax
+                              ? <span className="text-blue-400">⚡ 速度參與排序，越快越好</span>
+                              : v.min>0&&!v.spdMax
+                                ? <span className="text-blue-400">⚡ 有底速無上限 → 越快越好</span>
+                                : active
+                                  ? <span className="text-blue-400/70">🔒 速度僅作門檻篩選，不影響排序</span>
+                                  : <span className="text-slate-700">未設速度限制</span>
+                            }
+                            {v.spdShoe&&<span className="text-yellow-400/80">· 只考慮速度主屬鞋</span>}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── OTHER STAT ROWS ── */}
+                    {SK_NON_SPD.map((k,ki)=>{const v=sc[k];
+                      return(
+                        <div key={k} className={`flex items-center gap-2 px-3 py-1.5 text-[13px] ${ki<SK_NON_SPD.length-1?"border-b border-slate-800/30":""}`}>
+                          <span className="w-10 font-semibold text-slate-300 shrink-0 whitespace-nowrap">{k}</span>
+                          <input type="number"
+                            className="w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors"
+                            style={{background:"#151D2E",color:"#CBD5E1"}}
+                            placeholder="下限" value={v.min||""} onChange={e=>setSc(s=>({...s,[k]:{...v,min:+e.target.value||0}}))}/>
+                          <label className="flex items-center gap-1 cursor-pointer ml-1 shrink-0">
+                            <input type="checkbox" checked={v.max} onChange={e=>setSc(s=>({...s,[k]:{...v,max:e.target.checked}}))} className="accent-blue-500 w-3 h-3"/>
+                            <span className="text-slate-500 text-[12px]">MAX</span>
+                          </label>
+                          <input type="range" min="0" max="10" step="1" value={Math.round(v.w*10)}
+                            onChange={e=>setSc(s=>({...s,[k]:{...v,w:+e.target.value/10}}))}
+                            className="flex-1" style={{minWidth:"110px",maxWidth:"160px",accentColor:v.w>=0.5?"#F59E0B":"#3B82F6"}}/>
+                          <span className="w-6 text-right text-[12px] font-mono font-semibold shrink-0" style={{color:v.w>=0.5?"#F59E0B":v.w>0?"#93C5FD":"#475569"}}>{v.w.toFixed(1)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                </>)}
+
+                {/* ════════════ MODE B ════════════ */}
+                {calcMode==="B"&&(<>
+                {/* Goal */}
+                <div>
+                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">最大化目標</div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {MODE_B_GOALS.map(g=>(
+                      <button key={g.key} onClick={()=>setMb(m=>({...m,goal:g.key}))}
+                        className="text-[13px] px-2 py-2.5 rounded-lg border transition-all flex flex-col items-center justify-center text-center min-h-[52px]"
+                        style={mb.goal===g.key?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
+                        <div className="font-medium">{g.label}</div>
+                        {g.desc&&<div className="text-[10px] opacity-60 mt-0.5">{g.desc}</div>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Speed */}
+                <div>
+                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">速度區間</div>
+                  <div className="rounded-xl border border-slate-800/60 p-3" style={{background:"#0B0F1A"}}>
+                    <div className="flex items-center gap-2 text-[13px]">
+                      <span className="text-blue-300 font-semibold w-10 shrink-0 whitespace-nowrap">速度</span>
+                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[13px] text-center border ${mb.spdMin>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                        style={{background:"#151D2E",color:"#CBD5E1"}}
+                        placeholder="最低" value={mb.spdMin||""} onChange={e=>setMb(m=>({...m,spdMin:+e.target.value||0}))}/>
+                      <span className="text-slate-600">~</span>
+                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[13px] text-center border ${mb.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                        style={{background:"#151D2E",color:"#CBD5E1"}}
+                        placeholder="最高(選填)" value={mb.spdMax||""} onChange={e=>setMb(m=>({...m,spdMax:+e.target.value||0}))}/>
+                      <label className="flex items-center gap-1 cursor-pointer ml-auto">
+                        <input type="checkbox" checked={mb.spdShoe||false}
+                          onChange={e=>setMb(m=>({...m,spdShoe:e.target.checked}))}
+                          className="accent-blue-500 w-3 h-3"/>
+                        <span className={`text-[12px] ${mb.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
+                      </label>
+                    </div>
+                    <div className="mt-1.5 text-[10px] text-blue-400/70 pl-9">
+                      {mb.spdMin>0&&mb.spdMax>0?`🔒 速度 ${mb.spdMin}~${mb.spdMax}，不影響排序`
+                        :mb.spdMin>0?`🔒 速度 ≥${mb.spdMin}，不影響排序`
+                        :mb.spdMax>0?`🔒 速度 ≤${mb.spdMax}，不影響排序`
+                        :"未設速度限制"}
+                      {/* ★ Mode B 不提供「追求最快」選項，速度僅作門檻篩選不參與排序。
+                             如需最大化速度請切換 Mode A 並勾選「追求最快」。 */}
+                    </div>
+                  </div>
+                </div>
+                {/* Extra constraints */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">額外約束 (硬性門檻)</div>
+                    <button onClick={()=>setMb(m=>({...m,constraints:[...m.constraints,{stat:"爆率",val:0}]}))}
+                      className="text-[10px] px-2 py-0.5 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
+                  </div>
+                  {mb.constraints.length===0&&<div className="text-[10px] text-slate-700 pl-1">無額外約束（僅速度篩選）</div>}
+                  <div className="space-y-1.5">
+                    {mb.constraints.map((c,i)=>(
+                      <div key={i} className="flex items-center gap-1.5">
+                        <select className={`${iCls} w-24`} style={iSty} value={c.stat}
+                          onChange={e=>setMb(m=>({...m,constraints:m.constraints.map((x,j)=>j===i?{...x,stat:e.target.value}:x)}))}>
+                          {MODE_B_CONSTRAINT_OPTS.map(o=><option key={o}>{o}</option>)}
+                        </select>
+                        <button onClick={()=>setMb(m=>({...m,constraints:m.constraints.map((x,j)=>j===i?{...x,dir:x.dir==="≤"?"≥":"≤"}:x)}))}
+                          className="text-[13px] px-2 py-0.5 rounded border transition-colors font-mono shrink-0"
+                          style={c.dir==="≤"?{borderColor:"#F59E0B55",color:"#F59E0B",background:"#1C1400"}:{borderColor:"#3B82F655",color:"#93C5FD",background:"#0D1A2E"}}>
+                          {c.dir||"≥"}
+                        </button>
+                        <input type="number" className={`w-20 ${iCls}`} style={iSty}
+                          placeholder={["爆率","爆傷","命中","抗性"].includes(c.stat)?"如 85":"如 1700"}
+                          value={c.val||""} onChange={e=>setMb(m=>({...m,constraints:m.constraints.map((x,j)=>j===i?{...x,val:+e.target.value||0}:x)}))}/>
+                        <span className="text-[10px] text-slate-600 shrink-0">{["爆率","爆傷","命中","抗性"].includes(c.stat)?"%":""}</span>
+                        <button onClick={()=>setMb(m=>({...m,constraints:m.constraints.filter((_,j)=>j!==i)}))}
+                          className="text-slate-600 hover:text-red-400 transition-colors ml-auto">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  {mb.constraints.length>0&&<div className="text-[10px] text-slate-700 mt-1 pl-1">爆率/爆傷/命中/抗性 填最終%值。點擊 ≥/≤ 切換方向</div>}
+                </div>
+                </>)}
+
+                {runError&&<div className="text-[13px] text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">⚠️ {runError}</div>}
+
+                {/* Search duration */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] text-slate-500 shrink-0">搜索時長</span>
+                  <div className="flex gap-1 flex-1">
+                    {[[30,"快速"],[75,"標準"],[180,"深度"]].map(([s,l])=>(
+                      <button key={s} onClick={()=>setSearchDur(s)}
+                        className="flex-1 text-[12px] py-1 rounded-lg border transition-all"
+                        style={searchDur===s?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
+                        {l} {s}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Run / Stop button */}
+                {running?(
+                  <button onClick={stopRun}
+                    className="w-full py-2.5 rounded-xl font-bold text-sm transition-all border-2 border-red-600/60"
+                    style={{background:"#1C0A0A",color:"#F87171"}}>
+                    ⏹ 停止搜索
+                  </button>
+                ):(
+                  <button onClick={run} disabled={!canRun}
+                    className="w-full py-2.5 rounded-xl font-bold text-sm transition-all"
+                    style={!selChar||!equips.length?{background:"#1E293B",color:"#475569",cursor:"not-allowed"}
+                      :{background:"linear-gradient(135deg,#1D4ED8,#4F46E5)",color:"white",boxShadow:"0 0 20px #3B82F620"}}>
+                    {!selChar?"← 請先選擇角色":!equips.length?"請先匯入裝備":"🔍 開始配裝"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {tab==="equips"&&(
+              <div className="p-3 space-y-2">
+                <div className="flex gap-1.5 items-center">
+                  <select className={iCls} style={iSty} value={eqF.slot} onChange={e=>setEqF(f=>({...f,slot:e.target.value}))}>
+                    <option value="">全部位</option>{SLOTS.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                  <select className={iCls} style={iSty} value={eqF.set} onChange={e=>setEqF(f=>({...f,set:e.target.value}))}>
+                    <option value="">全套裝</option>{ALL_SETS.map(s=>{const n=equips.filter(e=>e.set===s).length;return n>0?<option key={s} value={s}>{s}({n})</option>:null;})}
+                  </select>
+                  <input className={`flex-1 ${iCls} placeholder-slate-600`} style={iSty} placeholder="搜尋..." value={eqF.q} onChange={e=>setEqF(f=>({...f,q:e.target.value}))}/>
+                  <button onClick={()=>setNewEq(true)} className="px-2.5 py-1 rounded-lg border border-blue-700/50 text-blue-400 text-[12px] transition-colors hover:bg-blue-900/30" style={{background:"#0D1A2E"}}>+ 新增</button>
+                </div>
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-[12px] text-slate-600 shrink-0">排序</span>
+                  <select className={`flex-1 ${iCls}`} style={iSty} value={eqF.sort} onChange={e=>setEqF(f=>({...f,sort:e.target.value}))}>
+                    <option value="">預設（匯入順序）</option>
+                    <option value="速度">速度 ↓</option>
+                    <option value="爆率">爆率 ↓</option>
+                    <option value="爆傷">爆傷 ↓</option>
+                    <option value="攻擊">攻擊 ↓</option>
+                    <option value="攻擊%">攻擊% ↓</option>
+                    <option value="防禦">防禦 ↓</option>
+                    <option value="生命">生命 ↓</option>
+                    <option value="命中">命中 ↓</option>
+                    <option value="抗性">抗性 ↓</option>
+                  </select>
+                </div>
+                {newEq&&<ManualForm onAdd={eq=>{setEquips(p=>[...p,{...eq,oid:"m_"+Date.now()+"_"+Math.random().toString(36).slice(2)}]);setNewEq(false);}} onCancel={()=>setNewEq(false)}/>}
+                <div className="text-[12px] text-slate-500 px-1">{fEquips.length} 件裝備</div>
+                <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
+                  {fEquips.slice(0,200).map(eq=>{
+                    const lk=lockedIds.has(eq.oid);const lb=Object.entries(locked).find(([_,v])=>v.eids?.includes(eq.oid));
+                    return(
+                      <div key={eq.oid} className={`text-[12px] px-2.5 py-1.5 rounded-lg border transition-colors ${lk?"border-amber-700/40":"border-slate-700/30 hover:border-slate-600/40"}`} style={{background:lk?"#1A1500":"#0F1628"}}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500 w-5">{eq.slot}</span>
+                          <span className="font-bold" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
+                          <span className="text-slate-200">{eq.mt} {fE(eq.mt,eq.mv)}</span>
+                          <span className="flex-1"/>
+                          {lk&&<span className="text-amber-500 text-[10px]">🔒{lb?.[0]}</span>}
+                          <button onClick={()=>setEquips(p=>p.filter(x=>x.oid!==eq.oid))} className="text-slate-700 hover:text-red-400 transition-colors px-1">✕</button>
+                        </div>
+                        <div className="ml-6 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                          {Object.entries(eq.subs).map(([k,v])=>{
+                            const isHl=eqF.sort&&k===eqF.sort;
+                            return(
+                              <span key={k} className={isHl?"font-bold":""}
+                                style={{color:isHl?"#FCD34D":"#64748B",fontSize:"12px"}}>
+                                {k}{fE(k,v)}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {fEquips.length>200&&<div className="text-[12px] text-slate-600 text-center py-2">顯示前 200 件</div>}
+                </div>
+              </div>
+            )}
+
+            {tab==="locked"&&(
+              <div className="p-3 space-y-3">
+                <div className="text-[12px] text-slate-500">已鎖定 <span className="text-blue-400">{Object.keys(locked).length}</span> 角色（每角色最多 3 組方案）</div>
+                {!Object.keys(locked).length&&<div className="text-slate-600 text-[13px] py-8 text-center">尚無鎖定方案</div>}
+                {Object.entries(locked).map(([name,data])=>(
+                  <div key={name} ref={el=>lockedCharRefs.current[name]=el}
+                    className="rounded-xl border border-slate-700/50 overflow-hidden" style={{background:"#0D1525"}}>
+                    {/* 角色標題列 */}
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/40" style={{background:"#111B2E"}}>
+                      <div className="flex items-center gap-2">
+                        {(()=>{const c=chars.find(x=>x.name===name);return c?(
+                          <><span className="w-2 h-2 rounded-full shrink-0" style={{background:EC[c.element]||"#94A3B8"}}/>
+                          <Bg color={JC[c.job]||"#94A3B8"}>{c.job}</Bg></>
+                        ):null;})()}
+                        <span className="font-bold text-sm text-slate-100">🔒 {name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-600">{(data.plans||[]).length}/3 組</span>
+                        <button onClick={()=>unlockChar(name)} className="text-[12px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>
+                      </div>
+                    </div>
+
+                    {/* 方案列表 */}
+                    {(data.plans||[]).map((plan,pi)=>(
+                      <div key={pi} className="border-b border-slate-800/50 last:border-0 p-3 space-y-2.5">
+                        {/* 方案標題 + 套裝標籤 */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {pi+1}</span>
+                            {/* 有效套裝組合標籤 */}
+                            {plan.stats?.套裝?.map((st,si)=>{const nm=st.replace(/\(\d\)/,"");return(
+                              <span key={si} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
+                            );})}
+                          </div>
+                          <button onClick={()=>unlockPlan(name,pi)} className="text-[10px] text-amber-500 hover:text-amber-300 transition-colors shrink-0">解鎖此組</button>
+                        </div>
+
+                        {/* 角色數值框 — 速度黃、攻擊/爆率/爆傷紅、防禦/生命/坦度綠、命中/抗性白 */}
+                        {plan.stats&&(
+                          <div className="rounded-lg border border-slate-700/40 px-3 py-2" style={{background:"#0B1120"}}>
+                            <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[12px]">
+                              {[
+                                ["攻擊","#F87171",v=>fN(v)],
+                                ["防禦","#4ADE80",v=>fN(v)],
+                                ["生命","#4ADE80",v=>fN(v)],
+                                ["速度","#FBBF24",v=>String(Math.floor(v??0))],
+                                ["爆率","#F87171",v=>fP(v)],
+                                ["爆傷","#F87171",v=>fP(v)],
+                                ["命中","#E2E8F0",v=>fP(v)],
+                                ["抗性","#E2E8F0",v=>fP(v)],
+                              ].map(([k,color,fmt])=>(
+                                <div key={k} className="flex flex-col items-center py-0.5">
+                                  <span className="text-[10px] text-slate-600 mb-0.5">{k}</span>
+                                  <span className="font-mono font-bold text-[12px]" style={{color}}>{fmt(plan.stats[k])}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {/* 坦度 / 傷害指數 */}
+                            <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-slate-800/40">
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="text-[10px] text-slate-600">🛡️ 坦度</span>
+                                <span className="font-mono text-[12px] font-bold text-green-400">{fN(plan.stats.坦度)}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="text-[10px] text-slate-600">⚔️ 期望傷害</span>
+                                <span className="font-mono text-[12px] font-bold text-red-400">{fN(plan.stats.傷害指數)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 裝備：左3(武頭甲) / 右3(鍊指鞋) */}
+                        {plan.combo&&(()=>{
+                          const left=plan.combo.filter(e=>["武器","頭盔","鎧甲"].includes(e.slot));
+                          const right=plan.combo.filter(e=>["項鍊","戒指","鞋子"].includes(e.slot));
+                          const EqRow=({eq})=>(
+                            <div className="text-[10px] py-1 border-b border-slate-800/20 last:border-0">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-600 w-4 shrink-0">{eq.slot}</span>
+                                <span className="font-bold text-[10px]" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
+                                <span className="text-slate-300 truncate">{eq.mt} {fE(eq.mt,eq.mv)}</span>
+                              </div>
+                              <div className="text-slate-600 mt-0.5 pl-5 leading-tight text-[10px]">{fmtSubs(eq.subs)}</div>
+                            </div>
+                          );
+                          return(
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="rounded-lg border border-slate-700/30 px-2 py-1" style={{background:"#0B1120"}}>
+                                {left.map((eq,i)=><EqRow key={i} eq={eq}/>)}
+                              </div>
+                              <div className="rounded-lg border border-slate-700/30 px-2 py-1" style={{background:"#0B1120"}}>
+                                {right.map((eq,i)=><EqRow key={i} eq={eq}/>)}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[12px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT — Results */}
+        <div className="flex flex-col overflow-hidden flex-1" style={{background:"#0B0F1A"}}>
+          <div className="px-4 py-2 border-b border-slate-800/60 text-[13px] text-slate-500 flex items-center gap-2 shrink-0 flex-wrap" style={{background:"#0D1220"}}>
+            <span className="text-slate-400 font-semibold">📊 配裝結果</span>
+            {res&&!running&&res.results?.length>0&&(
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1E3A5F",color:"#93C5FD",border:"1px solid #3B82F644"}}>
+                {res.results.length} 個方案
+              </span>
+            )}
+            {res&&<span className="text-slate-600">· 試算 {res.checked?.toLocaleString()} 組{res.totalFound>0?` · ${res.totalFound.toLocaleString()} 組合格`:""}</span>}
+            {res?.poolInfo&&(
+              <span className="text-slate-700 text-[10px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}${n}`).join(" / ")}</span>
+            )}
+            {calcMode==="B"&&<span className="ml-auto" style={{color:"#93C5FD"}}>B模式 · 最大化: {MODE_B_GOALS.find(g=>g.key===mb.goal)?.label||mb.goal}</span>}
+          </div>
+
+          {/* Progress bar + stop button */}
+          {running&&progress&&(
+            <div className="px-6 py-6 flex-1 flex flex-col items-center justify-center" style={{background:"#0B0F1A"}}>
+              <div className="w-full max-w-md space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl mb-3 animate-spin inline-block">⏳</div>
+                  <div className="text-blue-400 text-sm font-semibold">{progress.phase}</div>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{
+                    width:`${Math.min(100,progress.elapsed>0?(progress.elapsed/(searchDur*1000)*100):(progress.total>0?(progress.checked/progress.total*100):0))}%`,
+                    background:progress.elapsed>(searchDur*1000*0.8)?"linear-gradient(90deg,#F59E0B,#EF4444)":"linear-gradient(90deg,#3B82F6,#8B5CF6)"
+                  }}/>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-[13px] flex-wrap">
+                  <span className="text-slate-500">已檢查 <span className="text-slate-300 font-mono">{progress.checked.toLocaleString()}</span></span>
+                  <span className="text-slate-700">|</span>
+                  <span className="text-green-400 font-semibold">
+                    {(progress.totalFound||0)>progress.found
+                      ?`${progress.totalFound.toLocaleString()} 組合格，取最佳 ${progress.found}`
+                      :`${progress.totalFound||0} 組合格`}
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  <span className="text-slate-500">{(progress.elapsed/1000).toFixed(1)}s</span>
+                </div>
+                {progress.elapsed>30000&&(
+                  <div className="text-center text-[12px] text-amber-400/80">
+                    {progress.elapsed>(searchDur*1000*0.8)?"即將自動結束...":`${Math.ceil((searchDur*1000-progress.elapsed)/1000)}s 後將自動停止`}
+                  </div>
+                )}
+                <div className="flex justify-center pt-2">
+                  <button onClick={stopRun}
+                    className="text-[14px] px-6 py-2 rounded-xl font-bold border-2 border-red-600/60 transition-all hover:bg-red-900/40"
+                    style={{background:"#1C0A0A",color:"#F87171"}}>
+                    ⏹ 停止搜索
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quick jump highlights */}
+          {!running&&uniqueHighlights.length>0&&(
+            <div className="px-4 py-1.5 border-b border-slate-800/40 flex items-center gap-1.5 flex-wrap" style={{background:"#0D1424"}}>
+              <span className="text-[10px] text-slate-600 mr-1">快速跳轉:</span>
+              {uniqueHighlights.map((h,i)=>(
+                <button key={i} onClick={()=>scrollToResult(h.idx)}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold transition-all hover:scale-105"
+                  style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}44`}}>
+                  {h.label} {h.val!=null?fS(h.key,h.val):""} → #{h.idx+1}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!running&&(
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+            {!res&&<div className="text-slate-600 text-sm py-16 text-center leading-relaxed"><div className="text-2xl mb-3">⚔️</div>選擇角色 → 設定目標 → 開始配裝</div>}
+            {runError&&<div className="text-red-400 text-sm py-6 text-center bg-red-950/20 rounded-xl border border-red-800/30 mx-2">⚠️ {runError}</div>}
+            {!runError&&res?.results?.length===0&&(
+              <div className="text-amber-400 text-sm py-6 text-center bg-amber-950/20 rounded-xl border border-amber-800/30 mx-2 space-y-2">
+                <div>❌ 找不到滿足條件的組合</div>
+                <div className="text-slate-500 text-[12px] space-y-1 text-left px-4">
+                  <div className="font-semibold text-slate-400 mb-1">診斷建議：</div>
+                  <div>• 多個下限同時存在時，請逐一放寬看哪個是關鍵瓶頸</div>
+                  <div>• 套裝需求（6件）配合多個下限時組合空間極小，可嘗試移除套裝</div>
+                  <div>• 速度上下限範圍太窄，可嘗試擴大範圍或只保留下限</div>
+                  {res?.poolInfo&&<div className="text-slate-600 pt-1">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}(${n})`).join(" ")}</div>}
+                </div>
+              </div>
+            )}
+            {lockErr&&<div className="mx-4 mb-2 text-[12px] text-amber-400 bg-amber-950/40 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {lockErr}</div>}
+            {res?.results?.map((r,i)=>(
+              <div key={i} ref={el=>{resultRefs.current[i]=el;}}>
+                <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]} onLock={()=>lockRes(i)}/>
+              </div>
+            ))}
+          </div>
+          )}
+
+          {/* Running without progress (brief initial state) */}
+          {running&&!progress&&(
+            <div className="flex-1 flex items-center justify-center" style={{background:"#0B0F1A"}}>
+              <div className="text-blue-400 text-sm text-center"><div className="text-2xl mb-3 animate-spin inline-block">⏳</div><div>準備中...</div></div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// RESULT CARD (enhanced UI)
+// ============================================================
+function ResCard({idx,r,goalType,highlights,onLock}){
+  const[exp,setExp]=useState(idx===0);
+  const s=r.stats;
+  const statPairs=[["攻擊",s.攻擊,"#F87171"],["生命",s.生命,"#4ADE80"],["防禦",s.防禦,"#60A5FA"],["速度",s.速度,"#FBBF24"],["爆率",s.爆率,"#FB923C"],["爆傷",s.爆傷,"#F87171"],["命中",s.命中,"#A78BFA"],["抗性",s.抗性,"#34D399"]];
+  return(
+    <div className="rounded-xl border overflow-hidden transition-all" style={{background:"#0D1220",borderColor:highlights.length?"#1E3A5F":"#1E293B"}}>
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-base font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {idx+1}</span>
+            {highlights.map((h,hi)=>(
+              <span key={hi} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}33`}}>{h.label}</span>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button onClick={()=>setExp(!exp)} className="text-[12px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded border border-slate-700/30 hover:border-slate-600">{exp?"▲ 收起":"▼ 詳情"}</button>
+            <button onClick={onLock} className="text-[12px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
+              style={{background:"#0D1A2E",color:"#60A5FA",borderColor:"#1D4ED844"}}>🔒 鎖定</button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {s.套裝?.map((st,i)=>{const nm=st.replace(/\(\d\)/,"");return(
+            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+              style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
+          );})}
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[13px]">
+          {statPairs.map(([k,v])=>{
+            const hl=highlights.find(h=>h.key===k);
+            return(
+              <div key={k} className="flex justify-between items-center py-0.5">
+                <span className={hl?"font-semibold":"text-slate-500"} style={hl?{color:hl.color}:{}}>{k}</span>
+                <span className="font-mono font-semibold tabular-nums" style={hl?{color:hl.color}:{color:"#CBD5E1"}}>{fS(k,v)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 pt-2 border-t border-slate-800/40 grid grid-cols-2 gap-2">
+          <div className="flex justify-between items-center px-2 py-1 rounded-lg" style={{background:highlights.some(h=>h.key==="坦度")?"#422006":"transparent"}}>
+            <span className={`text-[12px] ${highlights.some(h=>h.key==="坦度")?"font-semibold text-amber-300":"text-slate-500"}`}>🛡️ 坦度</span>
+            <span className={`font-mono text-base font-bold ${highlights.some(h=>h.key==="坦度")?"text-amber-300":"text-amber-500/60"}`}>{fN(s.坦度)}</span>
+          </div>
+          <div className="flex justify-between items-center px-2 py-1 rounded-lg" style={{background:highlights.some(h=>h.key==="傷害指數")?"#450A0A":"transparent"}}>
+            <span className={`text-[12px] ${highlights.some(h=>h.key==="傷害指數")?"font-semibold text-rose-300":"text-slate-500"}`}>⚔️ 傷害指數</span>
+            <span className={`font-mono text-base font-bold ${highlights.some(h=>h.key==="傷害指數")?"text-rose-300":"text-rose-500/60"}`}>{fN(s.傷害指數)}</span>
+          </div>
+        </div>
+      </div>
+      {exp&&(
+        <div className="border-t border-slate-800/40 p-3 space-y-1.5" style={{background:"#080C14"}}>
+          {r.combo.map((eq,i)=>(
+            <div key={i} className="text-[12px] flex items-start gap-1.5">
+              <span className="text-slate-600 w-5 shrink-0 pt-0.5 text-center font-mono">{eq.slot}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
+                  <span className="text-slate-300">{eq.mt} {fE(eq.mt,eq.mv)}</span>
+                </div>
+                <div className="text-slate-500 mt-0.5 leading-relaxed">{fmtSubs(eq.subs)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// MANUAL FORM
+// ============================================================
+function ManualForm({onAdd,onCancel}){
+  const[slot,setSlot]=useState("武器");const[set,setSet]=useState("速度");
+  const[mt,setMt]=useState("攻擊");const[mv,setMv]=useState(500);
+  const[subs,setSubs]=useState([{t:"生命%",v:0},{t:"速度",v:0},{t:"爆率",v:0},{t:"命中",v:0}]);
+  useEffect(()=>{if(slot==="武器"){setMt("攻擊");setMv(500);}else if(slot==="頭盔"){setMt("生命");setMv(2700);}else if(slot==="鎧甲"){setMt("防禦");setMv(300);}},[slot]);
+  const iCls="rounded-lg px-1.5 py-1 text-[12px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
+  const iSty={background:"#0B0F1A",color:"#CBD5E1"};
+  return(
+    <div className="rounded-xl border border-blue-800/30 p-3 space-y-2.5 text-[13px]" style={{background:"#0D1A2E"}}>
+      <div className="font-bold text-sm text-blue-400">+ 新增裝備</div>
+      <div className="grid grid-cols-3 gap-2">
+        {[["部位",slot,setSlot,SLOTS],["套裝",set,setSet,ALL_SETS],["主屬",mt,setMt,PROPS]].map(([label,val,setter,opts])=>(
+          <label key={label} className="space-y-1">
+            <span className="text-slate-500 text-[10px] uppercase tracking-wide">{label}</span>
+            <select className={`w-full ${iCls}`} style={iSty} value={val} onChange={e=>setter(e.target.value)}>
+              {opts.map(o=><option key={o}>{o}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-slate-500">主屬值</span>
+        <input type="number" step="any" className={`w-20 ${iCls}`} style={iSty} value={mv} onChange={e=>setMv(+e.target.value)}/>
+        <span className="text-[10px] text-slate-600">%類填小數，如爆率 0.6 = 60%</span>
+      </div>
+      <div>
+        <div className="text-[12px] text-slate-500 mb-1.5">副屬</div>
+        <div className="space-y-1.5">
+          {subs.map((s,i)=>(
+            <div key={i} className="flex gap-1.5 items-center">
+              <select className={iCls} style={{...iSty,width:"80px"}} value={s.t} onChange={e=>setSubs(x=>x.map((y,j)=>j===i?{...y,t:e.target.value}:y))}>
+                {PROPS.map(p=><option key={p}>{p}</option>)}
+              </select>
+              <input type="number" step="any" className={`w-20 ${iCls}`} style={iSty} value={s.v||""} onChange={e=>setSubs(x=>x.map((y,j)=>j===i?{...y,v:+e.target.value}:y))}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button onClick={onCancel} className="flex-1 py-1.5 rounded-lg border border-slate-700/40 text-slate-400 text-[13px] hover:bg-slate-800/40 transition-colors">取消</button>
+        <button onClick={()=>{const so={};subs.forEach(s=>{if(s.v)so[s.t]=(so[s.t]||0)+s.v;});onAdd({slot,set,mt,mv,subs:so,lv:15,sid:"manual"});}}
+          className="flex-1 py-1.5 rounded-lg font-bold text-[13px] text-white" style={{background:"linear-gradient(135deg,#1D4ED8,#4F46E5)"}}>新增</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
