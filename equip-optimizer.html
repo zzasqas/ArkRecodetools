@@ -8,7 +8,25 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>body{margin:0;padding:0;}</style>
+<script>
+tailwind.config={
+  theme:{
+    extend:{
+      fontSize:{
+        'xs':  ['13px',{lineHeight:'18px'}],
+        'sm':  ['16px',{lineHeight:'23px'}],
+        'base':['18px',{lineHeight:'27px'}],
+        'lg':  ['20px',{lineHeight:'31px'}],
+      }
+    }
+  }
+}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;}
+html{font-size:16px;}
+body{margin:0;padding:0;font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -501,7 +519,7 @@ const fN=n=>n!=null?Math.floor(n).toLocaleString():"0";
 const fP=n=>`${n!=null?Math.floor(n*10)/10:0}%`;
 const fS=(k,v)=>["爆率","爆傷","命中","抗性"].includes(k)?fP(v):k==="速度"?String(Math.floor(v??0)):fN(v);
 const fE=(k,v)=>["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(k)?`${Math.floor((v??0)*100)}%`:String(Math.floor(v??0));
-const Bg=({children,color="#6B7280"})=><span className="px-1.5 py-0.5 rounded text-[12px] font-bold" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
+const Bg=({children,color="#6B7280"})=><span className="px-1.5 py-0.5 rounded text-[15px] font-bold" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
 const fmtSubs=subs=>Object.entries(subs).map(([k,v])=>`${k}${fE(k,v)}`).join("  ·  ");
 
 // ============================================================
@@ -776,7 +794,7 @@ function App(){
   });
 
   const canRun=selChar&&equips.length>0&&!running;
-  const iCls="rounded-lg px-2 py-1 text-[12px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
+  const iCls="rounded-lg px-2 py-1 text-[15px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
   const iSty={background:"#151D2E",color:"#CBD5E1"};
   const spdV=sc["速度"];
 
@@ -813,7 +831,7 @@ function App(){
                 <div className="absolute left-0 top-full mt-2 z-[9999] rounded-xl border border-slate-600 overflow-hidden shadow-2xl"
                   style={{background:"#0F1628",minWidth:"200px"}}>
                   <div className="px-3 py-2 border-b border-slate-700/50">
-                    <div className="text-[11px] text-slate-500 font-semibold tracking-widest uppercase">ArkRecode Tools</div>
+                    <div className="text-[16px] text-slate-500 font-semibold tracking-widest uppercase">ArkRecode Tools</div>
                   </div>
                   {[
                     {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./index.html"},
@@ -828,10 +846,10 @@ function App(){
                         :{color:"#94A3B8"}}>
                       <span className="text-base w-5 text-center shrink-0">{item.icon}</span>
                       <div>
-                        <div className="text-[13px] font-medium">{item.zh}</div>
-                        <div className="text-[10px] opacity-50">{item.en}</div>
+                        <div className="text-[16px] font-medium">{item.zh}</div>
+                        <div className="text-[15px] opacity-50">{item.en}</div>
                       </div>
-                      {item.active&&<span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{background:"#3B82F622",color:"#93C5FD",border:"1px solid #3B82F644"}}>目前頁面</span>}
+                      {item.active&&<span className="ml-auto text-[15px] px-1.5 py-0.5 rounded-full" style={{background:"#3B82F622",color:"#93C5FD",border:"1px solid #3B82F644"}}>目前頁面</span>}
                     </a>
                   ))}
                 </div>
@@ -842,13 +860,13 @@ function App(){
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
             <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span></h1>
-            <span className="text-[10px] text-slate-600 border border-slate-800 px-1.5 py-0.5 rounded-full">v1.0.0</span>
+            <span className="text-[15px] text-slate-600 border border-slate-800 px-1.5 py-0.5 rounded-full">v1.0.0</span>
           </div>
-          <button onClick={()=>setShowHelp(!showHelp)} className="text-[12px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
+          <button onClick={()=>setShowHelp(!showHelp)} className="text-[15px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
           </button>
         </div>
-        <div className="flex items-center gap-2 text-[13px]">
+        <div className="flex items-center gap-2 text-[16px]">
           <label className="cursor-pointer flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-300 transition-colors">
             <span>👤</span><span>角色CSV</span>
             <input type="file" accept=".csv" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{const parsed=parseCharCSV(r.result);const list=parsed.length?parsed:DEMO_CHARS;setChars(list);setHidden(list.filter(c=>c.star<=4).map(c=>c.name));};r.readAsText(f);}}}/>
@@ -858,7 +876,7 @@ function App(){
             <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{try{setEquips(parseEquipJSON(JSON.parse(r.result)))}catch(err){alert("JSON解析錯誤: "+err.message)}};r.readAsText(f);}e.target.value="";}}/>
           </label>
           {equips.length>0&&<button onClick={()=>setEquips([])} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
-          <div className="text-slate-500 text-[12px] border border-slate-800 px-2 py-1 rounded-lg">
+          <div className="text-slate-500 text-[15px] border border-slate-800 px-2 py-1 rounded-lg">
             <span style={{color:"#93C5FD"}}>{chars.length}</span> 角 · <span style={{color:"#4ADE80"}}>{equips.length}</span> 裝
           </div>
         </div>
@@ -867,13 +885,13 @@ function App(){
       {showHelp&&(
         <div className="border-b border-slate-800 px-5 py-4 text-sm text-slate-300 space-y-2" style={{background:"#0F1628"}}>
           <div className="font-bold text-blue-400 mb-1">📖 使用說明</div>
-          <div className="grid grid-cols-4 gap-4 text-[13px]">
+          <div className="grid grid-cols-4 gap-4 text-[16px]">
             <div><div className="text-blue-300 font-semibold mb-1">① 匯入資料</div><p className="text-slate-400">匯入角色 CSV 和裝備 JSON，或手動新增裝備。已內建測試角色。</p></div>
             <div><div className="text-blue-300 font-semibold mb-1">② 速度設定</div><p className="text-slate-400">設最低/最高速度後，速度只做門檻篩選，<b className="text-slate-200">不影響排序分數</b>。勾「追求最快」才讓速度參與排序。</p></div>
             <div><div className="text-blue-300 font-semibold mb-1">③ 其他屬性</div><p className="text-slate-400"><b className="text-slate-200">下限</b>=硬性門檻。<b className="text-slate-200">MAX+權重</b>=排序優先度。</p></div>
             <div><div className="text-blue-300 font-semibold mb-1">④ 配裝 &amp; 鎖定</div><p className="text-slate-400">Top 8 組合，可停止搜索。鎖定後裝備不被其他角色配走。</p></div>
           </div>
-          <p className="text-slate-500 text-[12px]">套裝：<span style={{color:"#F87171"}}>■ 紅=四件套</span>　<span style={{color:"#4ADE80"}}>■ 綠=二件套</span>　· 傷害指數 = 攻擊×(1+爆率×爆傷)</p>
+          <p className="text-slate-500 text-[15px]">套裝：<span style={{color:"#F87171"}}>■ 紅=四件套</span>　<span style={{color:"#4ADE80"}}>■ 綠=二件套</span>　· 傷害指數 = 攻擊×(1+爆率×爆傷)</p>
         </div>
       )}
 
@@ -884,7 +902,7 @@ function App(){
             <input className="w-full rounded-lg px-2.5 py-1.5 text-sm placeholder-slate-600 border border-slate-700/50 focus:outline-none focus:border-blue-700 transition-colors"
               style={{background:"#151D2E",color:"#CBD5E1"}} placeholder="🔍 搜尋角色..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
-          <div className="flex px-1.5 gap-0.5 text-[12px] pb-1">
+          <div className="flex px-1.5 gap-0.5 text-[15px] pb-1">
             {ELEM_LIST.map(el=>(
               <button key={el} onClick={()=>setElemTab(el)} className="flex-1 py-1 rounded text-center transition-all"
                 style={elemTab===el?{background:el==="⭐"?"#1E293B":EC[el]+"28",color:el==="⭐"?"#FCD34D":EC[el],fontWeight:700,borderBottom:`2px solid ${el==="⭐"?"#FCD34D":EC[el]}`}:{color:"#475569"}}>
@@ -893,7 +911,7 @@ function App(){
             ))}
           </div>
           <div className="flex-1 overflow-y-auto px-1.5 space-y-0.5">
-            {!chars.length&&<div className="text-slate-600 text-[12px] py-8 text-center leading-relaxed">請匯入角色 CSV<br/><span className="text-slate-700">↑ 右上角</span></div>}
+            {!chars.length&&<div className="text-slate-600 text-[15px] py-8 text-center leading-relaxed">請匯入角色 CSV<br/><span className="text-slate-700">↑ 右上角</span></div>}
             {fChars.map(c=>(
               <div key={c.name} onClick={()=>{
                 // 儲存前一個角色的設定
@@ -914,18 +932,18 @@ function App(){
               }}
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${selChar?.name===c.name?"border border-blue-700/60":"border border-transparent hover:border-slate-700/40"} ${hidden.includes(c.name)?"opacity-25":""}`}
                 style={selChar?.name===c.name?{background:"#1E3A5F"}:{}}>
-                <button onClick={e=>{e.stopPropagation();setFavs(f=>f.includes(c.name)?f.filter(x=>x!==c.name):[...f,c.name])}} className="text-[12px] shrink-0 hover:scale-125 transition-transform">
+                <button onClick={e=>{e.stopPropagation();setFavs(f=>f.includes(c.name)?f.filter(x=>x!==c.name):[...f,c.name])}} className="text-[15px] shrink-0 hover:scale-125 transition-transform">
                   {favs.includes(c.name)?"⭐":"☆"}
                 </button>
                 <span className="w-2 h-2 rounded-full shrink-0" style={{background:EC[c.element]||"#94A3B8"}}/>
-                <span className="flex-1 truncate text-[13px] text-slate-200">{c.name}</span>
+                <span className="flex-1 truncate text-[16px] text-slate-200">{c.name}</span>
                 <Bg color={JC[c.job]||"#94A3B8"}>{c.job}</Bg>
-                {locked[c.name]&&<span className="text-[10px]">🔒</span>}
+                {locked[c.name]&&<span className="text-[15px]">🔒</span>}
               </div>
             ))}
           </div>
           <div className="border-t border-slate-800/60 px-2 py-1">
-            <button onClick={()=>setShowHid(!showHid)} className="w-full text-[12px] text-slate-600 hover:text-slate-400 py-0.5 transition-colors">
+            <button onClick={()=>setShowHid(!showHid)} className="w-full text-[15px] text-slate-600 hover:text-slate-400 py-0.5 transition-colors">
               {showHid?"隱藏屏蔽":"顯示屏蔽"} ({hidden.length})
             </button>
           </div>
@@ -934,17 +952,17 @@ function App(){
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{background:EC[selChar.element]||"#94A3B8"}}/>
                 <span className="font-bold text-sm flex-1 truncate text-slate-100">{selChar.name}</span>
-                <span className="text-yellow-400 text-[12px]">{"★".repeat(selChar.star)}</span>
+                <span className="text-yellow-400 text-[15px]">{"★".repeat(selChar.star)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Bg color={JC[selChar.job]||"#94A3B8"}>{selChar.job}</Bg>
                 <button onClick={()=>setHidden(h=>h.includes(selChar.name)?h.filter(x=>x!==selChar.name):[...h,selChar.name])}
-                  className="text-[10px] px-1.5 py-0.5 rounded border transition-colors"
+                  className="text-[15px] px-1.5 py-0.5 rounded border transition-colors"
                   style={hidden.includes(selChar.name)?{borderColor:"#22C55E44",color:"#22C55E"}:{borderColor:"#334155",color:"#64748B"}}>
                   {hidden.includes(selChar.name)?"👁 顯示":"🚫 隱藏"}
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[12px]">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[15px]">
                 {[["攻",selChar.base_atk,selChar.bonus_atk],["防",selChar.base_def,selChar.bonus_def],["血",selChar.base_hp,selChar.bonus_hp],["速",selChar.base_spd,selChar.bonus_spd]].map(([l,b,bo])=>(
                   <span key={l} className="text-slate-400">{l}<span className="text-slate-200 font-mono">{b}</span><span className="text-slate-600">+{bo}</span></span>
                 ))}
@@ -955,23 +973,23 @@ function App(){
               </div>
               {/* ★ Per-% value display */}
               {perPctInfo&&(
-                <div className="flex gap-2 text-[10px] text-slate-600 bg-slate-800/30 rounded-lg px-2 py-1">
+                <div className="flex gap-2 text-[15px] text-slate-600 bg-slate-800/30 rounded-lg px-2 py-1">
                   <span>1%攻=<span className="text-rose-400 font-mono">{perPctInfo["攻擊%"]}</span></span>
                   <span>1%防=<span className="text-blue-400 font-mono">{perPctInfo["防禦%"]}</span></span>
                   <span>1%血=<span className="text-green-400 font-mono">{perPctInfo["生命%"]}</span></span>
                 </div>
               )}
-              <div className="flex gap-2 text-[12px] flex-wrap">
+              <div className="flex gap-2 text-[15px] flex-wrap">
                 <label className="flex items-center gap-1 text-slate-500">羈絆攻<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondAtk||""} onChange={e=>setBondAtk(+e.target.value||0)}/></label>
                 <label className="flex items-center gap-1 text-slate-500">羈絆血<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondHp||""} onChange={e=>setBondHp(+e.target.value||0)}/></label>
 
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] text-slate-500 font-semibold">🔓 突破加成</span>
-                  <button onClick={()=>setBreaks(b=>[...b,{prop:"攻擊",val:0}])} className="text-[10px] px-2 py-1 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
+                  <span className="text-[15px] text-slate-500 font-semibold">🔓 突破加成</span>
+                  <button onClick={()=>setBreaks(b=>[...b,{prop:"攻擊",val:0}])} className="text-[15px] px-2 py-1 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
                 </div>
-                {breaks.length===0&&<div className="text-[10px] text-slate-700">無突破加成</div>}                {breaks.map((br,i)=>(
+                {breaks.length===0&&<div className="text-[15px] text-slate-700">無突破加成</div>}                {breaks.map((br,i)=>(
                   <div key={i} className="flex items-center gap-1">
                     <select className={`${iCls} flex-1`} style={iSty} value={br.prop} onChange={e=>setBreaks(b=>b.map((x,j)=>j===i?{...x,prop:e.target.value}:x))}>
                       {BREAK_PROPS.map(p=><option key={p}>{p}</option>)}
@@ -985,19 +1003,19 @@ function App(){
                         const val=isNaN(num)?0:isPct?num/100:num;
                         setBreaks(b=>b.map((x,j)=>j===i?{...x,valStr:raw,val}:x));
                       }}/>
-                    <span className="text-[10px] text-slate-600 shrink-0 w-4">{["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"%":""}</span>/>
+                    <span className="text-[15px] text-slate-600 shrink-0 w-4">{["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"%":""}</span>/>
                     <button onClick={()=>setBreaks(b=>b.filter((_,j)=>j!==i))} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
                   </div>
                 ))}
               </div>
-              {selChar.passive&&<div className="text-[10px] text-slate-600 truncate" title={selChar.passive}>{selChar.passive}</div>}
+              {selChar.passive&&<div className="text-[15px] text-slate-600 truncate" title={selChar.passive}>{selChar.passive}</div>}
             </div>
           )}
         </div>
 
         {/* MID — Config/Equips/Locked */}
         <div className="flex flex-col border-r border-slate-800/60 overflow-hidden" style={{width:"40%",background:"#0D1220"}}>
-          <div className="flex border-b border-slate-800/60 text-[13px] shrink-0">
+          <div className="flex border-b border-slate-800/60 text-[16px] shrink-0">
             {[["config","⚙️ 配裝設定"],["equips","📦 裝備庫"],["locked","🔒 鎖定"]].map(([k,l])=>(
               <button key={k} onClick={()=>setTab(k)}
                 className={`px-4 py-2 transition-colors ${tab===k?"text-blue-400 border-b-2 border-blue-500":"text-slate-500 hover:text-slate-300"}`}
@@ -1011,7 +1029,7 @@ function App(){
               <div className="p-3 space-y-4">
                 {/* ── MODE SWITCHER ── */}
                 <div>
-                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">計算模式</div>
+                  <div className="text-[15px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">計算模式</div>
                   <div className="flex gap-0 rounded-lg border border-slate-700/50 overflow-hidden">
                     {[
                       ["A","⚙️ 自由配置","權重+多目標","設定各屬性的「下限門檻」與「優化權重」，系統計算加權綜合分後排名。適合平衡型配裝或多目標探索。速度可選擇「追求最快」參與排序。"],
@@ -1019,12 +1037,12 @@ function App(){
                     ].map(([m,title,desc,tip],mi)=>(
                       <div key={m} className="flex-1">
                         <button onClick={()=>setCalcMode(m)}
-                          className="w-full py-2 px-3 text-[13px] transition-all text-left"
+                          className="w-full py-2 px-3 text-[16px] transition-all text-left"
                           style={calcMode===m?{background:"#1E3A5F",color:"#93C5FD"}:{background:"#151D2E",color:"#64748B"}}>
                           <div className="flex items-center gap-1">
                             <span className="font-semibold">{title}</span>
                             <span
-                              className="text-[10px] rounded-full border px-1 opacity-50 hover:opacity-100 transition-opacity cursor-help"
+                              className="text-[15px] rounded-full border px-1 opacity-50 hover:opacity-100 transition-opacity cursor-help"
                               style={{borderColor:"currentColor"}}
                               onMouseEnter={e=>{
                                 const r=e.currentTarget.getBoundingClientRect();
@@ -1034,13 +1052,13 @@ function App(){
                               }}
                               onMouseLeave={()=>setTipIdx(null)}>?</span>
                           </div>
-                          <div className="text-[10px] opacity-70 mt-0.5">{desc}</div>
+                          <div className="text-[15px] opacity-70 mt-0.5">{desc}</div>
                         </button>
                       </div>
                     ))}
                   </div>
                   {tipIdx&&(
-                    <div className="fixed z-[9999] w-72 rounded-lg border border-slate-400 p-3 text-[12px] leading-relaxed shadow-2xl pointer-events-none"
+                    <div className="fixed z-[9999] w-72 rounded-lg border border-slate-400 p-3 text-[15px] leading-relaxed shadow-2xl pointer-events-none"
                       style={{background:"#1A2540",color:"#CBD5E1",left:tipIdx.x,top:tipIdx.y}}>
                       {["設定各屬性的「下限門檻」與「優化權重」，系統計算加權綜合分後排名。適合平衡型配裝或多目標探索。速度可選擇「追求最快」參與排序。",
                         "先設速度區間與其他硬性門檻，過濾合格組合後純粹最大化單一指標。適合速度已確定、只想最大化特定屬性的情境。"][tipIdx.idx]}
@@ -1051,13 +1069,13 @@ function App(){
                 {/* ── SHARED: Sets ── */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">套裝需求</div>
-                    <span className={`text-[12px] font-mono ${tsp>=6?"text-amber-400":"text-slate-500"}`}>{tsp}/6 件</span>
+                    <div className="text-[15px] text-slate-500 font-semibold tracking-wide uppercase">套裝需求</div>
+                    <span className={`text-[15px] font-mono ${tsp>=6?"text-amber-400":"text-slate-500"}`}>{tsp}/6 件</span>
                   </div>
                   {tspSets.length>0&&(
                     <div className="flex flex-wrap gap-1 mb-2">
                       {tspSets.map((s,i)=>(
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-bold border"
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[15px] font-bold border"
                           style={{background:getSetColor(s)+"15",color:getSetColor(s),borderColor:getSetColor(s)+"44"}}>
                           {s}({getSetPcs(s)})<button onClick={()=>setTspSets(x=>x.filter((_,j)=>j!==i))} className="hover:opacity-60 ml-0.5 font-normal">×</button>
                         </span>
@@ -1067,12 +1085,12 @@ function App(){
                   <div className="flex flex-wrap gap-1">
                     {ALL_SETS.filter(s=>tsp+getSetPcs(s)<=6).map(s=>(
                       <button key={s} onClick={()=>setTspSets(x=>[...x,s])}
-                        className="text-[12px] px-2 py-0.5 rounded-full border transition-all hover:opacity-90"
+                        className="text-[15px] px-2 py-0.5 rounded-full border transition-all hover:opacity-90"
                         style={{background:getSetColor(s)+"10",color:getSetColor(s),borderColor:getSetColor(s)+"33"}}>
                         {s}<span className="opacity-50 ml-0.5">({getSetPcs(s)})</span>
                       </button>
                     ))}
-                    {tsp>=6&&<span className="text-[12px] text-amber-500 self-center ml-1">已滿</span>}
+                    {tsp>=6&&<span className="text-[15px] text-amber-500 self-center ml-1">已滿</span>}
                   </div>
                 </div>
 
@@ -1080,11 +1098,11 @@ function App(){
                 {calcMode==="A"&&(<>
                 {/* Templates */}
                 <div>
-                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">快速模板</div>
+                  <div className="text-[15px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">快速模板</div>
                   <div className="flex flex-wrap gap-1.5">
                     {TEMPLATES.map(t=>(
                       <button key={t.name} onClick={()=>{setSc({...t.stats});setSelSets([...t.sets]);}}
-                        className="text-[13px] px-2.5 py-1 rounded-lg border transition-all hover:border-blue-700/50 hover:text-blue-300"
+                        className="text-[16px] px-2.5 py-1 rounded-lg border transition-all hover:border-blue-700/50 hover:text-blue-300"
                         style={{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
                         {t.name}
                       </button>
@@ -1093,7 +1111,7 @@ function App(){
                 </div>
                 {/* Stat targets */}
                 <div>
-                  <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase mb-1.5">屬性目標</div>
+                  <div className="text-[15px] text-slate-500 font-semibold tracking-wide uppercase mb-1.5">屬性目標</div>
                   <div className="rounded-xl border border-slate-800/60 overflow-hidden" style={{background:"#0B0F1A"}}>
 
                     {/* ── SPEED ROW (special) ── */}
@@ -1102,14 +1120,14 @@ function App(){
                       const active=v.min>0||v.spdMax>0;
                       return(
                         <div className={`px-3 py-2 border-b border-slate-800/30 ${active?"bg-blue-950/20":""}`}>
-                          <div className="flex items-center gap-2 text-[13px]">
+                          <div className="flex items-center gap-2 text-[16px]">
                             <span className={`w-7 font-semibold shrink-0 whitespace-nowrap ${active?"text-blue-300":"text-slate-300"}`}>速度</span>
                             <div className="flex items-center gap-1">
-                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border ${v.min>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[15px] text-center border ${v.min>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
                                 style={{background:"#151D2E",color:"#CBD5E1"}}
                                 placeholder="最低" value={v.min||""} onChange={e=>setSc(s=>({...s,速度:{...v,min:+e.target.value||0}}))}/>
-                              <span className="text-slate-600 text-[12px]">~</span>
-                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border ${v.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                              <span className="text-slate-600 text-[15px]">~</span>
+                              <input type="number" className={`w-20 rounded-md px-1.5 py-0.5 text-[15px] text-center border ${v.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
                                 style={{background:"#151D2E",color:"#CBD5E1"}}
                                 placeholder="最高" value={v.spdMax||""} onChange={e=>setSc(s=>({...s,速度:{...v,spdMax:+e.target.value||0}}))}/>
                             </div>
@@ -1118,17 +1136,17 @@ function App(){
                                 <input type="checkbox" checked={v.spdShoe||false}
                                   onChange={e=>setSc(s=>({...s,速度:{...v,spdShoe:e.target.checked}}))}
                                   className="accent-blue-500 w-3 h-3"/>
-                                <span className={`text-[12px] ${v.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
+                                <span className={`text-[15px] ${v.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
                               </label>
                               <label className="flex items-center gap-1 cursor-pointer">
                                 <input type="checkbox" checked={v.pursueMax||false}
                                   onChange={e=>setSc(s=>({...s,速度:{...v,pursueMax:e.target.checked}}))}
                                   className="accent-blue-500 w-3 h-3"/>
-                                <span className={`text-[12px] ${v.pursueMax?"text-blue-300":"text-slate-500"}`}>追求最快</span>
+                                <span className={`text-[15px] ${v.pursueMax?"text-blue-300":"text-slate-500"}`}>追求最快</span>
                               </label>
                             </div>
                           </div>
-                          <div className="mt-1 pl-9 text-[10px] flex flex-wrap gap-x-2">
+                          <div className="mt-1 pl-9 text-[15px] flex flex-wrap gap-x-2">
                             {v.pursueMax
                               ? <span className="text-blue-400">⚡ 速度參與排序，越快越好</span>
                               : v.min>0&&!v.spdMax
@@ -1146,20 +1164,20 @@ function App(){
                     {/* ── OTHER STAT ROWS ── */}
                     {SK_NON_SPD.map((k,ki)=>{const v=sc[k];
                       return(
-                        <div key={k} className={`flex items-center gap-2 px-3 py-1.5 text-[13px] ${ki<SK_NON_SPD.length-1?"border-b border-slate-800/30":""}`}>
+                        <div key={k} className={`flex items-center gap-2 px-3 py-1.5 text-[16px] ${ki<SK_NON_SPD.length-1?"border-b border-slate-800/30":""}`}>
                           <span className="w-10 font-semibold text-slate-300 shrink-0 whitespace-nowrap">{k}</span>
                           <input type="number"
-                            className="w-20 rounded-md px-1.5 py-0.5 text-[12px] text-center border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors"
+                            className="w-20 rounded-md px-1.5 py-0.5 text-[15px] text-center border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors"
                             style={{background:"#151D2E",color:"#CBD5E1"}}
                             placeholder="下限" value={v.min||""} onChange={e=>setSc(s=>({...s,[k]:{...v,min:+e.target.value||0}}))}/>
                           <label className="flex items-center gap-1 cursor-pointer ml-1 shrink-0">
                             <input type="checkbox" checked={v.max} onChange={e=>setSc(s=>({...s,[k]:{...v,max:e.target.checked}}))} className="accent-blue-500 w-3 h-3"/>
-                            <span className="text-slate-500 text-[12px]">MAX</span>
+                            <span className="text-slate-500 text-[15px]">MAX</span>
                           </label>
                           <input type="range" min="0" max="10" step="1" value={Math.round(v.w*10)}
                             onChange={e=>setSc(s=>({...s,[k]:{...v,w:+e.target.value/10}}))}
                             className="flex-1" style={{minWidth:"110px",maxWidth:"160px",accentColor:v.w>=0.5?"#F59E0B":"#3B82F6"}}/>
-                          <span className="w-6 text-right text-[12px] font-mono font-semibold shrink-0" style={{color:v.w>=0.5?"#F59E0B":v.w>0?"#93C5FD":"#475569"}}>{v.w.toFixed(1)}</span>
+                          <span className="w-6 text-right text-[15px] font-mono font-semibold shrink-0" style={{color:v.w>=0.5?"#F59E0B":v.w>0?"#93C5FD":"#475569"}}>{v.w.toFixed(1)}</span>
                         </div>
                       );
                     })}
@@ -1171,39 +1189,39 @@ function App(){
                 {calcMode==="B"&&(<>
                 {/* Goal */}
                 <div>
-                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">最大化目標</div>
+                  <div className="text-[15px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">最大化目標</div>
                   <div className="grid grid-cols-4 gap-1.5">
                     {MODE_B_GOALS.map(g=>(
                       <button key={g.key} onClick={()=>setMb(m=>({...m,goal:g.key}))}
-                        className="text-[13px] px-2 py-2.5 rounded-lg border transition-all flex flex-col items-center justify-center text-center min-h-[52px]"
+                        className="text-[16px] px-2 py-2.5 rounded-lg border transition-all flex flex-col items-center justify-center text-center min-h-[52px]"
                         style={mb.goal===g.key?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
                         <div className="font-medium">{g.label}</div>
-                        {g.desc&&<div className="text-[10px] opacity-60 mt-0.5">{g.desc}</div>}
+                        {g.desc&&<div className="text-[15px] opacity-60 mt-0.5">{g.desc}</div>}
                       </button>
                     ))}
                   </div>
                 </div>
                 {/* Speed */}
                 <div>
-                  <div className="text-[12px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">速度區間</div>
+                  <div className="text-[15px] text-slate-500 mb-1.5 font-semibold tracking-wide uppercase">速度區間</div>
                   <div className="rounded-xl border border-slate-800/60 p-3" style={{background:"#0B0F1A"}}>
-                    <div className="flex items-center gap-2 text-[13px]">
+                    <div className="flex items-center gap-2 text-[16px]">
                       <span className="text-blue-300 font-semibold w-10 shrink-0 whitespace-nowrap">速度</span>
-                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[13px] text-center border ${mb.spdMin>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[16px] text-center border ${mb.spdMin>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
                         style={{background:"#151D2E",color:"#CBD5E1"}}
                         placeholder="最低" value={mb.spdMin||""} onChange={e=>setMb(m=>({...m,spdMin:+e.target.value||0}))}/>
                       <span className="text-slate-600">~</span>
-                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[13px] text-center border ${mb.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
+                      <input type="number" className={`w-20 rounded-md px-1.5 py-1 text-[16px] text-center border ${mb.spdMax>0?"border-blue-600/50":"border-slate-700/40"} focus:outline-none focus:border-blue-700 transition-colors`}
                         style={{background:"#151D2E",color:"#CBD5E1"}}
                         placeholder="最高(選填)" value={mb.spdMax||""} onChange={e=>setMb(m=>({...m,spdMax:+e.target.value||0}))}/>
                       <label className="flex items-center gap-1 cursor-pointer ml-auto">
                         <input type="checkbox" checked={mb.spdShoe||false}
                           onChange={e=>setMb(m=>({...m,spdShoe:e.target.checked}))}
                           className="accent-blue-500 w-3 h-3"/>
-                        <span className={`text-[12px] ${mb.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
+                        <span className={`text-[15px] ${mb.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
                       </label>
                     </div>
-                    <div className="mt-1.5 text-[10px] text-blue-400/70 pl-9">
+                    <div className="mt-1.5 text-[15px] text-blue-400/70 pl-9">
                       {mb.spdMin>0&&mb.spdMax>0?`🔒 速度 ${mb.spdMin}~${mb.spdMax}，不影響排序`
                         :mb.spdMin>0?`🔒 速度 ≥${mb.spdMin}，不影響排序`
                         :mb.spdMax>0?`🔒 速度 ≤${mb.spdMax}，不影響排序`
@@ -1216,11 +1234,11 @@ function App(){
                 {/* Extra constraints */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">額外約束 (硬性門檻)</div>
+                    <div className="text-[15px] text-slate-500 font-semibold tracking-wide uppercase">額外約束 (硬性門檻)</div>
                     <button onClick={()=>setMb(m=>({...m,constraints:[...m.constraints,{stat:"爆率",val:0}]}))}
-                      className="text-[10px] px-2 py-0.5 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
+                      className="text-[15px] px-2 py-0.5 rounded border border-blue-700/40 text-blue-400 hover:bg-blue-900/20 transition-colors">+ 新增</button>
                   </div>
-                  {mb.constraints.length===0&&<div className="text-[10px] text-slate-700 pl-1">無額外約束（僅速度篩選）</div>}
+                  {mb.constraints.length===0&&<div className="text-[15px] text-slate-700 pl-1">無額外約束（僅速度篩選）</div>}
                   <div className="space-y-1.5">
                     {mb.constraints.map((c,i)=>(
                       <div key={i} className="flex items-center gap-1.5">
@@ -1229,32 +1247,32 @@ function App(){
                           {MODE_B_CONSTRAINT_OPTS.map(o=><option key={o}>{o}</option>)}
                         </select>
                         <button onClick={()=>setMb(m=>({...m,constraints:m.constraints.map((x,j)=>j===i?{...x,dir:x.dir==="≤"?"≥":"≤"}:x)}))}
-                          className="text-[13px] px-2 py-0.5 rounded border transition-colors font-mono shrink-0"
+                          className="text-[16px] px-2 py-0.5 rounded border transition-colors font-mono shrink-0"
                           style={c.dir==="≤"?{borderColor:"#F59E0B55",color:"#F59E0B",background:"#1C1400"}:{borderColor:"#3B82F655",color:"#93C5FD",background:"#0D1A2E"}}>
                           {c.dir||"≥"}
                         </button>
                         <input type="number" className={`w-20 ${iCls}`} style={iSty}
                           placeholder={["爆率","爆傷","命中","抗性"].includes(c.stat)?"如 85":"如 1700"}
                           value={c.val||""} onChange={e=>setMb(m=>({...m,constraints:m.constraints.map((x,j)=>j===i?{...x,val:+e.target.value||0}:x)}))}/>
-                        <span className="text-[10px] text-slate-600 shrink-0">{["爆率","爆傷","命中","抗性"].includes(c.stat)?"%":""}</span>
+                        <span className="text-[15px] text-slate-600 shrink-0">{["爆率","爆傷","命中","抗性"].includes(c.stat)?"%":""}</span>
                         <button onClick={()=>setMb(m=>({...m,constraints:m.constraints.filter((_,j)=>j!==i)}))}
                           className="text-slate-600 hover:text-red-400 transition-colors ml-auto">✕</button>
                       </div>
                     ))}
                   </div>
-                  {mb.constraints.length>0&&<div className="text-[10px] text-slate-700 mt-1 pl-1">爆率/爆傷/命中/抗性 填最終%值。點擊 ≥/≤ 切換方向</div>}
+                  {mb.constraints.length>0&&<div className="text-[15px] text-slate-700 mt-1 pl-1">爆率/爆傷/命中/抗性 填最終%值。點擊 ≥/≤ 切換方向</div>}
                 </div>
                 </>)}
 
-                {runError&&<div className="text-[13px] text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">⚠️ {runError}</div>}
+                {runError&&<div className="text-[16px] text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">⚠️ {runError}</div>}
 
                 {/* Search duration */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[12px] text-slate-500 shrink-0">搜索時長</span>
+                  <span className="text-[15px] text-slate-500 shrink-0">搜索時長</span>
                   <div className="flex gap-1 flex-1">
                     {[[30,"快速"],[75,"標準"],[180,"深度"]].map(([s,l])=>(
                       <button key={s} onClick={()=>setSearchDur(s)}
-                        className="flex-1 text-[12px] py-1 rounded-lg border transition-all"
+                        className="flex-1 text-[15px] py-1 rounded-lg border transition-all"
                         style={searchDur===s?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
                         {l} {s}s
                       </button>
@@ -1290,10 +1308,10 @@ function App(){
                     <option value="">全套裝</option>{ALL_SETS.map(s=>{const n=equips.filter(e=>e.set===s).length;return n>0?<option key={s} value={s}>{s}({n})</option>:null;})}
                   </select>
                   <input className={`flex-1 ${iCls} placeholder-slate-600`} style={iSty} placeholder="搜尋..." value={eqF.q} onChange={e=>setEqF(f=>({...f,q:e.target.value}))}/>
-                  <button onClick={()=>setNewEq(true)} className="px-2.5 py-1 rounded-lg border border-blue-700/50 text-blue-400 text-[12px] transition-colors hover:bg-blue-900/30" style={{background:"#0D1A2E"}}>+ 新增</button>
+                  <button onClick={()=>setNewEq(true)} className="px-2.5 py-1 rounded-lg border border-blue-700/50 text-blue-400 text-[15px] transition-colors hover:bg-blue-900/30" style={{background:"#0D1A2E"}}>+ 新增</button>
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-[12px] text-slate-600 shrink-0">排序</span>
+                  <span className="text-[15px] text-slate-600 shrink-0">排序</span>
                   <select className={`flex-1 ${iCls}`} style={iSty} value={eqF.sort} onChange={e=>setEqF(f=>({...f,sort:e.target.value}))}>
                     <option value="">預設（匯入順序）</option>
                     <option value="速度">速度 ↓</option>
@@ -1308,18 +1326,18 @@ function App(){
                   </select>
                 </div>
                 {newEq&&<ManualForm onAdd={eq=>{setEquips(p=>[...p,{...eq,oid:"m_"+Date.now()+"_"+Math.random().toString(36).slice(2)}]);setNewEq(false);}} onCancel={()=>setNewEq(false)}/>}
-                <div className="text-[12px] text-slate-500 px-1">{fEquips.length} 件裝備</div>
+                <div className="text-[15px] text-slate-500 px-1">{fEquips.length} 件裝備</div>
                 <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
                   {fEquips.slice(0,200).map(eq=>{
                     const lk=lockedIds.has(eq.oid);const lb=Object.entries(locked).find(([_,v])=>v.eids?.includes(eq.oid));
                     return(
-                      <div key={eq.oid} className={`text-[12px] px-2.5 py-1.5 rounded-lg border transition-colors ${lk?"border-amber-700/40":"border-slate-700/30 hover:border-slate-600/40"}`} style={{background:lk?"#1A1500":"#0F1628"}}>
+                      <div key={eq.oid} className={`text-[15px] px-2.5 py-1.5 rounded-lg border transition-colors ${lk?"border-amber-700/40":"border-slate-700/30 hover:border-slate-600/40"}`} style={{background:lk?"#1A1500":"#0F1628"}}>
                         <div className="flex items-center gap-1.5">
                           <span className="text-slate-500 w-5">{eq.slot}</span>
                           <span className="font-bold" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
                           <span className="text-slate-200">{eq.mt} {fE(eq.mt,eq.mv)}</span>
                           <span className="flex-1"/>
-                          {lk&&<span className="text-amber-500 text-[10px]">🔒{lb?.[0]}</span>}
+                          {lk&&<span className="text-amber-500 text-[15px]">🔒{lb?.[0]}</span>}
                           <button onClick={()=>setEquips(p=>p.filter(x=>x.oid!==eq.oid))} className="text-slate-700 hover:text-red-400 transition-colors px-1">✕</button>
                         </div>
                         <div className="ml-6 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
@@ -1336,15 +1354,15 @@ function App(){
                       </div>
                     );
                   })}
-                  {fEquips.length>200&&<div className="text-[12px] text-slate-600 text-center py-2">顯示前 200 件</div>}
+                  {fEquips.length>200&&<div className="text-[15px] text-slate-600 text-center py-2">顯示前 200 件</div>}
                 </div>
               </div>
             )}
 
             {tab==="locked"&&(
               <div className="p-3 space-y-3">
-                <div className="text-[12px] text-slate-500">已鎖定 <span className="text-blue-400">{Object.keys(locked).length}</span> 角色（每角色最多 3 組方案）</div>
-                {!Object.keys(locked).length&&<div className="text-slate-600 text-[13px] py-8 text-center">尚無鎖定方案</div>}
+                <div className="text-[15px] text-slate-500">已鎖定 <span className="text-blue-400">{Object.keys(locked).length}</span> 角色（每角色最多 3 組方案）</div>
+                {!Object.keys(locked).length&&<div className="text-slate-600 text-[16px] py-8 text-center">尚無鎖定方案</div>}
                 {Object.entries(locked).map(([name,data])=>(
                   <div key={name} ref={el=>lockedCharRefs.current[name]=el}
                     className="rounded-xl border border-slate-700/50 overflow-hidden" style={{background:"#0D1525"}}>
@@ -1358,8 +1376,8 @@ function App(){
                         <span className="font-bold text-sm text-slate-100">🔒 {name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-600">{(data.plans||[]).length}/3 組</span>
-                        <button onClick={()=>unlockChar(name)} className="text-[12px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>
+                        <span className="text-[15px] text-slate-600">{(data.plans||[]).length}/3 組</span>
+                        <button onClick={()=>unlockChar(name)} className="text-[15px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>
                       </div>
                     </div>
 
@@ -1369,20 +1387,20 @@ function App(){
                         {/* 方案標題 + 套裝標籤 */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {pi+1}</span>
+                            <span className="text-[15px] font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {pi+1}</span>
                             {/* 有效套裝組合標籤 */}
                             {plan.stats?.套裝?.map((st,si)=>{const nm=st.replace(/\(\d\)/,"");return(
-                              <span key={si} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                              <span key={si} className="text-[15px] px-1.5 py-0.5 rounded-full font-bold"
                                 style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
                             );})}
                           </div>
-                          <button onClick={()=>unlockPlan(name,pi)} className="text-[10px] text-amber-500 hover:text-amber-300 transition-colors shrink-0">解鎖此組</button>
+                          <button onClick={()=>unlockPlan(name,pi)} className="text-[15px] text-amber-500 hover:text-amber-300 transition-colors shrink-0">解鎖此組</button>
                         </div>
 
                         {/* 角色數值框 — 速度黃、攻擊/爆率/爆傷紅、防禦/生命/坦度綠、命中/抗性白 */}
                         {plan.stats&&(
                           <div className="rounded-lg border border-slate-700/40 px-3 py-2" style={{background:"#0B1120"}}>
-                            <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[12px]">
+                            <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[15px]">
                               {[
                                 ["攻擊","#F87171",v=>fN(v)],
                                 ["防禦","#4ADE80",v=>fN(v)],
@@ -1394,20 +1412,20 @@ function App(){
                                 ["抗性","#E2E8F0",v=>fP(v)],
                               ].map(([k,color,fmt])=>(
                                 <div key={k} className="flex flex-col items-center py-0.5">
-                                  <span className="text-[10px] text-slate-600 mb-0.5">{k}</span>
-                                  <span className="font-mono font-bold text-[12px]" style={{color}}>{fmt(plan.stats[k])}</span>
+                                  <span className="text-[15px] text-slate-600 mb-0.5">{k}</span>
+                                  <span className="font-mono font-bold text-[15px]" style={{color}}>{fmt(plan.stats[k])}</span>
                                 </div>
                               ))}
                             </div>
                             {/* 坦度 / 傷害指數 */}
                             <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-slate-800/40">
                               <div className="flex items-center gap-1.5 flex-1">
-                                <span className="text-[10px] text-slate-600">🛡️ 坦度</span>
-                                <span className="font-mono text-[12px] font-bold text-green-400">{fN(plan.stats.坦度)}</span>
+                                <span className="text-[15px] text-slate-600">🛡️ 坦度</span>
+                                <span className="font-mono text-[15px] font-bold text-green-400">{fN(plan.stats.坦度)}</span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-1">
-                                <span className="text-[10px] text-slate-600">⚔️ 期望傷害</span>
-                                <span className="font-mono text-[12px] font-bold text-red-400">{fN(plan.stats.傷害指數)}</span>
+                                <span className="text-[15px] text-slate-600">⚔️ 期望傷害</span>
+                                <span className="font-mono text-[15px] font-bold text-red-400">{fN(plan.stats.傷害指數)}</span>
                               </div>
                             </div>
                           </div>
@@ -1418,13 +1436,13 @@ function App(){
                           const left=plan.combo.filter(e=>["武器","頭盔","鎧甲"].includes(e.slot));
                           const right=plan.combo.filter(e=>["項鍊","戒指","鞋子"].includes(e.slot));
                           const EqRow=({eq})=>(
-                            <div className="text-[10px] py-1 border-b border-slate-800/20 last:border-0">
+                            <div className="text-[15px] py-1 border-b border-slate-800/20 last:border-0">
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-600 w-4 shrink-0">{eq.slot}</span>
-                                <span className="font-bold text-[10px]" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
+                                <span className="font-bold text-[15px]" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
                                 <span className="text-slate-300 truncate">{eq.mt} {fE(eq.mt,eq.mv)}</span>
                               </div>
-                              <div className="text-slate-600 mt-0.5 pl-5 leading-tight text-[10px]">{fmtSubs(eq.subs)}</div>
+                              <div className="text-slate-600 mt-0.5 pl-5 leading-tight text-[15px]">{fmtSubs(eq.subs)}</div>
                             </div>
                           );
                           return(
@@ -1442,7 +1460,7 @@ function App(){
                     ))}
                   </div>
                 ))}
-                {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[12px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
+                {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[15px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
               </div>
             )}
           </div>
@@ -1450,16 +1468,16 @@ function App(){
 
         {/* RIGHT — Results */}
         <div className="flex flex-col overflow-hidden flex-1" style={{background:"#0B0F1A"}}>
-          <div className="px-4 py-2 border-b border-slate-800/60 text-[13px] text-slate-500 flex items-center gap-2 shrink-0 flex-wrap" style={{background:"#0D1220"}}>
+          <div className="px-4 py-2 border-b border-slate-800/60 text-[16px] text-slate-500 flex items-center gap-2 shrink-0 flex-wrap" style={{background:"#0D1220"}}>
             <span className="text-slate-400 font-semibold">📊 配裝結果</span>
             {res&&!running&&res.results?.length>0&&(
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1E3A5F",color:"#93C5FD",border:"1px solid #3B82F644"}}>
+              <span className="text-[16px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1E3A5F",color:"#93C5FD",border:"1px solid #3B82F644"}}>
                 {res.results.length} 個方案
               </span>
             )}
             {res&&<span className="text-slate-600">· 試算 {res.checked?.toLocaleString()} 組{res.totalFound>0?` · ${res.totalFound.toLocaleString()} 組合格`:""}</span>}
             {res?.poolInfo&&(
-              <span className="text-slate-700 text-[10px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}${n}`).join(" / ")}</span>
+              <span className="text-slate-700 text-[15px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}${n}`).join(" / ")}</span>
             )}
             {calcMode==="B"&&<span className="ml-auto" style={{color:"#93C5FD"}}>B模式 · 最大化: {MODE_B_GOALS.find(g=>g.key===mb.goal)?.label||mb.goal}</span>}
           </div>
@@ -1478,7 +1496,7 @@ function App(){
                     background:progress.elapsed>(searchDur*1000*0.8)?"linear-gradient(90deg,#F59E0B,#EF4444)":"linear-gradient(90deg,#3B82F6,#8B5CF6)"
                   }}/>
                 </div>
-                <div className="flex items-center justify-center gap-3 text-[13px] flex-wrap">
+                <div className="flex items-center justify-center gap-3 text-[16px] flex-wrap">
                   <span className="text-slate-500">已檢查 <span className="text-slate-300 font-mono">{progress.checked.toLocaleString()}</span></span>
                   <span className="text-slate-700">|</span>
                   <span className="text-green-400 font-semibold">
@@ -1490,13 +1508,13 @@ function App(){
                   <span className="text-slate-500">{(progress.elapsed/1000).toFixed(1)}s</span>
                 </div>
                 {progress.elapsed>30000&&(
-                  <div className="text-center text-[12px] text-amber-400/80">
+                  <div className="text-center text-[15px] text-amber-400/80">
                     {progress.elapsed>(searchDur*1000*0.8)?"即將自動結束...":`${Math.ceil((searchDur*1000-progress.elapsed)/1000)}s 後將自動停止`}
                   </div>
                 )}
                 <div className="flex justify-center pt-2">
                   <button onClick={stopRun}
-                    className="text-[14px] px-6 py-2 rounded-xl font-bold border-2 border-red-600/60 transition-all hover:bg-red-900/40"
+                    className="text-[17px] px-6 py-2 rounded-xl font-bold border-2 border-red-600/60 transition-all hover:bg-red-900/40"
                     style={{background:"#1C0A0A",color:"#F87171"}}>
                     ⏹ 停止搜索
                   </button>
@@ -1508,10 +1526,10 @@ function App(){
           {/* Quick jump highlights */}
           {!running&&uniqueHighlights.length>0&&(
             <div className="px-4 py-1.5 border-b border-slate-800/40 flex items-center gap-1.5 flex-wrap" style={{background:"#0D1424"}}>
-              <span className="text-[10px] text-slate-600 mr-1">快速跳轉:</span>
+              <span className="text-[15px] text-slate-600 mr-1">快速跳轉:</span>
               {uniqueHighlights.map((h,i)=>(
                 <button key={i} onClick={()=>scrollToResult(h.idx)}
-                  className="text-[10px] px-2 py-0.5 rounded-full font-bold transition-all hover:scale-105"
+                  className="text-[15px] px-2 py-0.5 rounded-full font-bold transition-all hover:scale-105"
                   style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}44`}}>
                   {h.label} {h.val!=null?fS(h.key,h.val):""} → #{h.idx+1}
                 </button>
@@ -1526,7 +1544,7 @@ function App(){
             {!runError&&res?.results?.length===0&&(
               <div className="text-amber-400 text-sm py-6 text-center bg-amber-950/20 rounded-xl border border-amber-800/30 mx-2 space-y-2">
                 <div>❌ 找不到滿足條件的組合</div>
-                <div className="text-slate-500 text-[12px] space-y-1 text-left px-4">
+                <div className="text-slate-500 text-[15px] space-y-1 text-left px-4">
                   <div className="font-semibold text-slate-400 mb-1">診斷建議：</div>
                   <div>• 多個下限同時存在時，請逐一放寬看哪個是關鍵瓶頸</div>
                   <div>• 套裝需求（6件）配合多個下限時組合空間極小，可嘗試移除套裝</div>
@@ -1535,7 +1553,7 @@ function App(){
                 </div>
               </div>
             )}
-            {lockErr&&<div className="mx-4 mb-2 text-[12px] text-amber-400 bg-amber-950/40 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {lockErr}</div>}
+            {lockErr&&<div className="mx-4 mb-2 text-[15px] text-amber-400 bg-amber-950/40 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {lockErr}</div>}
             {res?.results?.map((r,i)=>(
               <div key={i} ref={el=>{resultRefs.current[i]=el;}}>
                 <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]} onLock={()=>lockRes(i)}/>
@@ -1570,23 +1588,23 @@ function ResCard({idx,r,goalType,highlights,onLock}){
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-base font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {idx+1}</span>
             {highlights.map((h,hi)=>(
-              <span key={hi} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+              <span key={hi} className="text-[15px] px-1.5 py-0.5 rounded-full font-bold"
                 style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}33`}}>{h.label}</span>
             ))}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button onClick={()=>setExp(!exp)} className="text-[12px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded border border-slate-700/30 hover:border-slate-600">{exp?"▲ 收起":"▼ 詳情"}</button>
-            <button onClick={onLock} className="text-[12px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
+            <button onClick={()=>setExp(!exp)} className="text-[15px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded border border-slate-700/30 hover:border-slate-600">{exp?"▲ 收起":"▼ 詳情"}</button>
+            <button onClick={onLock} className="text-[15px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
               style={{background:"#0D1A2E",color:"#60A5FA",borderColor:"#1D4ED844"}}>🔒 鎖定</button>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mb-2.5">
           {s.套裝?.map((st,i)=>{const nm=st.replace(/\(\d\)/,"");return(
-            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+            <span key={i} className="text-[15px] px-1.5 py-0.5 rounded-full font-bold"
               style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
           );})}
         </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[13px]">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[16px]">
           {statPairs.map(([k,v])=>{
             const hl=highlights.find(h=>h.key===k);
             return(
@@ -1599,11 +1617,11 @@ function ResCard({idx,r,goalType,highlights,onLock}){
         </div>
         <div className="mt-2 pt-2 border-t border-slate-800/40 grid grid-cols-2 gap-2">
           <div className="flex justify-between items-center px-2 py-1 rounded-lg" style={{background:highlights.some(h=>h.key==="坦度")?"#422006":"transparent"}}>
-            <span className={`text-[12px] ${highlights.some(h=>h.key==="坦度")?"font-semibold text-amber-300":"text-slate-500"}`}>🛡️ 坦度</span>
+            <span className={`text-[15px] ${highlights.some(h=>h.key==="坦度")?"font-semibold text-amber-300":"text-slate-500"}`}>🛡️ 坦度</span>
             <span className={`font-mono text-base font-bold ${highlights.some(h=>h.key==="坦度")?"text-amber-300":"text-amber-500/60"}`}>{fN(s.坦度)}</span>
           </div>
           <div className="flex justify-between items-center px-2 py-1 rounded-lg" style={{background:highlights.some(h=>h.key==="傷害指數")?"#450A0A":"transparent"}}>
-            <span className={`text-[12px] ${highlights.some(h=>h.key==="傷害指數")?"font-semibold text-rose-300":"text-slate-500"}`}>⚔️ 傷害指數</span>
+            <span className={`text-[15px] ${highlights.some(h=>h.key==="傷害指數")?"font-semibold text-rose-300":"text-slate-500"}`}>⚔️ 傷害指數</span>
             <span className={`font-mono text-base font-bold ${highlights.some(h=>h.key==="傷害指數")?"text-rose-300":"text-rose-500/60"}`}>{fN(s.傷害指數)}</span>
           </div>
         </div>
@@ -1611,7 +1629,7 @@ function ResCard({idx,r,goalType,highlights,onLock}){
       {exp&&(
         <div className="border-t border-slate-800/40 p-3 space-y-1.5" style={{background:"#080C14"}}>
           {r.combo.map((eq,i)=>(
-            <div key={i} className="text-[12px] flex items-start gap-1.5">
+            <div key={i} className="text-[15px] flex items-start gap-1.5">
               <span className="text-slate-600 w-5 shrink-0 pt-0.5 text-center font-mono">{eq.slot}</span>
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
@@ -1636,15 +1654,15 @@ function ManualForm({onAdd,onCancel}){
   const[mt,setMt]=useState("攻擊");const[mv,setMv]=useState(500);
   const[subs,setSubs]=useState([{t:"生命%",v:0},{t:"速度",v:0},{t:"爆率",v:0},{t:"命中",v:0}]);
   useEffect(()=>{if(slot==="武器"){setMt("攻擊");setMv(500);}else if(slot==="頭盔"){setMt("生命");setMv(2700);}else if(slot==="鎧甲"){setMt("防禦");setMv(300);}},[slot]);
-  const iCls="rounded-lg px-1.5 py-1 text-[12px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
+  const iCls="rounded-lg px-1.5 py-1 text-[15px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
   const iSty={background:"#0B0F1A",color:"#CBD5E1"};
   return(
-    <div className="rounded-xl border border-blue-800/30 p-3 space-y-2.5 text-[13px]" style={{background:"#0D1A2E"}}>
+    <div className="rounded-xl border border-blue-800/30 p-3 space-y-2.5 text-[16px]" style={{background:"#0D1A2E"}}>
       <div className="font-bold text-sm text-blue-400">+ 新增裝備</div>
       <div className="grid grid-cols-3 gap-2">
         {[["部位",slot,setSlot,SLOTS],["套裝",set,setSet,ALL_SETS],["主屬",mt,setMt,PROPS]].map(([label,val,setter,opts])=>(
           <label key={label} className="space-y-1">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wide">{label}</span>
+            <span className="text-slate-500 text-[15px] uppercase tracking-wide">{label}</span>
             <select className={`w-full ${iCls}`} style={iSty} value={val} onChange={e=>setter(e.target.value)}>
               {opts.map(o=><option key={o}>{o}</option>)}
             </select>
@@ -1654,10 +1672,10 @@ function ManualForm({onAdd,onCancel}){
       <div className="flex items-center gap-2">
         <span className="text-slate-500">主屬值</span>
         <input type="number" step="any" className={`w-20 ${iCls}`} style={iSty} value={mv} onChange={e=>setMv(+e.target.value)}/>
-        <span className="text-[10px] text-slate-600">%類填小數，如爆率 0.6 = 60%</span>
+        <span className="text-[15px] text-slate-600">%類填小數，如爆率 0.6 = 60%</span>
       </div>
       <div>
-        <div className="text-[12px] text-slate-500 mb-1.5">副屬</div>
+        <div className="text-[15px] text-slate-500 mb-1.5">副屬</div>
         <div className="space-y-1.5">
           {subs.map((s,i)=>(
             <div key={i} className="flex gap-1.5 items-center">
@@ -1670,9 +1688,9 @@ function ManualForm({onAdd,onCancel}){
         </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <button onClick={onCancel} className="flex-1 py-1.5 rounded-lg border border-slate-700/40 text-slate-400 text-[13px] hover:bg-slate-800/40 transition-colors">取消</button>
+        <button onClick={onCancel} className="flex-1 py-1.5 rounded-lg border border-slate-700/40 text-slate-400 text-[16px] hover:bg-slate-800/40 transition-colors">取消</button>
         <button onClick={()=>{const so={};subs.forEach(s=>{if(s.v)so[s.t]=(so[s.t]||0)+s.v;});onAdd({slot,set,mt,mv,subs:so,lv:15,sid:"manual"});}}
-          className="flex-1 py-1.5 rounded-lg font-bold text-[13px] text-white" style={{background:"linear-gradient(135deg,#1D4ED8,#4F46E5)"}}>新增</button>
+          className="flex-1 py-1.5 rounded-lg font-bold text-[16px] text-white" style={{background:"linear-gradient(135deg,#1D4ED8,#4F46E5)"}}>新增</button>
       </div>
     </div>
   );
