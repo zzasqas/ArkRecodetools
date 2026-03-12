@@ -7,7 +7,8 @@
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
                    script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval'; 
-                   style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
+                   style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';
+                   connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com;">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -118,21 +119,7 @@
         };
 
         // ==================== TAG 顏色 ====================
-        const TAG_COLORS = {
-            '速度型':         '#3B82F6',
-            '輸出型(高速)':   '#EF4444',
-            '輸出型(低速)':   '#F97316',
-            '坦克型':         '#10B981',
-            '肉輸出':         '#8B5CF6',
-            '控制型':         '#EC4899',
-            '對策額外回合':   '#F59E0B',
-            '對策非攻擊技能': '#84CC16',
-            '非攻擊技能':     '#06B6D4',
-            '絕對一速':       '#6366F1',
-            '解控型':         '#14B8A6',
-            '拉條型':         '#A855F7',
-        };
-
+        
         // ==================== 推薦配裝 Popup ====================
         const TAG_COLORS = {
             '速度型':         '#3B82F6',
