@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.1 - ArkRecode Tools</title>
+<title>配裝計算器 v1.1.1 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -51,7 +51,7 @@ const SK=["生命","防禦","攻擊","速度","爆率","爆傷","命中","抗性
 const SLOTS=["武器","頭盔","鎧甲","項鍊","戒指","鞋子"];
 const PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
 const BREAK_PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
-const DS=()=>({生命:{min:0,max:false,w:0.5},防禦:{min:0,max:false,w:0.3},攻擊:{min:0,max:false,w:0.3},速度:{min:0,spdMax:0,pursueMax:false,spdShoe:false},_necklaceMt:"",_ringMt:"",爆率:{min:0,max:false,w:0.2},爆傷:{min:0,max:false,w:0.1},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}});
+const DS=()=>({生命:{min:0,max:false,w:0.5},防禦:{min:0,max:false,w:0.3},攻擊:{min:0,max:false,w:0.3},速度:{min:0,spdMax:0,pursueMax:false,spdShoe:false},necklaceMt:"",ringMt:"",爆率:{min:0,max:false,w:0.2},爆傷:{min:0,max:false,w:0.1},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}});
 const TEMPLATES=[
   {name:"🛡️坦克",sets:[],stats:{生命:{min:0,max:true,w:1},防禦:{min:0,max:true,w:0.5},攻擊:{min:0,max:false,w:0},速度:{min:180,spdMax:0,pursueMax:false},爆率:{min:0,max:false,w:0},爆傷:{min:0,max:false,w:0},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}},goal:"坦度"},
   {name:"💥爆發",sets:["爆傷"],stats:{生命:{min:0,max:false,w:0},防禦:{min:0,max:false,w:0},攻擊:{min:0,max:true,w:0.8},速度:{min:0,spdMax:0,pursueMax:false},爆率:{min:85,max:true,w:1},爆傷:{min:0,max:true,w:0.8},命中:{min:0,max:false,w:0},抗性:{min:0,max:false,w:0}},goal:"傷害"},
@@ -853,7 +853,7 @@ function App(){
             if(v.max||v.w>0)optT[k]=v.w;
           }
         });
-        config={constraints,spdMax:spdMaxVal,spdMinVal,hasSpdConstraint,spdPursueMax,optimize:optT,requiredSets:_ss,excludedIds:_li,topK:8,goalType:"",spdShoe:_sc["速度"]?.spdShoe||false,necklaceMt:_sc["_necklaceMt"]||"",ringMt:_sc["_ringMt"]||""};
+        config={constraints,spdMax:spdMaxVal,spdMinVal,hasSpdConstraint,spdPursueMax,optimize:optT,requiredSets:_ss,excludedIds:_li,topK:8,goalType:"",spdShoe:_sc["速度"]?.spdShoe||false,necklaceMt:_sc["necklaceMt"]||"",ringMt:_sc["ringMt"]||""};
       }
 
       optimizeAsync(_ch,_eq,config,_ba,_bh,_bb,cancelRef,
@@ -961,8 +961,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[13px] font-normal ml-1.5" style={{color:"#475569"}}>v1.1</span></h1>
-            <span className="text-[10px] text-slate-600 border border-slate-800 px-1.5 py-0.5 rounded-full">v1.0.0</span>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[13px] font-normal ml-2" style={{color:"#475569"}}>v1.1.1</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[12px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -1169,31 +1168,58 @@ function App(){
                   )}
                 </div>
 
-                {/* ── SHARED: Sets ── */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">套裝需求</div>
-                    <span className={`text-[12px] font-mono ${tsp>=6?"text-amber-400":"text-slate-500"}`}>{tsp}/6 件</span>
-                  </div>
-                  {tspSets.length>0&&(
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {tspSets.map((s,i)=>(
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-bold border"
-                          style={{background:getSetColor(s)+"15",color:getSetColor(s),borderColor:getSetColor(s)+"44"}}>
-                          {s}({getSetPcs(s)})<button onClick={()=>setTspSets(x=>x.filter((_,j)=>j!==i))} className="hover:opacity-60 ml-0.5 font-normal">×</button>
-                        </span>
-                      ))}
+                {/* ── SHARED: Sets + 主屬鎖定 ── */}
+                <div className="flex gap-3 items-start">
+                  {/* 左：套裝需求 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase">套裝需求</div>
+                      <span className={`text-[12px] font-mono ${tsp>=6?"text-amber-400":"text-slate-500"}`}>{tsp}/6 件</span>
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    {ALL_SETS.filter(s=>tsp+getSetPcs(s)<=6).map(s=>(
-                      <button key={s} onClick={()=>setTspSets(x=>[...x,s])}
-                        className="text-[12px] px-2 py-0.5 rounded-full border transition-all hover:opacity-90"
-                        style={{background:getSetColor(s)+"10",color:getSetColor(s),borderColor:getSetColor(s)+"33"}}>
-                        {s}<span className="opacity-50 ml-0.5">({getSetPcs(s)})</span>
-                      </button>
-                    ))}
-                    {tsp>=6&&<span className="text-[12px] text-amber-500 self-center ml-1">已滿</span>}
+                    {tspSets.length>0&&(
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {tspSets.map((s,i)=>(
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-bold border"
+                            style={{background:getSetColor(s)+"15",color:getSetColor(s),borderColor:getSetColor(s)+"44"}}>
+                            {s}({getSetPcs(s)})<button onClick={()=>setTspSets(x=>x.filter((_,j)=>j!==i))} className="hover:opacity-60 ml-0.5 font-normal">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {ALL_SETS.filter(s=>tsp+getSetPcs(s)<=6).map(s=>(
+                        <button key={s} onClick={()=>setTspSets(x=>[...x,s])}
+                          className="text-[12px] px-2 py-0.5 rounded-full border transition-all hover:opacity-90"
+                          style={{background:getSetColor(s)+"10",color:getSetColor(s),borderColor:getSetColor(s)+"33"}}>
+                          {s}<span className="opacity-50 ml-0.5">({getSetPcs(s)})</span>
+                        </button>
+                      ))}
+                      {tsp>=6&&<span className="text-[12px] text-amber-500 self-center ml-1">已滿</span>}
+                    </div>
+                  </div>
+                  {/* 右：主屬鎖定 */}
+                  <div className="shrink-0 w-[108px] border-l border-slate-800/60 pl-3">
+                    <div className="text-[12px] text-slate-500 font-semibold tracking-wide uppercase mb-2">主屬鎖定</div>
+                    {[
+                      {label:"💎 項鍊", key:"necklaceMt", opts:["爆率","爆傷","攻擊%","生命%","防禦%"]},
+                      {label:"💍 戒指", key:"ringMt",    opts:["命中","抗性","防禦%","生命%","攻擊%"]},
+                    ].map(({label,key,opts})=>{
+                      const val  = calcMode==="A" ? (sc[key]||"")  : (mb[key]||"");
+                      const setV = calcMode==="A"
+                        ? (v)=>setSc(s=>({...s,[key]:v}))
+                        : (v)=>setMb(m=>({...m,[key]:v}));
+                      return(
+                        <div key={key} className="mb-2 last:mb-0">
+                          <div className="text-[11px] text-slate-500 mb-1">{label}</div>
+                          <select value={val} onChange={e=>setV(e.target.value)}
+                            className="w-full rounded-md px-1.5 py-1 text-[12px] border border-slate-700/40 outline-none focus:border-blue-700/60 transition-colors"
+                            style={{background:"#0D1424",color:val?"#93C5FD":"#475569"}}>
+                            <option value="">不限</option>
+                            {opts.map(o=><option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1234,7 +1260,7 @@ function App(){
                                 style={{background:"#151D2E",color:"#CBD5E1"}}
                                 placeholder="最高" value={v.spdMax||""} onChange={e=>setSc(s=>({...s,速度:{...v,spdMax:+e.target.value||0}}))}/>
                             </div>
-                            <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
+                            <div className="flex items-center gap-2 ml-auto">
                               <label className="flex items-center gap-1 cursor-pointer">
                                 <input type="checkbox" checked={v.spdShoe||false}
                                   onChange={e=>setSc(s=>({...s,速度:{...v,spdShoe:e.target.checked}}))}
@@ -1247,31 +1273,6 @@ function App(){
                                   className="accent-blue-500 w-3 h-3"/>
                                 <span className={`text-[12px] ${v.pursueMax?"text-blue-300":"text-slate-500"}`}>追求最快</span>
                               </label>
-                            </div>
-                            {/* 項鍊 / 戒指 主屬鎖定 */}
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <span className="text-[11px] text-slate-500">💎項鍊</span>
-                                <select value={sc._necklaceMt||""} onChange={e=>setSc(s=>({...s,_necklaceMt:e.target.value}))}
-                                  className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
-                                  style={{background:"#0F1628",color:sc._necklaceMt?"#FCD34D":"#64748B"}}>
-                                  <option value="">不限</option>
-                                  <option value="爆率">爆率主屬</option>
-                                  <option value="爆傷">爆傷主屬</option>
-                                  <option value="攻擊%">攻擊%主屬</option>
-                                </select>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-[11px] text-slate-500">💍戒指</span>
-                                <select value={sc._ringMt||""} onChange={e=>setSc(s=>({...s,_ringMt:e.target.value}))}
-                                  className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
-                                  style={{background:"#0F1628",color:sc._ringMt?"#FCD34D":"#64748B"}}>
-                                  <option value="">不限</option>
-                                  <option value="命中">命中主屬</option>
-                                  <option value="抗性">抗性主屬</option>
-                                  <option value="防禦%">防禦%主屬</option>
-                                </select>
-                              </div>
                             </div>
                           </div>
                           <div className="mt-1 pl-9 text-[10px] flex flex-wrap gap-x-2">
@@ -1349,31 +1350,7 @@ function App(){
                         <span className={`text-[12px] ${mb.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
                       </label>
                     </div>
-                    {/* 項鍊 / 戒指 主屬鎖定 */}
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-slate-500">💎項鍊</span>
-                        <select value={mb.necklaceMt||""} onChange={e=>setMb(m=>({...m,necklaceMt:e.target.value}))}
-                          className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
-                          style={{background:"#0F1628",color:mb.necklaceMt?"#FCD34D":"#64748B"}}>
-                          <option value="">不限</option>
-                          <option value="爆率">爆率主屬</option>
-                          <option value="爆傷">爆傷主屬</option>
-                          <option value="攻擊%">攻擊%主屬</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-slate-500">💍戒指</span>
-                        <select value={mb.ringMt||""} onChange={e=>setMb(m=>({...m,ringMt:e.target.value}))}
-                          className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
-                          style={{background:"#0F1628",color:mb.ringMt?"#FCD34D":"#64748B"}}>
-                          <option value="">不限</option>
-                          <option value="命中">命中主屬</option>
-                          <option value="抗性">抗性主屬</option>
-                          <option value="防禦%">防禦%主屬</option>
-                        </select>
-                      </div>
-                    </div>
+                    {/* 項鍊 / 戒指 主屬鎖定已移至套裝需求旁的「主屬鎖定」欄位 */}
                     <div className="mt-1.5 text-[10px] text-blue-400/70 pl-9">
                       {mb.spdMin>0&&mb.spdMax>0?`🔒 速度 ${mb.spdMin}~${mb.spdMax}，不影響排序`
                         :mb.spdMin>0?`🔒 速度 ≥${mb.spdMin}，不影響排序`
