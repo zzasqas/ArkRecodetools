@@ -51,7 +51,7 @@ const SK=["生命","防禦","攻擊","速度","爆率","爆傷","命中","抗性
 const SLOTS=["武器","頭盔","鎧甲","項鍊","戒指","鞋子"];
 const PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
 const BREAK_PROPS=["攻擊","攻擊%","防禦","防禦%","生命","生命%","速度","爆率","爆傷","命中","抗性"];
-const DS=()=>({生命:{min:0,max:false,w:0.5},防禦:{min:0,max:false,w:0.3},攻擊:{min:0,max:false,w:0.3},速度:{min:0,spdMax:0,pursueMax:false,spdShoe:false},爆率:{min:0,max:false,w:0.2},爆傷:{min:0,max:false,w:0.1},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}});
+const DS=()=>({生命:{min:0,max:false,w:0.5},防禦:{min:0,max:false,w:0.3},攻擊:{min:0,max:false,w:0.3},速度:{min:0,spdMax:0,pursueMax:false,spdShoe:false},_necklaceMt:"",_ringMt:"",爆率:{min:0,max:false,w:0.2},爆傷:{min:0,max:false,w:0.1},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}});
 const TEMPLATES=[
   {name:"🛡️坦克",sets:[],stats:{生命:{min:0,max:true,w:1},防禦:{min:0,max:true,w:0.5},攻擊:{min:0,max:false,w:0},速度:{min:180,spdMax:0,pursueMax:false},爆率:{min:0,max:false,w:0},爆傷:{min:0,max:false,w:0},命中:{min:0,max:false,w:0.2},抗性:{min:0,max:false,w:0.1}},goal:"坦度"},
   {name:"💥爆發",sets:["爆傷"],stats:{生命:{min:0,max:false,w:0},防禦:{min:0,max:false,w:0},攻擊:{min:0,max:true,w:0.8},速度:{min:0,spdMax:0,pursueMax:false},爆率:{min:85,max:true,w:1},爆傷:{min:0,max:true,w:0.8},命中:{min:0,max:false,w:0},抗性:{min:0,max:false,w:0}},goal:"傷害"},
@@ -70,7 +70,7 @@ const MODE_B_GOALS=[
   {key:"抗性",label:"🌿 Max 抗性",desc:""},
 ];
 const MODE_B_CONSTRAINT_OPTS=["生命","防禦","攻擊","爆率","爆傷","命中","抗性"];
-const DB=()=>({goal:"坦度",spdMin:0,spdMax:0,spdShoe:false,constraints:[],sets:[]});
+const DB=()=>({goal:"坦度",spdMin:0,spdMax:0,spdShoe:false,necklaceMt:"",ringMt:"",constraints:[],sets:[]});
 
 // ============================================================
 // BUILT-IN DEMO CHARACTERS (from CSV)
@@ -173,11 +173,13 @@ function getHighlights(stats,allStats){
 // OPTIMIZER — async time-sliced (non-blocking UI)
 // ============================================================
 function buildCandidates(char,allEquips,config){
-  const{constraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],excludedIds=new Set(),topK=8,goalType="",spdShoe=false,isModeB=false}=config;
+  const{constraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],excludedIds=new Set(),topK=8,goalType="",spdShoe=false,necklaceMt="",ringMt="",isModeB=false}=config;
   const reqCounts={};requiredSets.forEach(s=>{reqCounts[s]=(reqCounts[s]||0)+getSetPcs(s);});
   const bySlot={};SLOTS.forEach(s=>{bySlot[s]=[];});
   allEquips.forEach(eq=>{if(!excludedIds.has(eq.oid)&&bySlot[eq.slot])bySlot[eq.slot].push(eq);});
   if(spdShoe)bySlot["鞋子"]=bySlot["鞋子"].filter(e=>e.mt==="速度");
+  if(necklaceMt)bySlot["項鍊"]=bySlot["項鍊"].filter(e=>e.mt===necklaceMt);
+  if(ringMt)bySlot["戒指"]=bySlot["戒指"].filter(e=>e.mt===ringMt);
   for(const slot of SLOTS){
     if(!bySlot[slot].length)return{error:`沒有「${slot}」部位的裝備，無法配裝`};
   }
@@ -218,7 +220,7 @@ function buildCandidates(char,allEquips,config){
   };
 
   const numConstraints=Object.keys(constraints).length+(spdMax>0?1:0)+Object.keys(reqCounts).length;
-  const poolSize=isModeB?Math.max(30,numConstraints>=3?20:numConstraints>=2?14:topK):Math.max(topK,numConstraints>=3?20:numConstraints>=2?14:topK);
+  const poolSize=isModeB?Math.max(40,numConstraints>=3?35:numConstraints>=2?25:topK+10):Math.max(topK+5,numConstraints>=3?35:numConstraints>=2?25:topK+10);
 
   const candidates={};
   SLOTS.forEach(slot=>{
@@ -247,7 +249,7 @@ function buildCandidates(char,allEquips,config){
       爆率:e=>(e.subs["爆率"]||0)+(e.mt==="爆率"?e.mv:0),
       爆傷:e=>(e.subs["爆傷"]||0)+(e.mt==="爆傷"?e.mv:0),
     };
-    const guaranteeN={速度:6,命中:4,防禦:5,生命:4,爆率:4,爆傷:4};
+    const guaranteeN={速度:8,命中:6,防禦:8,生命:6,爆率:8,爆傷:8,攻擊:6,抗性:6};
     Object.keys(constraints).forEach(stat=>{
       const getter=statGetters[stat];if(!getter)return;
       all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,guaranteeN[stat]||4)
@@ -277,15 +279,27 @@ function buildCandidates(char,allEquips,config){
       }
     }
     if(goalType==="攻擊"){
-      // 攻擊需同時考慮攻擊固定值和攻擊%主屬
       ['攻擊','攻擊%'].forEach(mt=>{
-        all.filter(e=>e.mt===mt).sort((a,b)=>scoreEqForCandidate(b)-scoreEqForCandidate(a)).slice(0,6)
+        all.filter(e=>e.mt===mt).sort((a,b)=>scoreEqForCandidate(b)-scoreEqForCandidate(a)).slice(0,8)
           .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
       });
       const getter=statGetters["攻擊"];
-      if(getter) all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,6)
+      if(getter) all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,8)
         .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
     }
+    // ★ Mode A：opt 權重>0 的屬性也保證最高的裝備進池（解決高門檻配不到問題）
+    Object.entries(opt).forEach(([tgt,w])=>{
+      if(w<=0)return;
+      const getter=statGetters[tgt];if(!getter)return;
+      all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,8)
+        .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+    });
+    // ★ 約束屬性也補充（constraints 的門檻屬性需要高值裝備進池）
+    Object.keys(constraints).forEach(stat=>{
+      const getter=statGetters[stat];if(!getter)return;
+      all.slice().sort((a,b)=>getter(b)-getter(a)).slice(0,8)
+        .forEach(e=>{if(!seen.has(e.oid)){combined.push(e);seen.add(e.oid);}});
+    });
     candidates[slot]=combined;
   });
 
@@ -484,12 +498,7 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
     // Report progress & schedule next batch
     const elapsed=Date.now()-startTime;
 
-    // ★ Time-decay: auto-stop logic
-    if(elapsed>60000&&results.length>=3){
-      if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:`已找到 ${totalFound} 組合格（60s 提前結束）`});
-      onDone({results,checked,poolInfo,cancelled:false,timedOut:true,totalFound});
-      return;
-    }
+    // ★ 不設提前結束，讓深度模式跑滿設定時間
     if(elapsed>maxTime){
       if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:"超時自動停止"});
       onDone({results,checked,poolInfo,cancelled:false,timedOut:true,totalFound});
@@ -499,7 +508,7 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
     if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:elapsed>30000?`搜索中（${Math.floor(elapsed/1000)}s，將於75s自動停止）`:"搜索中"});
 
     if(i0<n0&&cancelRef.current){
-      setTimeout(runBatch,0);
+      scheduleNext();
     }else{
       const cancelled=!cancelRef.current;
       onDone({results,checked,poolInfo,cancelled,totalFound});
@@ -508,6 +517,14 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
 
   // Emit pool info and start first batch
   if(progressCb)progressCb({checked:0,total:totalEst,found:0,totalFound:0,elapsed:0,phase:`候選池就緒（${Object.values(poolInfo).join("×")}），開始搜索...`});
+  // ★ visibilitychange 防黑屏：頁面隱藏時用 setTimeout，可見時用 rAF
+  function scheduleNext(){
+    if(document.hidden){
+      setTimeout(runBatch,50);
+    }else{
+      requestAnimationFrame(()=>setTimeout(runBatch,0));
+    }
+  }
   setTimeout(runBatch,0);
   },0); // end of deferred setTimeout
 }
@@ -525,32 +542,6 @@ const fmtSubs=subs=>Object.entries(subs).map(([k,v])=>`${k}${fE(k,v)}`).join("  
 // ============================================================
 // APP
 // ============================================================
-// ── Dev Test Bar（頂部 banner，正式版移除此 component 及 JSX 呼叫）──
-function DevTestBar({onApply}){
-  const[val,setVal]=useState("");
-  const[open,setOpen]=useState(true);
-  const eg="char=艾瑞兒&set1=速度&set2=生命&w_生命=0.7&w_防禦=0.4&速度下限=180";
-  if(!open)return(
-    <div className="border-b border-slate-800/40 px-4 py-0.5 flex justify-end" style={{background:"#0A0D14"}}>
-      <button onClick={()=>setOpen(true)} className="text-yellow-700/60 hover:text-yellow-600 text-[10px] transition">🛠 DEV</button>
-    </div>
-  );
-  return(
-    <div className="border-b border-yellow-600/20 px-4 py-1.5 flex items-center gap-2" style={{background:"#0C0F16"}}>
-      <span className="text-yellow-600/70 font-bold text-[11px] shrink-0">🛠 DEV</span>
-      <input value={val} onChange={e=>setVal(e.target.value)} placeholder={eg}
-        className="flex-1 rounded px-2 py-1 text-slate-400 text-[11px] outline-none"
-        style={{background:"#151922",border:"1px solid #252D3D"}}/>
-      <button onClick={()=>{if(val.trim())onApply(val.trim());}}
-        style={{background:"#1E2D10",border:"1px solid #3A4D20",color:"#A3C560"}}
-        className="px-2.5 py-1 rounded text-[11px] hover:opacity-80 shrink-0">套用</button>
-      <button onClick={()=>setVal(eg)}
-        style={{background:"#151922",border:"1px solid #252D3D",color:"#64748B"}}
-        className="px-2 py-1 rounded text-[11px] hover:opacity-80 shrink-0">範例</button>
-      <button onClick={()=>setOpen(false)} className="text-slate-700 hover:text-slate-500 px-1 text-[11px] shrink-0">✕</button>
-    </div>
-  );
-}
 
 function App(){
   const[chars,setChars]=useState(DEMO_CHARS);
@@ -840,6 +831,8 @@ function App(){
           topK:8,
           goalType:_mb.goal,
           spdShoe:_mb.spdShoe||false,
+          necklaceMt:_mb.necklaceMt||"",
+          ringMt:_mb.ringMt||"",
           isModeB:true,
         };
       }else{
@@ -860,7 +853,7 @@ function App(){
             if(v.max||v.w>0)optT[k]=v.w;
           }
         });
-        config={constraints,spdMax:spdMaxVal,spdMinVal,hasSpdConstraint,spdPursueMax,optimize:optT,requiredSets:_ss,excludedIds:_li,topK:8,goalType:"",spdShoe:_sc["速度"]?.spdShoe||false};
+        config={constraints,spdMax:spdMaxVal,spdMinVal,hasSpdConstraint,spdPursueMax,optimize:optT,requiredSets:_ss,excludedIds:_li,topK:8,goalType:"",spdShoe:_sc["速度"]?.spdShoe||false,necklaceMt:_sc["_necklaceMt"]||"",ringMt:_sc["_ringMt"]||""};
       }
 
       optimizeAsync(_ch,_eq,config,_ba,_bh,_bb,cancelRef,
@@ -919,42 +912,7 @@ function App(){
 
   return(
     <div className="min-h-screen text-slate-200" style={{fontFamily:"'Noto Sans TC',system-ui,sans-serif",background:"#0B0F1A"}}>
-      {/* DEV TEST BAR — 模擬 URL 參數跳轉 */}
-      <DevTestBar onApply={(qs)=>{
-        const p=new URLSearchParams(qs);
-        const charName=p.get("char");
-        const set1=p.get("set1"),set2=p.get("set2"),set3=p.get("set3");
-        const speedShoes=p.get("speedShoes")==="1";
-        const numFields=["速度下限","速度上限","爆率下限","爆率上限","爆傷下限","攻擊下限","防禦下限","生命下限","命中下限","抗性下限"];
-        const weights=["攻擊","爆率","爆傷","命中","抗性","生命","防禦"];
-        if(charName){
-          const c=chars.find(x=>x.name===charName);
-          if(c){setSelChar(c);loadCharConfig(c.name);}
-        }
-        const sets=[set1,set2,set3].filter(Boolean);
-        if(sets.length)setSelSets(sets);
-        if(speedShoes)setSc(prev=>({...prev,速度:{...prev.速度,speedShoes:true}}));
-        setSc(prev=>{
-          const next={...prev};
-          numFields.forEach(f=>{
-            const v=p.get(f);if(!v)return;
-            const num=parseFloat(v);if(isNaN(num))return;
-            const map={"速度下限":"速度","速度上限":"速度","爆率下限":"爆率","爆率上限":"爆率","爆傷下限":"爆傷","攻擊下限":"攻擊","防禦下限":"防禦","生命下限":"生命","命中下限":"命中","抗性下限":"抗性"};
-            const key=map[f];if(!key)return;
-            if(!next[key])next[key]={...prev[key]};
-            if(f.includes("下限"))next[key]={...next[key],min:num};
-            else next[key]={...next[key],max:num};
-          });
-          weights.forEach(k=>{
-            const v=p.get("w_"+k);if(v===null||v==="")return;
-            const num=parseFloat(v);if(isNaN(num))return;
-            if(!next[k])next[k]={...prev[k]};
-            next[k]={...next[k],w:num,max:num>0?true:(next[k]?.max||false)};
-          });
-          return next;
-        });
-      }}/>
-      {/* HEADER */}
+            {/* HEADER */}
       <div className="border-b border-slate-800/60 px-4 py-2 flex items-center justify-between" style={{background:"#0F1628"}}>
         <div className="flex items-center gap-3">
 
@@ -1003,7 +961,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[13px] font-normal ml-1.5" style={{color:"#475569"}}>v1.1</span></h1>
             <span className="text-[10px] text-slate-600 border border-slate-800 px-1.5 py-0.5 rounded-full">v1.0.0</span>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[12px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
@@ -1276,7 +1234,7 @@ function App(){
                                 style={{background:"#151D2E",color:"#CBD5E1"}}
                                 placeholder="最高" value={v.spdMax||""} onChange={e=>setSc(s=>({...s,速度:{...v,spdMax:+e.target.value||0}}))}/>
                             </div>
-                            <div className="flex items-center gap-2 ml-auto">
+                            <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
                               <label className="flex items-center gap-1 cursor-pointer">
                                 <input type="checkbox" checked={v.spdShoe||false}
                                   onChange={e=>setSc(s=>({...s,速度:{...v,spdShoe:e.target.checked}}))}
@@ -1289,6 +1247,31 @@ function App(){
                                   className="accent-blue-500 w-3 h-3"/>
                                 <span className={`text-[12px] ${v.pursueMax?"text-blue-300":"text-slate-500"}`}>追求最快</span>
                               </label>
+                            </div>
+                            {/* 項鍊 / 戒指 主屬鎖定 */}
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-slate-500">💎項鍊</span>
+                                <select value={sc._necklaceMt||""} onChange={e=>setSc(s=>({...s,_necklaceMt:e.target.value}))}
+                                  className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
+                                  style={{background:"#0F1628",color:sc._necklaceMt?"#FCD34D":"#64748B"}}>
+                                  <option value="">不限</option>
+                                  <option value="爆率">爆率主屬</option>
+                                  <option value="爆傷">爆傷主屬</option>
+                                  <option value="攻擊%">攻擊%主屬</option>
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-slate-500">💍戒指</span>
+                                <select value={sc._ringMt||""} onChange={e=>setSc(s=>({...s,_ringMt:e.target.value}))}
+                                  className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
+                                  style={{background:"#0F1628",color:sc._ringMt?"#FCD34D":"#64748B"}}>
+                                  <option value="">不限</option>
+                                  <option value="命中">命中主屬</option>
+                                  <option value="抗性">抗性主屬</option>
+                                  <option value="防禦%">防禦%主屬</option>
+                                </select>
+                              </div>
                             </div>
                           </div>
                           <div className="mt-1 pl-9 text-[10px] flex flex-wrap gap-x-2">
@@ -1365,6 +1348,31 @@ function App(){
                           className="accent-blue-500 w-3 h-3"/>
                         <span className={`text-[12px] ${mb.spdShoe?"text-yellow-300":"text-slate-500"}`}>👟速度鞋</span>
                       </label>
+                    </div>
+                    {/* 項鍊 / 戒指 主屬鎖定 */}
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-slate-500">💎項鍊</span>
+                        <select value={mb.necklaceMt||""} onChange={e=>setMb(m=>({...m,necklaceMt:e.target.value}))}
+                          className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
+                          style={{background:"#0F1628",color:mb.necklaceMt?"#FCD34D":"#64748B"}}>
+                          <option value="">不限</option>
+                          <option value="爆率">爆率主屬</option>
+                          <option value="爆傷">爆傷主屬</option>
+                          <option value="攻擊%">攻擊%主屬</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-slate-500">💍戒指</span>
+                        <select value={mb.ringMt||""} onChange={e=>setMb(m=>({...m,ringMt:e.target.value}))}
+                          className="rounded px-1.5 py-0.5 text-[11px] border border-slate-700/40 outline-none"
+                          style={{background:"#0F1628",color:mb.ringMt?"#FCD34D":"#64748B"}}>
+                          <option value="">不限</option>
+                          <option value="命中">命中主屬</option>
+                          <option value="抗性">抗性主屬</option>
+                          <option value="防禦%">防禦%主屬</option>
+                        </select>
+                      </div>
                     </div>
                     <div className="mt-1.5 text-[10px] text-blue-400/70 pl-9">
                       {mb.spdMin>0&&mb.spdMax>0?`🔒 速度 ${mb.spdMin}~${mb.spdMax}，不影響排序`
