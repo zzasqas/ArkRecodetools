@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.3.1 - ArkRecode Tools</title>
+<title>配裝計算器 v1.3.3 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -627,10 +627,13 @@ function App(){
       const charName=p.get("char");
       const set1=p.get("set1"),set2=p.get("set2"),set3=p.get("set3");
       const speedShoes=p.get("speedShoes")==="1";
+      const attrParam=p.get("attr"); // ★ 屬性篩選參數（火/水/木/光/暗）
       // 數值門檻
       const numFields=["速度下限","速度上限","爆率下限","爆率上限","爆傷下限","攻擊下限","防禦下限","生命下限","命中下限","抗性下限"];
       const weights=["攻擊","爆率","爆傷","命中","抗性","生命","防禦"];
       if(!charName)return;
+      // ★ 有 attr 參數時切換元素 tab
+      if(attrParam&&ELEM_LIST.includes(attrParam))setElemTab(attrParam);
       // 等 chars 載入後套角色
       const applyParams=(charList)=>{
         const c=charList.find(x=>x.name===charName);
@@ -659,14 +662,14 @@ function App(){
             if(f.includes("下限"))next[key]={...next[key],min:num};
             else next[key]={...next[key],max:num};
           });
-          // 權重
+          // 權重：w >= 0.6 才自動勾 MAX
           weights.forEach(k=>{
             const v=p.get("w_"+k);
             if(v===null||v==="")return;
             const num=parseFloat(v);
             if(isNaN(num))return;
             if(!next[k])next[k]={...prev[k]};
-            next[k]={...next[k],w:num,max:num>0?true:(next[k]?.max||false)};
+            next[k]={...next[k],w:num,max:num>=0.6?true:(next[k]?.max||false)};
           });
           return next;
         });
@@ -975,7 +978,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.1</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.3</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}

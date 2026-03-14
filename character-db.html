@@ -86,6 +86,10 @@
             { id: 36, nameCN: '歸還者璐茜婭',      nameEN: 'Redeemer Lucia',       aliases: ['路雅','滷鴨'],                  attribute: 'water',  job: 'sniper',   rarity: 5 },
             { id: 37, nameCN: '南瓜鬼怪萊拉',      nameEN: 'Pumpkin Pixie Layla',  aliases: ['捷克O','jko','南瓜'],           attribute: 'fire',   job: 'warrior',  rarity: 5 },
             { id: 38, nameCN: '彼岸花茱莉亞',      nameEN: 'Spider Lily Julia',    aliases: ['大哥','暗蘋果','暗大哥'],        attribute: 'dark',   job: 'vanguard', rarity: 5 },
+            { id: 39, nameCN: '蜜茶多恩',          nameEN: 'Micha Douen',          aliases: ['花刺'],                         attribute: 'nature', job: 'vanguard', rarity: 5 },
+            { id: 40, nameCN: '空',                nameEN: 'Ku',                   aliases: ['DZ','空'],                      attribute: 'nature', job: 'caster',   rarity: 5 },
+            { id: 41, nameCN: '小女將希蓓爾',      nameEN: 'Lady General Sybel',   aliases: ['水呆','希蓓爾'],                attribute: 'water',  job: 'defender', rarity: 5 },
+            { id: 42, nameCN: '咲',                nameEN: 'Saki',                 aliases: ['木LLK','咲'],                   attribute: 'nature', job: 'medic',    rarity: 5 },
         ];
 
         // ==================== ICON ====================
@@ -147,9 +151,19 @@
 
             const goToOptimizer = () => {
                 const base = './equip-optimizer.html';
-                if (!build) { window.location.href = `${base}?char=${encodeURIComponent(character.nameCN)}`; return; }
+                // 屬性 → 元素 tab 對應
+                const attrMap = { fire:'火', water:'水', nature:'木', light:'光', dark:'暗' };
+                const attrParam = attrMap[character.attribute] || '';
+                if (!build) {
+                    const p = new URLSearchParams();
+                    p.set('char', character.nameCN);
+                    if (attrParam) p.set('attr', attrParam);
+                    window.location.href = `${base}?${p.toString()}`;
+                    return;
+                }
                 const p = new URLSearchParams();
                 p.set('char', character.nameCN);
+                if (attrParam) p.set('attr', attrParam);
                 // 套裝 (最多3個)
                 ['套裝1','套裝2','套裝3'].forEach((k,i) => { if (build[k]) p.set(`set${i+1}`, build[k]); });
                 // 速度
