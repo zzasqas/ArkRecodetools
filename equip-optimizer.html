@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.1.2 - ArkRecode Tools</title>
+<title>配裝計算器 v1.3.1 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config={
@@ -181,7 +181,7 @@ function buildCandidates(char,allEquips,config){
   if(necklaceMt)bySlot["項鍊"]=bySlot["項鍊"].filter(e=>e.mt===necklaceMt);
   if(ringMt)bySlot["戒指"]=bySlot["戒指"].filter(e=>e.mt===ringMt);
   for(const slot of SLOTS){
-    if(!bySlot[slot].length)return{error:`沒有「${slot}」部位的裝備，無法配裝`};
+    if(!bySlot[slot].length)return{error:"沒有「"+slot+"」部位的裝備，無法配裝"};
   }
 
   const scoreEqForCandidate=eq=>{
@@ -475,7 +475,7 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
       return;
     }
 
-    if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:elapsed>30000?`搜索中（${Math.floor(elapsed/1000)}s，將於75s自動停止）`:"搜索中"});
+    if(progressCb)progressCb({checked,total:totalEst,found:results.length,totalFound,elapsed,phase:elapsed>30000?"搜索中（"+Math.floor(elapsed/1000)+"s，將於75s自動停止）":"搜索中"});
 
     if(i0<n0&&cancelRef.current){
       scheduleNext();
@@ -486,7 +486,7 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
   }
 
   // Emit pool info and start first batch
-  if(progressCb)progressCb({checked:0,total:totalEst,found:0,totalFound:0,elapsed:0,phase:`候選池就緒（${Object.values(poolInfo).join("×")}），開始搜索...`});
+  if(progressCb)progressCb({checked:0,total:totalEst,found:0,totalFound:0,elapsed:0,phase:"候選池就緒（"+Object.values(poolInfo).join("×")+"），開始搜索..."});
   // ★ visibilitychange 防黑屏：頁面隱藏時用 setTimeout，可見時用 rAF
   function scheduleNext(){
     if(document.hidden){
@@ -503,11 +503,11 @@ function optimizeAsync(char,allEquips,config,bondAtk,bondHp,breakBonus,cancelRef
 // HELPERS
 // ============================================================
 const fN=n=>n!=null?Math.floor(n).toLocaleString():"0";
-const fP=n=>`${n!=null?Math.floor(n*10)/10:0}%`;
-const fS=(k,v)=>["爆率","爆傷","命中","抗性"].includes(k)?fP(v):k==="速度"?String(Math.floor(v??0)):fN(v);
-const fE=(k,v)=>["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(k)?`${Math.floor((v??0)*100)}%`:String(Math.floor(v??0));
-const Bg=({children,color="#6B7280"})=><span className="px-1.5 py-0.5 rounded text-[14px] font-bold" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
-const fmtSubs=subs=>Object.entries(subs).map(([k,v])=>`${k}${fE(k,v)}`).join("  ·  ");
+const fP=n=>(n!=null?Math.floor(n*10)/10:0)+"%";
+const fS=(k,v)=>["爆率","爆傷","命中","抗性"].includes(k)?fP(v):k==="速度"?String(Math.floor(v||0)):fN(v);
+const fE=(k,v)=>["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(k)?Math.floor((v||0)*100)+"%":String(Math.floor(v||0));
+const Bg=({children,color="#6B7280"})=><span className="px-1.5 py-0.5 rounded text-[14px] font-bold" style={{background:color+"22",color,border:"1px solid "+color+"44"}}>{children}</span>;
+const fmtSubs=subs=>Object.entries(subs).map(([k,v])=>k+fE(k,v)).join("  ·  ");
 
 // ============================================================
 // APP
@@ -543,6 +543,22 @@ function App(){
   const[searchDur,setSearchDur]=useState(75); // 30 / 75 / 180 秒
   const[navOpen,setNavOpen]=useState(false); // hamburger menu
   const[equipCacheMeta,setEquipCacheMeta]=useState(null); // {ts,count}
+  // ★ 手動配套 state
+  const[manualSlots,setManualSlots]=useState({}); // {charName:{武器:oid,...}}
+  const[manualSaved,setManualSaved]=useState({});  // {charName:{武器:oid,...}} snapshot
+  const[manualOpen,setManualOpen]=useState(null);  // charName | null
+  const[manualCurSlot,setManualCurSlot]=useState("武器");
+  const[mEqF,setMEqF]=useState({main:[],sets:[],subs:[],sort:""});
+  // ★ 裝備鎖定策略
+  const[useIncludeLocked,setUseIncludeLocked]=useState(true); // true=搜索含已鎖定裝備（預設）
+  const[superLocked,setSuperLocked]=useState(new Set()); // 超級鎖定的 oid — 所有配裝一律排除
+  // ★ 面板收合
+  const[showResults,setShowResults]=useState(true);
+  const[showEqPicker,setShowEqPicker]=useState(false);
+  // ★ 目前手動配套中的角色名（從鎖定 tab 觸發，供第四欄使用）
+  const[manualCharName,setManualCharName]=useState(null);
+  // ★ 鎖定 tab 每角色的方案 sub-tab（0-2=自動方案, 3=手動配套）
+  const[lockedPlanTab,setLockedPlanTab]=useState({});
   const cancelRef=useRef(true);
   const resultRefs=useRef({});
   const lockedCharRefs=useRef({});
@@ -550,13 +566,13 @@ function App(){
   // ★ 角色切換時儲存/載入 Mode A 設定（sc 權重 + selSets 套裝）
   const saveCharConfig=useCallback((charName)=>{
     if(!charName)return;
-    try{localStorage.setItem(`arkrecode_charConfig_${charName}`,JSON.stringify({sc,selSets}));}catch(e){}
+    try{localStorage.setItem("arkrecode_charConfig_"+charName,JSON.stringify({sc,selSets}));}catch(e){}
   },[sc,selSets]);
 
   const loadCharConfig=useCallback((charName)=>{
     if(!charName)return;
     try{
-      const raw=localStorage.getItem(`arkrecode_charConfig_${charName}`);
+      const raw=localStorage.getItem("arkrecode_charConfig_"+charName);
       if(raw){const{sc:s,selSets:ss}=JSON.parse(raw);if(s)setSc(s);if(ss)setSelSets(ss);}
     }catch(e){}
   },[]);
@@ -679,15 +695,19 @@ function App(){
   const tspSets=calcMode==="A"?selSets:mb.sets;
   const setTspSets=calcMode==="A"?setSelSets:(fn)=>setMb(m=>({...m,sets:typeof fn==="function"?fn(m.sets):fn}));
   const breakBonus=useMemo(()=>{const b={};breaks.forEach(({prop,val})=>{if(prop&&val)b[prop]=(b[prop]||0)+val;});return b;},[breaks]);
-  // lockedIds：排除其他角色的裝備，同角色方案內裝備不排除（可重複鎖定比較）
+  // lockedIds：配裝時排除的裝備
+  // useIncludeLocked=true → 只排除 superLocked（預設，允許搜索已鎖定裝備）
+  // useIncludeLocked=false → 排除其他角色鎖定裝備 + superLocked
   const lockedIds=useMemo(()=>{
-    const ids=new Set();
-    Object.entries(locked).forEach(([charName,data])=>{
-      if(charName===selChar?.name)return;
-      (data.plans||[]).forEach(plan=>plan.eids?.forEach(id=>ids.add(id)));
-    });
+    const ids=new Set(superLocked);
+    if(!useIncludeLocked){
+      Object.entries(locked).forEach(([charName,data])=>{
+        if(charName===selChar?.name)return;
+        (data.plans||[]).forEach(plan=>plan.eids?.forEach(id=>ids.add(id)));
+      });
+    }
     return ids;
-  },[locked,selChar]);
+  },[locked,selChar,useIncludeLocked,superLocked]);
 
   const fChars=useMemo(()=>{
     let list=chars;if(!showHid)list=list.filter(c=>!hidden.includes(c.name));
@@ -761,7 +781,9 @@ function App(){
   const run=useCallback(()=>{
     if(!selChar){setRunError("請先選擇角色");return;}
     if(!equips.length){setRunError("請先匯入裝備");return;}
-    setRunning(true);setRes(null);setRunError(null);setTab("results");
+    // Stop any in-flight run
+    cancelRef.current=false;
+    setRunning(true);setRes(null);setRunError(null);setShowResults(true);
     cancelRef.current=true;
     setProgress({checked:0,total:1,found:0,elapsed:0,phase:"準備候選池..."});
     const _ba=bondAtk,_bh=bondHp,_bb={...breakBonus},_ch={...selChar},_eq=[...equips],_li=new Set(lockedIds);
@@ -830,11 +852,11 @@ function App(){
         (p)=>setProgress(p),
         (r)=>{
           if(r.error)setRunError(r.error);
-          if(r.timedOut&&r.results.length>0)setRunError(`搜索超時，從 ${(r.totalFound||r.results.length).toLocaleString()} 組合格中取最佳 ${r.results.length} 個方案`);
-          else if(r.timedOut&&r.results.length===0)setRunError(`搜索超過 ${searchDur} 秒未找到結果，請放寬速度區間或減少約束條件`);
-          else if(r.cancelled&&r.results.length>0)setRunError(`已手動停止（已找到 ${r.results.length} 個方案）`);
+          if(r.timedOut&&r.results.length>0)setRunError("搜索超時，從 "+(r.totalFound||r.results.length).toLocaleString()+" 組合格中取最佳 "+r.results.length+" 個方案");
+          else if(r.timedOut&&r.results.length===0)setRunError("搜索超過 "+searchDur+" 秒未找到結果，請放寬速度區間或減少約束條件");
+          else if(r.cancelled&&r.results.length>0)setRunError("已手動停止（已找到 "+r.results.length+" 個方案）");
           else if(r.cancelled&&r.results.length===0)setRunError("已手動停止，尚未找到符合條件的組合");
-          setRes(r);
+          setRes({...r,charName:_ch.name});
           setRunning(false);
           setProgress(null);
         },
@@ -845,24 +867,46 @@ function App(){
 
   const stopRun=useCallback(()=>{cancelRef.current=false;},[]);
 
-  // ★ 每個角色最多鎖定 3 組方案，方便進遊戲比較驗證
-  //   同角色不同方案間裝備可重複（同角色鎖定不互相排除）
-  //   跨角色裝備仍互相排除（lockedIds 只收非當前角色的裝備）
-  const lockRes=idx=>{if(!res||!selChar)return;const r=res.results[idx];
+  // ★ 鎖定結果到指定方案號（1-3），覆蓋式 — 使用 res.charName 而非 selChar
+  const lockRes=(idx,slotNum)=>{if(!res||!res.charName)return;const r=res.results[idx];const cn=res.charName;
     setLocked(p=>{
-      const prev=p[selChar.name]||{plans:[]};
-      const plans=prev.plans||[];
-      if(plans.length>=3){setLockErr("同一角色最多鎖定 3 組方案，請先解鎖其中一組");setTimeout(()=>setLockErr(""),3000);return p;}
-      setLockErr("");
+      const prev=p[cn]||{plans:[]};
+      const plans=[...(prev.plans||[])];
       const newPlan={eids:r.combo.map(e=>e.oid),ba:bondAtk,bh:bondHp,stats:r.stats,combo:r.combo};
-      return{...p,[selChar.name]:{plans:[...plans,newPlan]}};
+      plans[slotNum]=newPlan;
+      setLockErr("");
+      return{...p,[cn]:{...prev,plans}};
     });
+  };
+  // 手動配套輔助
+  const getManualSlots=(cn)=>manualSlots[cn]||{};
+  const getManualSaved=(cn)=>manualSaved[cn]||null;
+  const setManualSlotFor=(cn,slot,oid)=>setManualSlots(p=>({...p,[cn]:{...getManualSlots(cn),[slot]:oid}}));
+  const clearManualSlot=(cn,slot)=>setManualSlots(p=>{const s={...getManualSlots(cn)};delete s[slot];return{...p,[cn]:s};});
+  const saveManualPlan=(cn)=>{
+    const sl=getManualSlots(cn);
+    if(Object.keys(sl).length<6)return false;
+    setManualSaved(p=>({...p,[cn]:{...sl}}));
+    // also push into locked as manual plan (labelled)
+    setLocked(p=>{
+      const prev=p[cn]||{plans:[]};
+      const plans=[...(prev.plans||[])];
+      const char=chars.find(c=>c.name===cn);
+      const combo=SLOTS.map(s=>{const oid=sl[s];return oid?equips.find(e=>e.oid===oid):null;}).filter(Boolean);
+      const stats=char?calcFinal(char,combo,bondAtk,bondHp,breakBonus):null;
+      const newPlan={eids:combo.map(e=>e.oid),ba:bondAtk,bh:bondHp,stats,combo,isManual:true};
+      plans[3]=newPlan;
+      return{...p,[cn]:{...prev,plans}};
+    });
+    return true;
   };
   const unlockChar=n=>setLocked(p=>{const x={...p};delete x[n];return x;});
   const unlockPlan=(cn,planIdx)=>setLocked(p=>{
-    const plans=(p[cn]?.plans||[]).filter((_,i)=>i!==planIdx);
-    if(!plans.length){const x={...p};delete x[cn];return x;}
-    return{...p,[cn]:{plans}};
+    const plans=[...(p[cn]?.plans||[])];
+    plans[planIdx]=null;
+    // if all plans are empty, remove the char entry
+    if(!plans.some(Boolean)){const x={...p};delete x[cn];return x;}
+    return{...p,[cn]:{...p[cn],plans}};
   });
 
   const canRun=selChar&&equips.length>0&&!running;
@@ -931,7 +975,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.1.2</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.1</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -949,7 +993,7 @@ function App(){
           {equips.length>0&&<button onClick={()=>{setEquips([]);setEquipCacheMeta(null);try{localStorage.removeItem("arkrecode_equips");localStorage.removeItem("arkrecode_equips_meta");}catch(e){}}} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
           <div className="text-slate-500 text-[14px] border border-slate-800 px-2 py-1 rounded-lg flex items-center gap-1">
             <span style={{color:"#93C5FD"}}>{chars.length}</span> 角 · <span style={{color:"#4ADE80"}}>{equips.length}</span> 裝
-            {equipCacheMeta&&<span className="text-[13px] cursor-default" style={{color:"#475569"}} title={`快取：${equips.length}件，${new Date(equipCacheMeta.ts).toLocaleString()}`}>💾</span>}
+            {equipCacheMeta&&<span className="text-[13px] cursor-default" style={{color:"#475569"}} title={"快取："+equips.length+"件，"+new Date(equipCacheMeta.ts).toLocaleString()}>💾</span>}
           </div>
         </div>
       </div>
@@ -967,7 +1011,7 @@ function App(){
         </div>
       )}
 
-      <div className="flex" style={{height:`calc(100vh - ${showHelp?148:49}px)`}}>
+      <div className="flex" style={{height:"calc(100vh - "+(showHelp?148:49)+"px)"}}>
         {/* LEFT — Character List */}
         <div className="flex flex-col border-r border-slate-800/60" style={{width:"19%",minWidth:"170px",background:"#0D1220"}}>
           <div className="p-2">
@@ -977,7 +1021,7 @@ function App(){
           <div className="flex px-1.5 gap-0.5 text-[14px] pb-1">
             {ELEM_LIST.map(el=>(
               <button key={el} onClick={()=>setElemTab(el)} className="flex-1 py-1 rounded text-center transition-all"
-                style={elemTab===el?{background:el==="⭐"?"#1E293B":EC[el]+"28",color:el==="⭐"?"#FCD34D":EC[el],fontWeight:700,borderBottom:`2px solid ${el==="⭐"?"#FCD34D":EC[el]}`}:{color:"#475569"}}>
+                style={elemTab===el?{background:el==="⭐"?"#1E293B":EC[el]+"28",color:el==="⭐"?"#FCD34D":EC[el],fontWeight:700,borderBottom:"2px solid "+(el==="⭐"?"#FCD34D":EC[el])}:{color:"#475569"}}>
                 {el}
               </button>
             ))}
@@ -993,13 +1037,9 @@ function App(){
                 setBondHp(locked[c.name]?.plans?.[0]?.bh||0);
                 // 載入新角色的設定記憶
                 loadCharConfig(c.name);
-                // 若該角色有鎖定方案，跳到鎖定 tab 並 scroll 到對應位置
-                if(locked[c.name]){
-                  setTab("locked");
-                  setTimeout(()=>{
-                    const el=lockedCharRefs.current[c.name];
-                    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
-                  },50);
+                // ★ 切角色時清除手動編輯狀態（解除 manualOpen 過濾）
+                if(manualOpen&&manualOpen!==c.name){
+                  setManualOpen(null);setManualCharName(null);setShowEqPicker(false);
                 }
               }}
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${selChar?.name===c.name?"border border-blue-700/60":"border border-transparent hover:border-slate-700/40"} ${hidden.includes(c.name)?"opacity-25":""}`}
@@ -1075,7 +1115,7 @@ function App(){
                         const val=isNaN(num)?0:isPct?num/100:num;
                         setBreaks(b=>b.map((x,j)=>j===i?{...x,valStr:raw,val}:x));
                       }}/>
-                    <span className="text-[13px] text-slate-600 shrink-0 w-4">{["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"%":""}</span>/>
+                    <span className="text-[13px] text-slate-600 shrink-0 w-4">{["攻擊%","防禦%","生命%","爆率","爆傷","命中","抗性"].includes(br.prop)?"%":""}</span>
                     <button onClick={()=>setBreaks(b=>b.filter((_,j)=>j!==i))} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
                   </div>
                 ))}
@@ -1086,15 +1126,23 @@ function App(){
         </div>
 
         {/* MID — Config/Equips/Locked */}
-        <div className="flex flex-col border-r border-slate-800/60 overflow-hidden" style={{width:"40%",background:"#0D1220"}}>
+        <div className="flex flex-col border-r border-slate-800/60 overflow-hidden" style={{width:"36%",minWidth:"320px",background:"#0D1220"}}>
           <div className="flex border-b border-slate-800/60 text-[15px] shrink-0">
-            {[["config","⚙️ 配裝設定"],["equips","📦 裝備庫"],["locked","🔒 鎖定"]].map(([k,l])=>(
+            {[["config","⚙️ 配裝設定"],["equips","📦 裝備庫"],["locked","🔒 鎖定/手動"]].map(([k,l])=>(
               <button key={k} onClick={()=>setTab(k)}
                 className={`px-4 py-2 transition-colors ${tab===k?"text-blue-400 border-b-2 border-blue-500":"text-slate-500 hover:text-slate-300"}`}
                 style={tab===k?{background:"#101828"}:{}}>
                 {l}
               </button>
             ))}
+            <div className="ml-auto flex items-center gap-1 pr-2">
+              <button onClick={()=>setShowResults(v=>!v)} className="text-[11px] px-1.5 py-1 rounded transition-colors"
+                style={showResults?{color:"#93C5FD",background:"#1E3A5F"}:{color:"#475569",background:"#151D2E"}}
+                title={showResults?"收合結果面板":"展開結果面板"}>📊</button>
+              <button onClick={()=>setShowEqPicker(v=>!v)} className="text-[11px] px-1.5 py-1 rounded transition-colors"
+                style={showEqPicker?{color:"#4ADE80",background:"#052e16"}:{color:"#475569",background:"#151D2E"}}
+                title={showEqPicker?"收合裝備篩選":"展開裝備篩選"}>📦</button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             {tab==="config"&&(
@@ -1322,9 +1370,9 @@ function App(){
                     </div>
                     {/* 項鍊 / 戒指 主屬鎖定已移至套裝需求旁的「主屬鎖定」欄位 */}
                     <div className="mt-1.5 text-[13px] text-blue-400/70 pl-9">
-                      {mb.spdMin>0&&mb.spdMax>0?`🔒 速度 ${mb.spdMin}~${mb.spdMax}，不影響排序`
-                        :mb.spdMin>0?`🔒 速度 ≥${mb.spdMin}，不影響排序`
-                        :mb.spdMax>0?`🔒 速度 ≤${mb.spdMax}，不影響排序`
+                      {mb.spdMin>0&&mb.spdMax>0?("🔒 速度 "+mb.spdMin+"~"+mb.spdMax+"，不影響排序")
+                        :mb.spdMin>0?("🔒 速度 ≥"+mb.spdMin+"，不影響排序")
+                        :mb.spdMax>0?("🔒 速度 ≤"+mb.spdMax+"，不影響排序")
                         :"未設速度限制"}
                       {/* ★ Mode B 不提供「追求最快」選項，速度僅作門檻篩選不參與排序。
                              如需最大化速度請切換 Mode A 並勾選「追求最快」。 */}
@@ -1380,6 +1428,18 @@ function App(){
                   </div>
                 </div>
 
+                {/* Locked equip policy */}
+                <div className="flex items-center gap-2 text-[13px]">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={useIncludeLocked}
+                      onChange={e=>setUseIncludeLocked(e.target.checked)}
+                      className="accent-blue-500 w-3.5 h-3.5"/>
+                    <span className="text-slate-400">含已鎖定裝備</span>
+                  </label>
+                  <span className="text-[12px] text-slate-600">{useIncludeLocked?"（搜索全部裝備）":"（排除他角鎖定裝備）"}</span>
+                  {superLocked.size>0&&<span className="text-[12px] text-amber-500 ml-auto">🔐 {superLocked.size} 件超級鎖定</span>}
+                </div>
+
                 {/* Run / Stop button */}
                 {running?(
                   <button onClick={stopRun}
@@ -1429,15 +1489,21 @@ function App(){
                 <div className="text-[14px] text-slate-500 px-1">{fEquips.length} 件裝備</div>
                 <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
                   {fEquips.slice(0,200).map(eq=>{
-                    const lk=lockedIds.has(eq.oid);const lb=Object.entries(locked).find(([_,v])=>v.eids?.includes(eq.oid));
+                    const lk=lockedIds.has(eq.oid);
+                    // 找出所有使用此裝備的角色（最多顯示4個）
+                    const owners=Object.entries(locked).filter(([_,v])=>(v.plans||[]).some(p=>p&&p.eids?.includes(eq.oid))).map(([n])=>n).slice(0,4);
+                    const isSL=superLocked.has(eq.oid);
                     return(
-                      <div key={eq.oid} className={`text-[14px] px-2.5 py-1.5 rounded-lg border transition-colors ${lk?"border-amber-700/40":"border-slate-700/30 hover:border-slate-600/40"}`} style={{background:lk?"#1A1500":"#0F1628"}}>
+                      <div key={eq.oid} className={`text-[14px] px-2.5 py-1.5 rounded-lg border transition-colors ${isSL?"border-amber-700/50":owners.length?"border-amber-700/40":"border-slate-700/30 hover:border-slate-600/40"}`} style={{background:isSL?"#1A0A00":owners.length?"#1A1500":"#0F1628"}}>
                         <div className="flex items-center gap-1.5">
                           <span className="text-slate-500 w-5">{eq.slot}</span>
                           <span className="font-bold" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
                           <span className="text-slate-200">{eq.mt} {fE(eq.mt,eq.mv)}</span>
                           <span className="flex-1"/>
-                          {lk&&<span className="text-amber-500 text-[13px]">🔒{lb?.[0]}</span>}
+                          {isSL&&<span className="text-[11px]">🔐</span>}
+                          {owners.length>0&&owners.map(n=>{const c=chars.find(x=>x.name===n);return(
+                            <span key={n} className="text-[11px] font-semibold" style={{color:c?EC[c.element]||"#94A3B8":"#94A3B8"}}>{n}</span>
+                          );})}
                           <button onClick={()=>setEquips(p=>p.filter(x=>x.oid!==eq.oid))} className="text-slate-700 hover:text-red-400 transition-colors px-1">✕</button>
                         </div>
                         <div className="ml-6 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
@@ -1461,125 +1527,280 @@ function App(){
 
             {tab==="locked"&&(
               <div className="p-3 space-y-3">
-                <div className="text-[14px] text-slate-500">已鎖定 <span className="text-blue-400">{Object.keys(locked).length}</span> 角色（每角色最多 3 組方案）</div>
-                {!Object.keys(locked).length&&<div className="text-slate-600 text-[15px] py-8 text-center">尚無鎖定方案</div>}
-                {Object.entries(locked).map(([name,data])=>(
+                {!Object.keys(locked).length&&!selChar&&<div className="text-slate-600 text-[14px] py-8 text-center">尚無鎖定方案<br/><span className="text-[12px] text-slate-700">請先選擇角色</span></div>}
+                {/* ★ 產生角色列表：合併已鎖定角色 + 當前選中角色（即使未鎖定） */}
+                {(()=>{
+                  let entries=Object.entries(locked);
+                  const names=entries.map(([n])=>n);
+                  // 若當前角色未在 locked 中，插入一個空 plans 項目
+                  if(selChar&&!names.includes(selChar.name)){
+                    entries.unshift([selChar.name,{plans:[]}]);
+                  }
+                  // ★ 手動編輯中時，只顯示該角色（簡化 UI）
+                  if(manualOpen){
+                    entries=entries.filter(([n])=>n===manualOpen);
+                  }
+                  return entries.map(([name,data])=>{
+                  const plans=data.plans||[];
+                  const curTab=lockedPlanTab[name]||0;
+                  const isManualTab=curTab===3;
+                  const activePlan=!isManualTab?plans[curTab]:null;
+                  const cn=name;
+                  const mSlots=manualSlots[cn]||{};
+                  const mSaved=manualSaved[cn]||null;
+                  const comboEqs=SLOTS.map(s=>{const oid=mSlots[s];return oid?equips.find(e=>e.oid===oid):null;});
+                  const combo=comboEqs.filter(Boolean);
+                  const char=chars.find(c=>c.name===cn);
+                  const stats=isManualTab&&char&&combo.length>0?calcFinal(char,combo,bondAtk,bondHp,breakBonus):null;
+                  const savedComboEqs=mSaved?SLOTS.map(s=>{const oid=mSaved[s];return oid?equips.find(e=>e.oid===oid):null;}):null;
+                  const savedStats=isManualTab&&char&&mSaved?calcFinal(char,savedComboEqs.filter(Boolean),bondAtk,bondHp,breakBonus):null;
+                  const hasSaved=mSaved&&Object.keys(mSaved).length===6;
+                  const hasAnyChange=mSaved&&SLOTS.some(s=>mSlots[s]!==mSaved[s]);
+                  return(
                   <div key={name} ref={el=>lockedCharRefs.current[name]=el}
                     className="rounded-xl border border-slate-700/50 overflow-hidden" style={{background:"#0D1525"}}>
                     {/* 角色標題列 */}
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/40" style={{background:"#111B2E"}}>
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-700/40" style={{background:"#111B2E"}}>
                       <div className="flex items-center gap-2">
                         {(()=>{const c=chars.find(x=>x.name===name);return c?(
                           <><span className="w-2 h-2 rounded-full shrink-0" style={{background:EC[c.element]||"#94A3B8"}}/>
                           <Bg color={JC[c.job]||"#94A3B8"}>{c.job}</Bg></>
                         ):null;})()}
-                        <span className="font-bold text-sm text-slate-100">🔒 {name}</span>
+                        <span className="font-bold text-[14px] text-slate-100">{name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] text-slate-600">{(data.plans||[]).length}/3 組</span>
-                        <button onClick={()=>unlockChar(name)} className="text-[14px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>
-                      </div>
+                      {plans.length>0&&<button onClick={()=>unlockChar(name)} className="text-[12px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>}
                     </div>
 
-                    {/* 方案列表 */}
-                    {(data.plans||[]).map((plan,pi)=>(
-                      <div key={pi} className="border-b border-slate-800/50 last:border-0 p-3 space-y-2.5">
-                        {/* 方案標題 + 套裝標籤 */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[13px] font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {pi+1}</span>
-                            {/* 有效套裝組合標籤 */}
-                            {plan.stats?.套裝?.map((st,si)=>{const nm=st.replace(/\(\d\)/,"");return(
-                              <span key={si} className="text-[13px] px-1.5 py-0.5 rounded-full font-bold"
-                                style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
-                            );})}
+                    {/* 方案 Tab 列 */}
+                    <div className="flex border-b border-slate-800/50" style={{background:"#0A1018"}}>
+                      {[0,1,2].map(n=>{
+                        const has=!!plans[n];
+                        return(
+                          <button key={n} onClick={()=>setLockedPlanTab(p=>({...p,[name]:n}))}
+                            className="flex-1 py-1.5 text-[12px] text-center transition-colors"
+                            style={curTab===n?{background:"#151D2E",color:has?"#93C5FD":"#475569",borderBottom:"2px solid "+(has?"#3B82F6":"#334155")}:{color:has?"#64748B":"#334155"}}>
+                            {(n+1)+"號"}{has?"":"·空"}
+                          </button>
+                        );
+                      })}
+                      <button onClick={()=>{
+                        setLockedPlanTab(p=>({...p,[name]:3}));
+                        setManualOpen(cn);setManualCharName(cn);setShowEqPicker(true);setManualCurSlot("武器");
+                      }}
+                        className="flex-1 py-1.5 text-[12px] text-center transition-colors"
+                        style={isManualTab?{background:"#052e1688",color:"#4ADE80",borderBottom:"2px solid #16A34A"}:{color:hasSaved?"#16A34A":"#475569"}}>
+                        🖐 手動{hasSaved?" ✓":""}
+                      </button>
+                    </div>
+
+                    {/* ── 自動方案內容 ── */}
+                    {!isManualTab&&(
+                      <div className="p-3 space-y-2">
+                        {activePlan?(
+                          <>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {activePlan.stats?.套裝?.map((st,si)=>{const nm=st.replace(/\(\d\)/,"");return(
+                                <span key={si} className="text-[12px] px-1.5 py-0.5 rounded-full font-bold"
+                                  style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:"1px solid "+getSetColor(nm)+"33"}}>{st}</span>
+                              );})}
+                            </div>
+                            <button onClick={()=>unlockPlan(name,curTab)} className="text-[12px] text-amber-500 hover:text-amber-300 transition-colors">解鎖</button>
                           </div>
-                          <button onClick={()=>unlockPlan(name,pi)} className="text-[13px] text-amber-500 hover:text-amber-300 transition-colors shrink-0">解鎖此組</button>
+                          {activePlan.stats&&(
+                            <div className="rounded-lg border border-slate-700/40 px-2 py-1.5" style={{background:"#0B1120"}}>
+                              <div className="grid grid-cols-4 gap-x-2 gap-y-0.5 text-[13px]">
+                                {[["攻擊","#F87171",v=>fN(v)],["防禦","#4ADE80",v=>fN(v)],["生命","#4ADE80",v=>fN(v)],["速度","#FBBF24",v=>String(Math.floor(v||0))],
+                                  ["爆率","#F87171",v=>fP(v)],["爆傷","#F87171",v=>fP(v)],["命中","#E2E8F0",v=>fP(v)],["抗性","#E2E8F0",v=>fP(v)]
+                                ].map(([k,color,fmt])=>(
+                                  <div key={k} className="flex flex-col items-center py-0.5">
+                                    <span className="text-[11px] text-slate-600">{k}</span>
+                                    <span className="font-mono font-bold text-[13px]" style={{color}}>{fmt(activePlan.stats[k])}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex gap-3 mt-1 pt-1 border-t border-slate-800/40 text-[12px]">
+                                <span className="text-slate-600">🛡️ <span className="font-mono font-bold text-green-400">{fN(activePlan.stats.坦度)}</span></span>
+                                <span className="text-slate-600">⚔️ <span className="font-mono font-bold text-red-400">{fN(activePlan.stats.傷害指數)}</span></span>
+                              </div>
+                            </div>
+                          )}
+                          {activePlan.combo&&(
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {activePlan.combo.map((eq,i)=>{
+                                const isSL=superLocked.has(eq.oid);
+                                return(
+                                <div key={i} className="text-[12px] py-1 px-2 rounded border" style={{background:isSL?"#1A0A00":"#0B1120",borderColor:isSL?"#92400E44":"#1E293B33"}}>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-600 w-4 shrink-0">{eq.slot}</span>
+                                    <span className="font-bold" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
+                                    <span className="text-slate-300 truncate">{eq.mt} {fE(eq.mt,eq.mv)}</span>
+                                    <button onClick={()=>setSuperLocked(prev=>{const n=new Set(prev);if(n.has(eq.oid))n.delete(eq.oid);else n.add(eq.oid);return n;})}
+                                      className="ml-auto text-[10px] px-1 py-0.5 rounded border shrink-0 transition-colors"
+                                      style={isSL?{borderColor:"#F59E0B55",color:"#F59E0B",background:"#1C1400"}:{borderColor:"#334155",color:"#475569",background:"#0D1525"}}
+                                      title={isSL?"解除超級鎖":"超級鎖定"}>
+                                      {isSL?"🔐":"🔓"}
+                                    </button>
+                                  </div>
+                                  <div className="text-slate-600 mt-0.5 pl-5 text-[11px] leading-tight">{fmtSubs(eq.subs)}</div>
+                                </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          </>
+                        ):(
+                          <div className="text-[13px] text-slate-600 py-6 text-center">此方案尚未儲存</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── 手動配套內容（遊戲風格佈局） ── */}
+                    {isManualTab&&(
+                      <div className="p-2 space-y-2">
+                        {/* 快速帶入 + 全部復原 */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] text-slate-600">帶入:</span>
+                          {[0,1,2].map(n=>{
+                            const p=plans[n];
+                            return p?(
+                              <button key={n} onClick={()=>{
+                                const sl={};p.combo.forEach(eq=>{sl[eq.slot]=eq.oid;});
+                                setManualSlots(prev=>({...prev,[cn]:sl}));
+                              }}
+                                className="text-[11px] px-2 py-0.5 rounded border transition-colors hover:border-blue-600/50"
+                                style={{borderColor:"#3B82F644",color:"#93C5FD",background:"#0D1A2E"}}>
+                                {(n+1)+"號"}
+                              </button>
+                            ):(
+                              <button key={n} disabled className="text-[11px] px-2 py-0.5 rounded border opacity-30"
+                                style={{borderColor:"#1E293B",color:"#475569",background:"#0D1525"}}>
+                                {(n+1)+"號"}
+                              </button>
+                            );
+                          })}
+                          {hasAnyChange&&(
+                            <button onClick={()=>{if(mSaved)setManualSlots(p=>({...p,[cn]:{...mSaved}}));}}
+                              className="text-[11px] px-2 py-0.5 rounded border transition-colors ml-auto"
+                              style={{borderColor:"#F59E0B55",color:"#F59E0B",background:"#1C1400"}}>
+                              ↩ 全部復原
+                            </button>
+                          )}
                         </div>
 
-                        {/* 角色數值框 — 速度黃、攻擊/爆率/爆傷紅、防禦/生命/坦度綠、命中/抗性白 */}
-                        {plan.stats&&(
-                          <div className="rounded-lg border border-slate-700/40 px-3 py-2" style={{background:"#0B1120"}}>
-                            <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[14px]">
-                              {[
-                                ["攻擊","#F87171",v=>fN(v)],
-                                ["防禦","#4ADE80",v=>fN(v)],
-                                ["生命","#4ADE80",v=>fN(v)],
-                                ["速度","#FBBF24",v=>String(Math.floor(v??0))],
-                                ["爆率","#F87171",v=>fP(v)],
-                                ["爆傷","#F87171",v=>fP(v)],
-                                ["命中","#E2E8F0",v=>fP(v)],
-                                ["抗性","#E2E8F0",v=>fP(v)],
-                              ].map(([k,color,fmt])=>(
-                                <div key={k} className="flex flex-col items-center py-0.5">
-                                  <span className="text-[13px] text-slate-600 mb-0.5">{k}</span>
-                                  <span className="font-mono font-bold text-[14px]" style={{color}}>{fmt(plan.stats[k])}</span>
+                        {/* 數值列 + 坦度/傷害 */}
+                        <div className="rounded-lg border border-slate-700/40 px-2 py-1.5" style={{background:"#0B1120"}}>
+                          <div className="grid grid-cols-4 gap-x-2 gap-y-0.5 text-[12px]">
+                            {[["攻擊","#F87171"],["防禦","#4ADE80"],["生命","#4ADE80"],["速度","#FBBF24"],["爆率","#F87171"],["爆傷","#F87171"],["命中","#94A3B8"],["抗性","#94A3B8"]].map(([k,col])=>{
+                              const cur=stats?stats[k]:null;
+                              const sv=savedStats?savedStats[k]:null;
+                              const diff=cur!==null&&sv!==null?Math.round((cur-sv)*10)/10:null;
+                              const isPct=["爆率","爆傷","命中","抗性"].includes(k);
+                              const isDecimal=["爆率","爆傷"].includes(k);
+                              const diffStr=diff===null?"":diff>0?"+"+(isDecimal?diff.toFixed(1):Math.round(diff))+(isPct?"%":""):diff<0?(isDecimal?diff.toFixed(1):Math.round(diff))+(isPct?"%":""):"";
+                              return(
+                                <div key={k} className="flex flex-col items-center">
+                                  <span className="text-[10px] text-slate-600">{k}</span>
+                                  <span className="font-mono font-bold text-[13px]" style={{color:cur!==null?col:"#334155"}}>
+                                    {cur!==null?(isDecimal?cur.toFixed(1)+"%":isPct?cur+"%":Math.round(cur).toLocaleString()):"—"}
+                                  </span>
+                                  {diffStr&&<span className="text-[9px] font-semibold" style={{color:diff>0?"#4ADE80":"#F87171"}}>{diffStr}</span>}
                                 </div>
-                              ))}
-                            </div>
-                            {/* 坦度 / 傷害指數 */}
-                            <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-slate-800/40">
-                              <div className="flex items-center gap-1.5 flex-1">
-                                <span className="text-[13px] text-slate-600">🛡️ 坦度</span>
-                                <span className="font-mono text-[14px] font-bold text-green-400">{fN(plan.stats.坦度)}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-1">
-                                <span className="text-[13px] text-slate-600">⚔️ 期望傷害</span>
-                                <span className="font-mono text-[14px] font-bold text-red-400">{fN(plan.stats.傷害指數)}</span>
-                              </div>
-                            </div>
+                              );
+                            })}
                           </div>
-                        )}
+                          {stats&&(
+                            <div className="flex gap-3 mt-1 pt-1 border-t border-slate-800/40 text-[11px]">
+                              <span className="text-slate-600">🛡️ <span className="font-mono font-bold text-green-400">{fN(stats.坦度)}</span></span>
+                              <span className="text-slate-600">⚔️ <span className="font-mono font-bold text-red-400">{fN(stats.傷害指數)}</span></span>
+                            </div>
+                          )}
+                        </div>
 
-                        {/* 裝備：左3(武頭甲) / 右3(鍊指鞋) */}
-                        {plan.combo&&(()=>{
-                          const left=plan.combo.filter(e=>["武器","頭盔","鎧甲"].includes(e.slot));
-                          const right=plan.combo.filter(e=>["項鍊","戒指","鞋子"].includes(e.slot));
-                          const EqRow=({eq})=>(
-                            <div className="text-[13px] py-1 border-b border-slate-800/20 last:border-0">
-                              <div className="flex items-center gap-1">
-                                <span className="text-slate-600 w-4 shrink-0">{eq.slot}</span>
-                                <span className="font-bold text-[13px]" style={{color:getSetColor(eq.set)}}>[{eq.set}]</span>
-                                <span className="text-slate-300 truncate">{eq.mt} {fE(eq.mt,eq.mv)}</span>
-                              </div>
-                              <div className="text-slate-600 mt-0.5 pl-5 leading-tight text-[13px]">{fmtSubs(eq.subs)}</div>
+                        {/* 六件裝備：左三(武頭甲) / 右三(鍊指鞋) — 仿遊戲佈局 */}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[["武器","頭盔","鎧甲"],["項鍊","戒指","鞋子"]].map((group,gi)=>(
+                            <div key={gi} className="space-y-1">
+                              {group.map(s=>{
+                                const eq=comboEqs[SLOTS.indexOf(s)];
+                                const isA=manualCurSlot===s;
+                                const svOid=mSaved?mSaved[s]:null;
+                                const isChanged=svOid&&mSlots[s]!==svOid;
+                                const isSL=eq&&superLocked.has(eq.oid);
+                                return(
+                                  <div key={s} onClick={()=>setManualCurSlot(s)}
+                                    className="rounded-lg border px-2 py-1.5 cursor-pointer transition-all"
+                                    style={{borderColor:isA?"#3B82F6":eq?"#16A34A44":"#1E293B",background:isA?"#0F1E35":"#0B1120"}}>
+                                    <div className="flex items-center gap-1 mb-0.5">
+                                      <span className="text-[10px] text-slate-500 w-4 shrink-0">{s}</span>
+                                      {eq?(
+                                        <>
+                                        <span className="text-[10px] px-1 rounded-full" style={{background:(getSetColor(eq.set)||"#94A3B8")+"22",color:getSetColor(eq.set)||"#94A3B8"}}>{eq.set}</span>
+                                        <span className="text-[11px] text-slate-200 truncate">{eq.mt} {fE(eq.mt,eq.mv)}</span>
+                                        {isChanged&&<button onClick={e=>{e.stopPropagation();setManualSlots(p=>({...p,[cn]:{...(p[cn]||{}),[s]:svOid}}));}}
+                                          className="text-[9px] px-1 rounded" style={{color:"#F59E0B",background:"#1C1400"}}>↩</button>}
+                                        <button onClick={e=>{e.stopPropagation();setSuperLocked(prev=>{const n=new Set(prev);if(n.has(eq.oid))n.delete(eq.oid);else n.add(eq.oid);return n;});}}
+                                          className="ml-auto text-[9px] px-1 py-0.5 rounded border shrink-0"
+                                          style={isSL?{borderColor:"#F59E0B55",color:"#F59E0B",background:"#1C1400"}:{borderColor:"#334155",color:"#475569",background:"#0D1525"}}
+                                          title={isSL?"解除超級鎖":"超級鎖定"}>
+                                          {isSL?"🔐":"🔓"}
+                                        </button>
+                                        </>
+                                      ):(
+                                        <span className="text-[11px] text-slate-700">未選</span>
+                                      )}
+                                    </div>
+                                    {eq&&<div className="text-[10px] text-slate-600 pl-5 leading-snug">{fmtSubs(eq.subs)}</div>}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                          return(
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="rounded-lg border border-slate-700/30 px-2 py-1" style={{background:"#0B1120"}}>
-                                {left.map((eq,i)=><EqRow key={i} eq={eq}/>)}
-                              </div>
-                              <div className="rounded-lg border border-slate-700/30 px-2 py-1" style={{background:"#0B1120"}}>
-                                {right.map((eq,i)=><EqRow key={i} eq={eq}/>)}
-                              </div>
-                            </div>
-                          );
-                        })()}
+                          ))}
+                        </div>
+
+                        {/* 儲存 */}
+                        <div className="flex items-center gap-2">
+                          <button onClick={()=>{saveManualPlan(cn);setManualSaved(p=>({...p,[cn]:{...mSlots}}));}}
+                            className="flex-1 py-1.5 rounded-lg border text-[12px] font-semibold transition-all"
+                            style={{borderColor:combo.length===6?"#16A34A55":"#1E293B",color:combo.length===6?"#4ADE80":"#475569",background:"#052e1699"}}>
+                            {combo.length===6?"儲存手動配套":"還差 "+(6-combo.length)+" 件"}
+                          </button>
+                          {hasSaved&&(
+                            <button onClick={()=>setManualSaved(p=>{const x={...p};delete x[cn];return x;})}
+                              className="text-[11px] text-red-400 hover:text-red-300 px-2 py-1 rounded border border-red-800/30">清除</button>
+                          )}
+                        </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                ))}
-                {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[14px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
+                  );
+                  });
+                })()}
+                {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[13px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT — Results */}
-        <div className="flex flex-col overflow-hidden flex-1" style={{background:"#0B0F1A"}}>
+        {/* COL 3 — Results (collapsible) */}
+        {showResults?(
+        <div className="flex flex-col overflow-hidden flex-1 border-r border-slate-800/60" style={{background:"#0B0F1A",minWidth:"280px"}}>
           <div className="px-4 py-2 border-b border-slate-800/60 text-[15px] text-slate-500 flex items-center gap-2 shrink-0 flex-wrap" style={{background:"#0D1220"}}>
             <span className="text-slate-400 font-semibold">📊 配裝結果</span>
+            {res?.charName&&(()=>{const rc=chars.find(x=>x.name===res.charName);return(
+              <span className="text-[13px] font-bold" style={{color:rc?EC[rc.element]||"#94A3B8":"#94A3B8"}}>{res.charName}</span>
+            );})()}
             {res&&!running&&res.results?.length>0&&(
               <span className="text-[13px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1E3A5F",color:"#93C5FD",border:"1px solid #3B82F644"}}>
                 {res.results.length} 個方案
               </span>
             )}
-            {res&&<span className="text-slate-600">· 試算 {res.checked?.toLocaleString()} 組{res.totalFound>0?` · ${res.totalFound.toLocaleString()} 組合格`:""}</span>}
+            {res&&<span className="text-slate-600">{"· 試算 "+(res.checked?.toLocaleString()||0)+" 組"+(res.totalFound>0?" · "+res.totalFound.toLocaleString()+" 組合格":"")}</span>}
             {res?.poolInfo&&(
-              <span className="text-slate-700 text-[13px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}${n}`).join(" / ")}</span>
+              <span className="text-slate-700 text-[13px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>s+String(n)).join(" / ")}</span>
             )}
             {calcMode==="B"&&<span className="ml-auto" style={{color:"#93C5FD"}}>B模式 · 最大化: {MODE_B_GOALS.find(g=>g.key===mb.goal)?.label||mb.goal}</span>}
+            <button onClick={()=>setShowResults(false)} className="ml-auto text-[12px] text-slate-600 hover:text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/40 hover:border-slate-600 transition-colors shrink-0" title="收合結果面板">✕</button>
           </div>
 
           {/* Progress bar + stop button */}
@@ -1592,7 +1813,7 @@ function App(){
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{
-                    width:`${Math.min(100,progress.elapsed>0?(progress.elapsed/(searchDur*1000)*100):(progress.total>0?(progress.checked/progress.total*100):0))}%`,
+                    width:Math.min(100,progress.elapsed>0?(progress.elapsed/(searchDur*1000)*100):(progress.total>0?(progress.checked/progress.total*100):0))+"%",
                     background:progress.elapsed>(searchDur*1000*0.8)?"linear-gradient(90deg,#F59E0B,#EF4444)":"linear-gradient(90deg,#3B82F6,#8B5CF6)"
                   }}/>
                 </div>
@@ -1601,15 +1822,15 @@ function App(){
                   <span className="text-slate-700">|</span>
                   <span className="text-green-400 font-semibold">
                     {(progress.totalFound||0)>progress.found
-                      ?`${progress.totalFound.toLocaleString()} 組合格，取最佳 ${progress.found}`
-                      :`${progress.totalFound||0} 組合格`}
+                      ?(progress.totalFound.toLocaleString()+" 組合格，取最佳 "+progress.found)
+                      :((progress.totalFound||0)+" 組合格")}
                   </span>
                   <span className="text-slate-700">|</span>
                   <span className="text-slate-500">{(progress.elapsed/1000).toFixed(1)}s</span>
                 </div>
                 {progress.elapsed>30000&&(
                   <div className="text-center text-[14px] text-amber-400/80">
-                    {progress.elapsed>(searchDur*1000*0.8)?"即將自動結束...":`${Math.ceil((searchDur*1000-progress.elapsed)/1000)}s 後將自動停止`}
+                    {progress.elapsed>(searchDur*1000*0.8)?"即將自動結束...":(Math.ceil((searchDur*1000-progress.elapsed)/1000)+"s 後將自動停止")}
                   </div>
                 )}
                 <div className="flex justify-center pt-2">
@@ -1630,7 +1851,7 @@ function App(){
               {uniqueHighlights.map((h,i)=>(
                 <button key={i} onClick={()=>scrollToResult(h.idx)}
                   className="text-[13px] px-2 py-0.5 rounded-full font-bold transition-all hover:scale-105"
-                  style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}44`}}>
+                  style={{background:h.color+"18",color:h.color,border:"1px solid "+h.color+"44"}}>
                   {h.label} {h.val!=null?fS(h.key,h.val):""} → #{h.idx+1}
                 </button>
               ))}
@@ -1649,14 +1870,14 @@ function App(){
                   <div>• 多個下限同時存在時，請逐一放寬看哪個是關鍵瓶頸</div>
                   <div>• 套裝需求（6件）配合多個下限時組合空間極小，可嘗試移除套裝</div>
                   <div>• 速度上下限範圍太窄，可嘗試擴大範圍或只保留下限</div>
-                  {res?.poolInfo&&<div className="text-slate-600 pt-1">候選池：{Object.entries(res.poolInfo).map(([s,n])=>`${s}(${n})`).join(" ")}</div>}
+                  {res?.poolInfo&&<div className="text-slate-600 pt-1">候選池：{Object.entries(res.poolInfo).map(([s,n])=>s+"("+n+")").join(" ")}</div>}
                 </div>
               </div>
             )}
             {lockErr&&<div className="mx-4 mb-2 text-[14px] text-amber-400 bg-amber-950/40 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {lockErr}</div>}
             {res?.results?.map((r,i)=>(
               <div key={i} ref={el=>{resultRefs.current[i]=el;}}>
-                <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]} onLock={()=>lockRes(i)}/>
+                <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]} onLock={(slotNum)=>{lockRes(i,slotNum);setTab("locked");setLockedPlanTab(p=>({...p,[res.charName]:slotNum}));}}/>
               </div>
             ))}
           </div>
@@ -1669,7 +1890,55 @@ function App(){
             </div>
           )}
         </div>
+        ):(
+          /* Collapsed results toggle */
+          <div className="flex flex-col items-center py-3 px-1 border-r border-slate-800/60 cursor-pointer hover:bg-slate-800/30 transition-colors"
+            style={{background:"#0D1220",writingMode:"vertical-rl"}}
+            onClick={()=>setShowResults(true)}>
+            <span className="text-[12px] text-slate-500 tracking-widest whitespace-nowrap">📊 結果{res?.results?.length>0?" ("+res.results.length+")":""}</span>
+          </div>
+        )}
+
+        {/* COL 4 — Manual Picker (collapsible) */}
+        {showEqPicker&&manualCharName&&manualOpen===manualCharName?(
+        <div className="flex flex-col overflow-hidden" style={{background:"#0B0F1A",width:showResults?"340px":"100%",minWidth:"300px",flex:showResults?"none":"1"}}>
+          <div className="px-3 py-2 border-b border-slate-800/60 flex items-center gap-2 shrink-0" style={{background:"#0D1220"}}>
+            <span className="text-[14px] font-semibold" style={{color:"#4ADE80"}}>📦 裝備篩選</span>
+            <span className="text-[13px] text-slate-500">{manualCharName}</span>
+            <span className="text-[13px] px-2 py-0.5 rounded-full font-bold" style={{background:"#1E3A5F",color:"#93C5FD"}}>{manualCurSlot}</span>
+            <button onClick={()=>setShowEqPicker(false)} className="ml-auto text-[12px] text-slate-600 hover:text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/40 hover:border-slate-600 transition-colors shrink-0" title="收合篩選面板">✕</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            {(()=>{
+              const cn=manualCharName;
+              const mSlots=manualSlots[cn]||{};
+              const mSaved=manualSaved[cn]||null;
+              return(
+                <ManualPicker
+                  slot={manualCurSlot} equips={equips} selSlots={mSlots}
+                  savedSlots={mSaved} eqF={mEqF} setEqF={setMEqF}
+                  onSelect={(slot,oid)=>{
+                    setManualSlots(p=>({...p,[cn]:{...(p[cn]||{}),[slot]:oid}}));
+                  }}
+                  onDeselect={(slot)=>{
+                    setManualSlots(p=>{const s={...(p[cn]||{})};delete s[slot];return{...p,[cn]:s};});
+                  }}
+                />
+              );
+            })()}
+          </div>
+        </div>
+        ):showEqPicker?(
+          <div className="flex flex-col items-center justify-center px-4" style={{background:"#0B0F1A",width:"280px"}}>
+            <div className="text-slate-600 text-[13px] text-center leading-relaxed">
+              <div className="text-2xl mb-2">📦</div>
+              請在「🔒 鎖定/手動」Tab<br/>點擊角色的「🖐 手動」分頁<br/>即可在此篩選裝備
+            </div>
+            <button onClick={()=>setShowEqPicker(false)} className="mt-4 text-[12px] text-slate-600 hover:text-slate-400 px-2 py-1 rounded border border-slate-700/40 transition-colors">收合</button>
+          </div>
+        ):null}
       </div>
+
     </div>
   );
 }
@@ -1679,6 +1948,7 @@ function App(){
 // ============================================================
 function ResCard({idx,r,goalType,highlights,onLock}){
   const[exp,setExp]=useState(idx===0);
+  const[showLockMenu,setShowLockMenu]=useState(false);
   const s=r.stats;
   const statPairs=[["攻擊",s.攻擊,"#F87171"],["生命",s.生命,"#4ADE80"],["防禦",s.防禦,"#60A5FA"],["速度",s.速度,"#FBBF24"],["爆率",s.爆率,"#FB923C"],["爆傷",s.爆傷,"#F87171"],["命中",s.命中,"#A78BFA"],["抗性",s.抗性,"#34D399"]];
   return(
@@ -1689,19 +1959,33 @@ function ResCard({idx,r,goalType,highlights,onLock}){
             <span className="text-base font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {idx+1}</span>
             {highlights.map((h,hi)=>(
               <span key={hi} className="text-[13px] px-1.5 py-0.5 rounded-full font-bold"
-                style={{background:h.color+"18",color:h.color,border:`1px solid ${h.color}33`}}>{h.label}</span>
+                style={{background:h.color+"18",color:h.color,border:"1px solid "+h.color+"33"}}>{h.label}</span>
             ))}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button onClick={()=>setExp(!exp)} className="text-[14px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded border border-slate-700/30 hover:border-slate-600">{exp?"▲ 收起":"▼ 詳情"}</button>
-            <button onClick={onLock} className="text-[14px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
-              style={{background:"#0D1A2E",color:"#60A5FA",borderColor:"#1D4ED844"}}>🔒 鎖定</button>
+            <div className="relative">
+              <button onClick={()=>setShowLockMenu(!showLockMenu)} className="text-[14px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
+                style={{background:"#0D1A2E",color:"#60A5FA",borderColor:"#1D4ED844"}}>🔒 儲存方案</button>
+              {showLockMenu&&(
+                <>
+                <div className="fixed inset-0 z-40" onClick={()=>setShowLockMenu(false)}/>
+                <div className="absolute right-0 top-full mt-1 z-50 rounded-lg border border-slate-600/60 p-2 space-y-1 shadow-xl" style={{background:"#0D1525",minWidth:"140px"}}>
+                  {[0,1,2].map(n=>(
+                    <button key={n} onClick={()=>{onLock(n);setShowLockMenu(false);}}
+                      className="w-full text-left text-[13px] px-2.5 py-1.5 rounded-md transition-colors hover:bg-blue-900/30"
+                      style={{color:"#93C5FD"}}>{n+1} 號方案</button>
+                  ))}
+                </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 mb-2.5">
           {s.套裝?.map((st,i)=>{const nm=st.replace(/\(\d\)/,"");return(
             <span key={i} className="text-[13px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:`1px solid ${getSetColor(nm)}33`}}>{st}</span>
+              style={{background:getSetColor(nm)+"18",color:getSetColor(nm),border:"1px solid "+getSetColor(nm)+"33"}}>{st}</span>
           );})}
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[15px]">
@@ -1791,6 +2075,118 @@ function ManualForm({onAdd,onCancel}){
         <button onClick={onCancel} className="flex-1 py-1.5 rounded-lg border border-slate-700/40 text-slate-400 text-[15px] hover:bg-slate-800/40 transition-colors">取消</button>
         <button onClick={()=>{const so={};subs.forEach(s=>{if(s.v)so[s.t]=(so[s.t]||0)+s.v;});onAdd({slot,set,mt,mv,subs:so,lv:15,sid:"manual"});}}
           className="flex-1 py-1.5 rounded-lg font-bold text-[15px] text-white" style={{background:"linear-gradient(135deg,#1D4ED8,#4F46E5)"}}>新增</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MANUAL PICKER — inline equip selector for 手動配套
+// ============================================================
+const MP_MT_BY_SLOT={武器:["攻擊"],頭盔:["生命"],鎧甲:["防禦"],
+  項鍊:["爆率","爆傷","攻擊%","生命%","防禦%","攻擊","生命","防禦"],
+  戒指:["命中","抗性","防禦%","生命%","攻擊%","防禦","生命","攻擊"],
+  鞋子:["速度","攻擊%","生命%","防禦%","攻擊","生命","防禦"]};
+const MP_ALL_SETS=["速度","爆傷","攻擊","生命","防禦","命中","抗性","暴擊","吸血","反擊","復仇","暴怒","創傷","夾擊","免疫","貫穿"];
+const MP_ALL_SUBS=["速度","爆率","爆傷","攻擊","攻擊%","防禦","防禦%","生命","生命%","命中","抗性"];
+
+function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDeselect}){
+  const curMT=MP_MT_BY_SLOT[slot]||[];
+  const sk=eqF.sort;
+  const savedOid=savedSlots?savedSlots[slot]:null;
+
+  const getSubN=(eq,s)=>(eq.subs[s]||0)+(eq.mt===s?eq.mv:0);
+  const fmtMV=(mt,mv)=>{
+    if(["攻擊%","防禦%","生命%"].includes(mt))return Math.round(mv*100)+"%";
+    if(["爆率","爆傷","命中","抗性"].includes(mt))return Math.round(mv*100)+"%";
+    if(mt==="速度")return"+"+mv;
+    return Math.floor(mv);
+  };
+  const fmtSubV=(k,v)=>["爆率","爆傷","命中","抗性","攻擊%","防禦%","生命%"].includes(k)?Math.round(v*100)+"%":Math.floor(v)+"";
+
+  const list=useMemo(()=>{
+    let l=equips.filter(e=>e.slot===slot);
+    if(eqF.main.length)l=l.filter(e=>eqF.main.includes(e.mt));
+    if(eqF.sets.length)l=l.filter(e=>eqF.sets.includes(e.set));
+    if(eqF.subs.length)l=l.filter(e=>eqF.subs.every(s=>s in e.subs||e.mt===s));
+    if(sk)l.sort((a,b)=>getSubN(b,sk)-getSubN(a,sk));
+    else l.sort((a,b)=>(b.lv||0)-(a.lv||0));
+    // saved always first
+    if(savedOid){const si=l.findIndex(e=>e.oid===savedOid);if(si>0){const[it]=l.splice(si,1);l.unshift(it);}else if(si<0){const se=equips.find(e=>e.oid===savedOid);if(se)l.unshift(se);}}
+    return l;
+  },[equips,slot,eqF.main,eqF.sets,eqF.subs,sk,savedOid]);
+
+  const togglePill=(arr,val,max,key)=>{
+    const next=arr.includes(val)?arr.filter(x=>x!==val):arr.length<max?[...arr,val]:arr;
+    setEqF(f=>({...f,[key]:next}));
+  };
+
+  return(
+    <div className="space-y-2">
+      {/* Filters: 套裝 → 主屬 → 副屬 */}
+      <div className="grid grid-cols-3 gap-2">
+        {[["套裝",MP_ALL_SETS,"sets",3],["主屬",curMT,"main",2],["副屬含",MP_ALL_SUBS,"subs",3]].map(([label,opts,key,max])=>(
+          <div key={key}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[12px] text-slate-500 font-semibold">{label}</span>
+              {eqF[key].length>0&&<button onClick={()=>setEqF(f=>({...f,[key]:[]}))} className="text-[11px] text-red-600 hover:text-red-400">清除</button>}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {opts.map(o=>{const on=eqF[key].includes(o);const dim=!on&&eqF[key].length>=max;
+                return(<span key={o} onClick={()=>!dim&&togglePill(eqF[key],o,max,key)}
+                  className="text-[14px] px-2 py-0.5 rounded-full border cursor-pointer select-none transition-all"
+                  style={{background:on?"#1E3A5F":"#0D1525",color:on?"#93C5FD":"#64748B",borderColor:on?"#3B82F688":"#1E293B",opacity:dim?0.3:1}}>{o}</span>);
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Sort + count */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-slate-600 uppercase tracking-wide">排序</span>
+        <select value={sk} onChange={e=>setEqF(f=>({...f,sort:e.target.value}))}
+          className="flex-1 text-[12px] rounded-lg px-1.5 py-1 border border-slate-700/40 outline-none" style={{background:"#0D1525",color:"#CBD5E1"}}>
+          <option value="">預設（等級）</option>
+          <option value="速度">速度 ↓</option>
+          <option value="爆率">爆率 ↓</option><option value="爆傷">爆傷 ↓</option>
+          <option value="攻擊%">攻擊% ↓</option><option value="攻擊">攻擊 ↓</option>
+          <option value="防禦%">防禦% ↓</option><option value="防禦">防禦 ↓</option>
+          <option value="生命%">生命% ↓</option><option value="生命">生命 ↓</option>
+          <option value="命中">命中 ↓</option><option value="抗性">抗性 ↓</option>
+        </select>
+        <span className="text-[11px] text-slate-600">{list.length} 件</span>
+      </div>
+      {/* List */}
+      <div className="space-y-1.5 pr-0.5">
+        {list.slice(0,150).map(eq=>{
+          const isSel=selSlots[slot]===eq.oid;
+          const isSaved=savedOid===eq.oid;
+          const sc=getSetColor(eq.set)||"#94A3B8";
+          let subs=Object.entries(eq.subs);
+          if(sk){const si=subs.findIndex(([k])=>k===sk);if(si>0){const[it]=subs.splice(si,1);subs.unshift(it);}}
+          const subsH=subs.map(([k,v])=>{
+            const isS=sk&&k===sk;const isF=eqF.subs.includes(k);
+            const col=isS?"#FBBF24":isF?"#93C5FD":"#475569";
+            const fw=isS||isF?600:400;
+            return'<span style="color:'+col+";font-weight:"+fw+'">'+k+" "+fmtSubV(k,v)+"</span>";
+          }).join('<span style="color:#1E293B"> · </span>');
+          const savedBadge=isSaved?'<span style="font-size:10px;padding:1px 5px;border-radius:999px;background:#16A34A22;color:#4ADE80;border:1px solid #16A34A44;margin-left:4px">已儲存</span>':"";
+          return(
+            <div key={eq.oid}
+              onClick={()=>isSel?onDeselect(slot):onSelect(slot,eq.oid)}
+              className="px-2 py-1.5 rounded-lg border cursor-pointer transition-all text-[12px]"
+              style={{background:isSel?"#052e16":"#0D1525",borderColor:isSel?"#16A34A":isSaved?"#16A34A44":"#1E293B"}}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{background:sc+"22",color:sc,border:"1px solid "+sc+"44"}}>{eq.set}</span>
+                <span className="font-medium text-slate-200">{eq.mt} {fmtMV(eq.mt,eq.mv)}</span>
+                <span dangerouslySetInnerHTML={{__html:savedBadge}}/>
+                <span className="ml-auto text-slate-600">Lv{eq.lv}</span>
+              </div>
+              <div className="leading-relaxed" dangerouslySetInnerHTML={{__html:subsH}}/>
+            </div>
+          );
+        })}
+        {list.length>150&&<div className="text-[11px] text-slate-600 text-center py-1">還有 {list.length-150} 件...</div>}
       </div>
     </div>
   );
