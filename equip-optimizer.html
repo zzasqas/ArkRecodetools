@@ -676,13 +676,18 @@ function App(){
         // 清掉 URL params 避免 refresh 重複套用
         window.history.replaceState({},"",window.location.pathname);
       };
-      // chars 可能還沒載入，輪詢一下
+      // chars 可能還沒載入，輪詢等待真實 CSV（>20 筆才算載入完成，DEMO_CHARS 只有 9 筆）
       let tries=0;
       const poll=setInterval(()=>{
         tries++;
         setChars(current=>{
-          if(current.length>1||tries>20){
+          const realLoaded=current.length>20;
+          const timeout=tries>20;
+          if(realLoaded||timeout){
             clearInterval(poll);
+            // 若目標角色是隱藏角色（四星），自動展開隱藏清單
+            const found=current.find(x=>x.name===charName);
+            if(found&&found.star<=4) setShowHid(true);
             applyParams(current);
           }
           return current;
