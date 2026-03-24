@@ -183,3 +183,11 @@ version:20260314
 - `import` 語句不可使用，必須用 `const { useState, ... } = React`
 - `export default function App()` 必須改為 `function App()`
 - 詳見開發規格文件 `arkrecode_dev_spec_v2.5.0.docx`
+
+## 版本更新
+
+## v1.3.6 (2026-03-24)
+- 修正 build_recom.csv 每次從 git 最新版載入
+- 推薦配裝彈窗改為向上展開，防止畫面跳動
+- 快速連結條件放寬，速度欄位強制顯示
+- 版本號全面更新
