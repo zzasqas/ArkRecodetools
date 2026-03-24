@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.3.5 - ArkRecode Tools</title>
+<title>配裝計算器 v1.3.6 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -704,18 +704,13 @@ function App(){
 
   useEffect(()=>{setBreaks([]);},[selChar?.name]);
 
-  // ★ 推薦配裝：優先讀 localStorage 快取，fallback fetch CSV
+  // ★ 推薦配裝：每次都從 CSV fetch（不快取，確保 git 上最新版），fallback 到 localStorage
   useEffect(()=>{
     const CACHE_KEY="arkrecode_build_recom_data";
-    try{
-      const cached=localStorage.getItem(CACHE_KEY);
-      if(cached){setBuildsData(JSON.parse(cached));return;}
-    }catch(e){}
-    fetch("./build_recom.csv?_="+Date.now()).then(r=>r.ok?r.text():null).then(text=>{
-      if(!text)return;
+    const parseCsv=(text)=>{
       const lines=text.split("\n").map(l=>l.endsWith("\r")?l.slice(0,-1):l).filter(l=>l.trim());
       const dataLines=lines.filter(l=>l.trim().slice(0,7).toLowerCase()!=="version");
-      if(dataLines.length<2)return;
+      if(dataLines.length<2)return null;
       const headers=dataLines[0].split(",");
       const parsed={};
       for(let i=1;i<dataLines.length;i++){
@@ -726,7 +721,17 @@ function App(){
         if(!parsed[name])parsed[name]=[];
         parsed[name].push(row);
       }
+      return parsed;
+    };
+    // 先從 localStorage 顯示（避免白屏等待）
+    try{const cached=localStorage.getItem(CACHE_KEY);if(cached){setBuildsData(JSON.parse(cached));}}catch(e){}
+    // 每次都嘗試 fetch 最新版本
+    fetch("./build_recom.csv?_="+Date.now()).then(r=>r.ok?r.text():null).then(text=>{
+      if(!text)return;
+      const parsed=parseCsv(text);
+      if(!parsed)return;
       setBuildsData(parsed);
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));}catch(e){}
     }).catch(()=>{});
   },[]);
 
@@ -777,40 +782,71 @@ function App(){
   },[res]);
 
   // Collect all unique highlights across results for quick-jump
-  // Always show speed; expand related stats based on goal
+  // Always show speed; expand related stats based on goal and config
   const uniqueHighlights=useMemo(()=>{
-    if(!allHighlights.length||!res?.results?.length)return[];
+    if(!res?.results?.length)return[];
+    const allStats=res.results.map(r=>r.stats);
     // Always-show keys
     const activeKeys=new Set(["速度"]);
     if(calcMode==="B"){
       const g=mb.goal;
       if(g==="坦度"){activeKeys.add("坦度");activeKeys.add("生命");activeKeys.add("防禦");}
-      else if(g==="傷害"){activeKeys.add("傷害指數");activeKeys.add("攻擊");activeKeys.add("爆傷");}
+      else if(g==="傷害"){activeKeys.add("傷害指數");activeKeys.add("攻擊");activeKeys.add("爆傷");activeKeys.add("爆率");}
       else if(g==="生命"||g==="防禦"){activeKeys.add(g);activeKeys.add("坦度");}
       else if(g==="攻擊"){activeKeys.add("攻擊");activeKeys.add("傷害指數");activeKeys.add("爆傷");}
       else if(g==="爆傷"){activeKeys.add("爆傷");activeKeys.add("傷害指數");activeKeys.add("攻擊");}
       else activeKeys.add(g);
       mb.constraints.forEach(c=>{if(c.stat&&c.val>0)activeKeys.add(c.stat);});
+      // 速度設定存在時補充相關
+      if(mb.spdMin>0||mb.spdMax>0){activeKeys.add("速度");}
     }else{
+      // Mode A: 從 sc 推導
+      const hasSpdActive=(sc["速度"]?.min>0)||(sc["速度"]?.spdMax>0)||(sc["速度"]?.pursueMax)||false;
+      if(hasSpdActive)activeKeys.add("速度");
+      // 有設速度鞋或速度追求最快，也顯示
+      if(sc["速度"]?.spdShoe||sc["速度"]?.pursueMax)activeKeys.add("速度");
       Object.entries(sc).forEach(([k,v])=>{
         if(k==="速度")return;
-        if(v.max||v.w>0.3)activeKeys.add(k);
-        if((k==="生命"||k==="防禦")&&(v.max||v.w>0.3))activeKeys.add("坦度");
-        if((k==="攻擊"||k==="爆傷")&&(v.max||v.w>0.3))activeKeys.add("傷害指數");
+        // 有下限 or 權重>0.1 即顯示
+        if(v.min>0||v.w>0.1){activeKeys.add(k);}
+        if(v.max){activeKeys.add(k);}
+        // 坦度/傷害指數衍生
+        if((k==="生命"||k==="防禦")&&(v.max||v.w>0.1))activeKeys.add("坦度");
+        if((k==="攻擊"||k==="爆傷"||k==="爆率")&&(v.max||v.w>0.1))activeKeys.add("傷害指數");
       });
     }
-    const allStats=res.results.map(r=>r.stats);
+    // 速度始終納入（不論設定，配裝後速度是核心指標）
+    activeKeys.add("速度");
+
+    // 只顯示各方案中真正有差異的 key（max !== min），避免顯示沒意義的相同值
+    const meaningfulKeys=new Set();
+    ["速度","攻擊","生命","防禦","爆率","爆傷","命中","抗性","坦度","傷害指數"].forEach(k=>{
+      const vals=allStats.map(s=>s[k]??0);
+      const mx=Math.max(...vals),mn=Math.min(...vals);
+      if(mx>0&&mx!==mn)meaningfulKeys.add(k);
+    });
+    // 速度強制顯示（即使全方案速度相同，仍顯示最快的那個）
+    meaningfulKeys.add("速度");
+
+    const labels={攻擊:"最高攻擊",生命:"最高生命",防禦:"最高防禦",速度:"最快速度",爆率:"最高爆率",爆傷:"最高爆傷",命中:"最高命中",抗性:"最高抗性",坦度:"最大坦度",傷害指數:"最高傷害"};
+    const colors={攻擊:"#F87171",生命:"#4ADE80",防禦:"#60A5FA",速度:"#FBBF24",爆率:"#FB923C",爆傷:"#F87171",命中:"#A78BFA",抗性:"#34D399",坦度:"#FBBF24",傷害指數:"#F87171"};
+    const keys=["速度","坦度","傷害指數","攻擊","爆率","爆傷","生命","防禦","命中","抗性"];
+
     const map={};
-    allHighlights.forEach((hs,idx)=>{
-      hs.forEach(h=>{
-        if(activeKeys.has(h.key)&&!map[h.key]){
-          const val=allStats[idx][h.key];
-          map[h.key]={...h,idx,val};
-        }
-      });
+    keys.forEach(k=>{
+      if(!activeKeys.has(k)&&!meaningfulKeys.has(k))return;
+      // 只顯示有意義 key 或 activeKeys 中的速度
+      const relevant=activeKeys.has(k)||(meaningfulKeys.has(k)&&k==="速度");
+      if(!relevant&&!meaningfulKeys.has(k))return;
+      if(!activeKeys.has(k))return;
+      const vals=allStats.map(s=>s[k]??0);
+      const maxVal=Math.max(...vals);
+      if(maxVal<=0)return;
+      const maxIdx=vals.indexOf(maxVal);
+      map[k]={key:k,label:labels[k],color:colors[k]||"#94A3B8",idx:maxIdx,val:maxVal};
     });
     return Object.values(map);
-  },[allHighlights,calcMode,mb,sc,res]);
+  },[res,calcMode,mb,sc]);
 
   const scrollToResult=(idx)=>{
     const el=resultRefs.current[idx];
@@ -1044,7 +1080,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.5</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.6</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -1173,8 +1209,10 @@ function App(){
                       <span style={{fontSize:"10px"}}>{charBuilds.length+"個方案 "+(buildsOpen?"▲":"▼")}</span>
                     </button>
                     {buildsOpen&&(
-                      <div className="absolute left-0 right-0 bottom-full mb-1 rounded-lg border border-slate-700/60 overflow-y-auto z-20"
-                        style={{background:"#0D1525",boxShadow:"0 -8px 24px rgba(0,0,0,0.5)",maxHeight:"320px"}}>
+                      <>
+                      <div className="fixed inset-0 z-[998]" onClick={()=>setBuildsOpen(false)}/>
+                      <div className="absolute left-0 right-0 bottom-full mb-1 rounded-lg border border-slate-700/60 overflow-y-auto z-[999]"
+                        style={{background:"#0D1525",boxShadow:"0 -8px 24px rgba(0,0,0,0.5)",maxHeight:"360px"}}>
                         {charBuilds.map((b,bi)=>{
                           const sets=["套裝1","套裝2","套裝3"].map(k=>b[k]).filter(Boolean);
                           const spd=b["速度下限"]?(b["速度下限"]+"+"):(b["速度上限"]?("≤"+b["速度上限"]):null);
@@ -1195,6 +1233,7 @@ function App(){
                           );
                         })}
                       </div>
+                      </>
                     )}
                   </div>
                 );
