@@ -26,6 +26,8 @@ tailwind.config={
 *,*::before,*::after{box-sizing:border-box;}
 html{font-size:16px;}
 body{margin:0;padding:0;font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;appearance:textfield;}
 </style>
 </head>
 <body>
@@ -173,7 +175,7 @@ function getHighlights(stats,allStats){
 // OPTIMIZER — async time-sliced (non-blocking UI)
 // ============================================================
 function buildCandidates(char,allEquips,config){
-  const{constraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],excludedIds=new Set(),topK=8,goalType="",spdShoe=false,necklaceMt="",ringMt="",isModeB=false,poolCap=28}=config;
+  const{constraints={},spdMax=0,spdMinVal=0,hasSpdConstraint=false,spdPursueMax=false,optimize:opt={},requiredSets=[],excludedIds=new Set(),topK=8,goalType="",spdShoe=false,necklaceMt="",ringMt="",isModeB=false,poolCap=24}=config;
   const reqCounts={};requiredSets.forEach(s=>{reqCounts[s]=(reqCounts[s]||0)+getSetPcs(s);});
   const bySlot={};SLOTS.forEach(s=>{bySlot[s]=[];});
   allEquips.forEach(eq=>{if(!excludedIds.has(eq.oid)&&bySlot[eq.slot])bySlot[eq.slot].push(eq);});
@@ -222,7 +224,7 @@ function buildCandidates(char,allEquips,config){
   const numConstraints=Object.keys(constraints).length+(spdMax>0?1:0)+Object.keys(reqCounts).length;
   // ★ poolSize 控制基礎候選數；MAX_POOL_CAP 是每個 slot 的硬上限
   //   避免多屬性補充疊加後搜索空間爆炸 (e.g. 79^6 ≈ 2400億)
-  const poolSize=isModeB?Math.max(20,topK+8):Math.max(topK+4,16);
+  const poolSize=Math.min(MAX_POOL_CAP,isModeB?Math.max(20,topK+8):Math.max(topK+4,16));
   const MAX_POOL_CAP=poolCap; // 快速=14 / 標準=28 / 深度=42
   const candidates={};
   SLOTS.forEach(slot=>{
@@ -540,7 +542,7 @@ function App(){
   const[mb,setMb]=useState(DB()); // Mode B state
   const[tipIdx,setTipIdx]=useState(null);
   const[lockErr,setLockErr]=useState("");
-  const[searchDur,setSearchDur]=useState(75); // 30 / 75 / 180 秒
+  const[searchDur,setSearchDur]=useState(30); // 30 / 75 / 180 秒
   const[navOpen,setNavOpen]=useState(false); // hamburger menu
   const[equipCacheMeta,setEquipCacheMeta]=useState(null); // {ts,count}
   // ★ 手動配套 state
@@ -828,7 +830,7 @@ function App(){
     setTimeout(()=>{
       if(!cancelRef.current){setRunning(false);setProgress(null);return;}
       let config;
-      const _poolCap=searchDur===30?14:searchDur===180?42:28;
+      const _poolCap=searchDur===30?12:searchDur===180?36:24;
 
       if(calcMode==="B"){
         // ── Mode B: pure constraint + single goal ──
@@ -1171,8 +1173,8 @@ function App(){
                       <span style={{fontSize:"10px"}}>{charBuilds.length+"個方案 "+(buildsOpen?"▲":"▼")}</span>
                     </button>
                     {buildsOpen&&(
-                      <div className="absolute left-0 right-0 mt-1 rounded-lg border border-slate-700/60 overflow-hidden z-20"
-                        style={{background:"#0D1525",boxShadow:"0 8px 24px rgba(0,0,0,0.5)"}}>
+                      <div className="absolute left-0 right-0 bottom-full mb-1 rounded-lg border border-slate-700/60 overflow-y-auto z-20"
+                        style={{background:"#0D1525",boxShadow:"0 -8px 24px rgba(0,0,0,0.5)",maxHeight:"320px"}}>
                         {charBuilds.map((b,bi)=>{
                           const sets=["套裝1","套裝2","套裝3"].map(k=>b[k]).filter(Boolean);
                           const spd=b["速度下限"]?(b["速度下限"]+"+"):(b["速度上限"]?("≤"+b["速度上限"]):null);
@@ -1198,8 +1200,8 @@ function App(){
                 );
               })()}
               <div className="flex gap-2 text-[14px] flex-wrap">
-                <label className="flex items-center gap-1 text-slate-500">羈絆攻<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondAtk||""} onChange={e=>setBondAtk(+e.target.value||0)} onWheel={e=>e.target.blur()} onKeyDown={e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown")e.preventDefault();}}/></label>
-                <label className="flex items-center gap-1 text-slate-500">羈絆血<input type="number" className={`w-12 ${iCls}`} style={iSty} value={bondHp||""} onChange={e=>setBondHp(+e.target.value||0)} onWheel={e=>e.target.blur()} onKeyDown={e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown")e.preventDefault();}}/></label>
+                <label className="flex items-center gap-1 text-slate-500">羈絆攻<input type="number" className={`w-16 ${iCls}`} style={iSty} value={bondAtk||""} onChange={e=>setBondAtk(+e.target.value||0)} onWheel={e=>e.target.blur()} onKeyDown={e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown")e.preventDefault();}}/></label>
+                <label className="flex items-center gap-1 text-slate-500">羈絆血<input type="number" className={`w-16 ${iCls}`} style={iSty} value={bondHp||""} onChange={e=>setBondHp(+e.target.value||0)} onWheel={e=>e.target.blur()} onKeyDown={e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown")e.preventDefault();}}/></label>
 
               </div>
               <div className="space-y-1.5">
@@ -1528,8 +1530,7 @@ function App(){
                       <button key={s} onClick={()=>setSearchDur(s)}
                         className="flex-1 text-[14px] py-1 rounded-lg border transition-all"
                         style={searchDur===s?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
-                        <span className="block">{l} {s}s</span>
-                        <span className="block text-[11px] opacity-60">{s===30?"池×14":s===180?"池×42":"池×28"}</span>
+                        {l} {s}s
                       </button>
                     ))}
                   </div>
