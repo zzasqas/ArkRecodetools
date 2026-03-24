@@ -48,11 +48,11 @@ header{border-bottom:1px solid var(--border);background:rgba(8,13,24,.88);backdr
 
 /* TRUST STRIP */
 .trust-strip{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:22px 0 26px;background:var(--bg2);}
-.trust-item{flex:1;padding:12px 16px;display:flex;gap:10px;align-items:flex-start;border-right:1px solid var(--border);}
+.trust-item{flex:1;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;border-right:1px solid var(--border);}
 .trust-item:last-child{border-right:none;}
-.trust-icon{font-size:17px;flex-shrink:0;margin-top:2px;}
-.trust-label{font-size:12px;font-weight:700;color:#CBD5E1;margin-bottom:2px;}
-.trust-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.trust-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
+.trust-label{font-size:14px;font-weight:700;color:#E2E8F0;margin-bottom:4px;}
+.trust-desc{font-size:12px;color:#94A3B8;line-height:1.55;}
 
 /* TOOLS GRID */
 .tools-section{margin:0 0 26px;}
@@ -62,34 +62,34 @@ header{border-bottom:1px solid var(--border);background:rgba(8,13,24,.88);backdr
 .tool-card{border:1px solid var(--border);border-radius:16px;background:var(--bg2);overflow:hidden;transition:border-color .25s,transform .2s,box-shadow .25s;display:flex;flex-direction:column;text-decoration:none;color:inherit;cursor:pointer;}
 .tool-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4);}
 .tool-card-accent{height:3px;width:100%;}
-.tool-card-body{padding:17px;flex:1;display:flex;flex-direction:column;gap:7px;}
-.tool-card-icon{font-size:22px;}
-.tool-card-name{font-size:16px;font-weight:700;color:#E2E8F0;}
-.tool-card-en{font-size:11px;color:var(--muted);margin-top:-4px;font-family:'Space Mono',monospace;}
-.tool-card-desc{font-size:12px;color:var(--muted);line-height:1.6;flex:1;}
-.tool-card-notes{font-size:11px;color:var(--dim);line-height:1.5;padding:6px 9px;border-radius:7px;border:1px solid var(--border);background:rgba(0,0,0,.2);}
-.tool-card-footer{padding:10px 17px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.tool-arrow{font-size:12px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:4px;transition:color .2s,gap .2s;}
-.tool-card:hover .tool-arrow{color:var(--blue-l);gap:7px;}
-.tool-meta{font-size:11px;color:var(--dim);}
+.tool-card-body{padding:18px;flex:1;display:flex;flex-direction:column;gap:8px;}
+.tool-card-header{display:flex;align-items:center;gap:10px;margin-bottom:2px;}
+.tool-card-icon{font-size:22px;flex-shrink:0;}
+.tool-card-name{font-size:20px;font-weight:700;color:#F1F5F9;}
+.tool-card-desc{font-size:14px;color:#94A3B8;line-height:1.65;flex:1;}
+.tool-card-notes{font-size:13px;color:#64748B;line-height:1.55;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:rgba(0,0,0,.25);}
+.tool-card-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.tool-arrow{font-size:14px;font-weight:700;color:#94A3B8;display:inline-flex;align-items:center;gap:4px;transition:color .2s,gap .2s;}
+.tool-card:hover .tool-arrow{color:#93C5FD;gap:8px;}
+.tool-meta{font-size:12px;color:#475569;}
 
 /* GUIDE */
-.guide-section{border:1px solid var(--border);border-radius:16px;background:var(--bg2);padding:22px;margin-bottom:36px;}
-.guide-title{font-size:15px;font-weight:700;color:#E2E8F0;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
-.guide-block-title{font-size:13px;font-weight:700;color:var(--blue-l);margin-bottom:7px;}
-.guide-list{list-style:none;display:flex;flex-direction:column;gap:5px;}
-.guide-list li{font-size:13px;color:var(--muted);line-height:1.55;padding-left:16px;position:relative;}
+.guide-section{border:1px solid var(--border);border-radius:16px;background:var(--bg2);padding:24px;margin-bottom:36px;}
+.guide-title{font-size:18px;font-weight:700;color:#F1F5F9;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.guide-block-title{font-size:16px;font-weight:700;color:#93C5FD;margin-bottom:10px;}
+.guide-list{list-style:none;display:flex;flex-direction:column;gap:7px;}
+.guide-list li{font-size:14px;color:#94A3B8;line-height:1.6;padding-left:18px;position:relative;}
 .guide-list li::before{content:"—";position:absolute;left:0;color:var(--dim);}
 .guide-list li a{color:var(--teal);text-decoration:none;}
 .guide-list li a:hover{text-decoration:underline;}
 .guide-list li strong{color:#CBD5E1;}
 
-.thanks-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
-.guide-highlight{flex:1;min-width:240px;padding:12px 16px;border-radius:10px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.04);font-size:13px;color:var(--muted);line-height:1.65;}
-.guide-highlight strong{color:var(--amber);}
-.guide-highlight.teal{border-color:rgba(45,212,191,.2);background:rgba(45,212,191,.03);}
-.guide-highlight.teal strong{color:var(--teal);}
+.thanks-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.guide-highlight{flex:1;min-width:240px;padding:14px 18px;border-radius:10px;border:1px solid rgba(251,191,36,.25);background:rgba(251,191,36,.05);font-size:14px;color:#94A3B8;line-height:1.7;}
+.guide-highlight strong{color:#FCD34D;}
+.guide-highlight.teal{border-color:rgba(45,212,191,.25);background:rgba(45,212,191,.04);}
+.guide-highlight.teal strong{color:#5EEAD4;}
 
 /* FOOTER */
 .footer-bar{border-top:1px solid var(--border);background:var(--bg2);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;flex-wrap:wrap;gap:10px;}
@@ -239,11 +239,11 @@ body.lang-en span[data-lang="en"]{display:inline;}
       <a class="tool-card" href="./battle-recorder.html">
         <div class="tool-card-accent" style="background:linear-gradient(90deg,#3B82F6,#60A5FA);"></div>
         <div class="tool-card-body">
-          <div class="tool-card-icon">📊</div>
-          <div class="tool-card-name" data-lang="zh">對戰紀錄器</div>
-          <div class="tool-card-name" data-lang="en">Battle Recorder</div>
-          <div class="tool-card-en" data-lang="zh">Battle Recorder</div>
-          <div class="tool-card-en" data-lang="en">對戰紀錄器</div>
+          <div class="tool-card-header">
+            <div class="tool-card-icon">📊</div>
+            <div class="tool-card-name" data-lang="zh">對戰紀錄器</div>
+            <div class="tool-card-name" data-lang="en">Battle Recorder</div>
+          </div>
           <div class="tool-card-desc">
             <span data-lang="zh">記錄戰鬥結果，支援歷史搜尋、角色暱稱搜尋與策略推薦，可選連接 Google Sheet 紀錄統計、查找對戰組合。</span>
             <span data-lang="en">Log battle results with history search, nickname lookup, and strategy suggestions. Optional Google Sheet integration for stat tracking and matchup reference.</span>
@@ -256,7 +256,7 @@ body.lang-en span[data-lang="en"]{display:inline;}
         <div class="tool-card-footer">
           <span class="tool-arrow" data-lang="zh">前往 →</span>
           <span class="tool-arrow" data-lang="en">Open →</span>
-          <span class="tool-meta">v2.5.3</span>
+          <span class="tool-meta">v2.6.0</span>
         </div>
       </a>
 
@@ -264,11 +264,11 @@ body.lang-en span[data-lang="en"]{display:inline;}
       <a class="tool-card" href="./character-db.html">
         <div class="tool-card-accent" style="background:linear-gradient(90deg,#8B5CF6,#C084FC);"></div>
         <div class="tool-card-body">
-          <div class="tool-card-icon">👤</div>
-          <div class="tool-card-name" data-lang="zh">角色資料庫</div>
-          <div class="tool-card-name" data-lang="en">Character Database</div>
-          <div class="tool-card-en" data-lang="zh">Character Database</div>
-          <div class="tool-card-en" data-lang="en">角色資料庫</div>
+          <div class="tool-card-header">
+            <div class="tool-card-icon">👤</div>
+            <div class="tool-card-name" data-lang="zh">角色資料庫</div>
+            <div class="tool-card-name" data-lang="en">Character Database</div>
+          </div>
           <div class="tool-card-desc">
             <span data-lang="zh">中英文角色名稱與暱稱對照，參照煙雨閣強度表，可拉出配裝各屬性權重並直接帶入配裝工具。</span>
             <span data-lang="en">Chinese/English name and nickname reference. Based on Yan-Yu-Ge tier rankings. Pull stat weights and jump directly into the optimizer.</span>
@@ -289,11 +289,11 @@ body.lang-en span[data-lang="en"]{display:inline;}
       <a class="tool-card" href="./equip-optimizer.html">
         <div class="tool-card-accent" style="background:linear-gradient(90deg,#2DD4BF,#4ADE80);"></div>
         <div class="tool-card-body">
-          <div class="tool-card-icon">⚙️</div>
-          <div class="tool-card-name" data-lang="zh">配裝計算器</div>
-          <div class="tool-card-name" data-lang="en">Equip Optimizer</div>
-          <div class="tool-card-en" data-lang="zh">Equip Optimizer</div>
-          <div class="tool-card-en" data-lang="en">配裝計算器</div>
+          <div class="tool-card-header">
+            <div class="tool-card-icon">⚙️</div>
+            <div class="tool-card-name" data-lang="zh">配裝計算器</div>
+            <div class="tool-card-name" data-lang="en">Equip Optimizer</div>
+          </div>
           <div class="tool-card-desc">
             <span data-lang="zh">依照權重篩選裝備組合，計算符合條件之最佳 8 組裝備，並支援手動配套與多角色裝備鎖定。</span>
             <span data-lang="en">Filter equipment by weighted stats and calculate the top 8 valid build combinations. Supports manual picks and multi-character equipment locking.</span>
@@ -366,8 +366,8 @@ body.lang-en span[data-lang="en"]{display:inline;}
       <div class="guide-highlight teal">
         <strong data-lang="zh">🙏 感謝 煙雨閣</strong>
         <strong data-lang="en">🙏 Thanks to 煙雨閣 (Yan-Yu-Ge)</strong>
-        <span data-lang="zh"> — 角色資料庫與推薦配裝暫定參考煙雨閣強度表，後續將陸續更新完善，感謝整理與分享。</span>
-        <span data-lang="en"> — Character data and recommended builds currently reference Yan-Yu-Ge's tier list. Data will continue to be updated. Thanks for the research and community contributions.</span>
+        <span data-lang="zh"> — 角色資料庫與推薦配裝參考煙雨閣強度表，後續若有更新將紀錄於更新紀錄，感謝整理與分享。</span>
+        <span data-lang="en"> — Character data and recommended builds reference Yan-Yu-Ge's tier list. Any future updates will be noted in the changelog. Thanks for the research and community contributions.</span>
       </div>
     </div>
   </section>
