@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.3.6 - ArkRecode Tools</title>
+<title>配裝計算器 v1.4.0 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -545,6 +545,12 @@ function App(){
   const[searchDur,setSearchDur]=useState(30); // 30 / 75 / 180 秒
   const[navOpen,setNavOpen]=useState(false); // hamburger menu
   const[equipCacheMeta,setEquipCacheMeta]=useState(null); // {ts,count}
+  // ★ 對比模式
+  const[compareMode,setCompareMode]=useState(false);
+  const[compareSelected,setCompareSelected]=useState([]); // max 2 indices
+  const[showComparePanel,setShowComparePanel]=useState(false);
+  // ★ 清除快取 modal
+  const[showClearModal,setShowClearModal]=useState(false);
   // ★ 手動配套 state
   const[manualSlots,setManualSlots]=useState({}); // {charName:{武器:oid,...}}
   // ★ 推薦配裝
@@ -621,6 +627,22 @@ function App(){
       if(raw&&meta){
         const parsed=JSON.parse(raw);
         if(Array.isArray(parsed)&&parsed.length){setEquips(parsed);setEquipCacheMeta(meta);}
+      }
+    }catch(e){}
+    // ★ 載入已鎖定方案快取
+    try{
+      const rawLocked=localStorage.getItem("arkrecode_locked_plans");
+      if(rawLocked){
+        const parsed=JSON.parse(rawLocked);
+        if(parsed&&typeof parsed==="object")setLocked(parsed);
+      }
+    }catch(e){}
+    // ★ 載入超級鎖定快取
+    try{
+      const rawSL=localStorage.getItem("arkrecode_super_locked");
+      if(rawSL){
+        const arr=JSON.parse(rawSL);
+        if(Array.isArray(arr))setSuperLocked(new Set(arr));
       }
     }catch(e){}
   },[]);
@@ -1014,7 +1036,84 @@ function App(){
     return{...p,[cn]:{...p[cn],plans}};
   });
 
+  // ★ 匯出：純文字複製單一結果
+  const exportResultText=(r,charName)=>{
+    if(!r)return;
+    const s=r.stats;
+    const sets=s.套裝?.join(" + ")||"";
+    const lines=["=== "+charName+" 配裝方案 ===",
+      "套裝: "+sets,
+      "速度: "+Math.floor(s.速度)+"  爆率: "+s.爆率+"%  爆傷: "+s.爆傷+"%",
+      "攻擊: "+Math.floor(s.攻擊)+"  防禦: "+Math.floor(s.防禦)+"  生命: "+Math.floor(s.生命),
+      "命中: "+s.命中+"%  抗性: "+s.抗性+"%",
+      "坦度: "+Math.floor(s.坦度)+"  傷害指數: "+Math.floor(s.傷害指數),
+      "---裝備明細---",
+      ...[...r.combo].sort((a,b)=>SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot)).map(eq=>{
+        const subsStr=Object.entries(eq.subs).map(([k,v])=>k+fE(k,v)).join(" / ");
+        return eq.slot+": ["+eq.set+"] "+eq.mt+" "+fE(eq.mt,eq.mv)+"  "+subsStr;
+      })
+    ];
+    navigator.clipboard.writeText(lines.join("\n")).then(()=>alert("已複製到剪貼簿！")).catch(()=>alert("複製失敗，請手動選取"));
+  };
+
+  // ★ 匯出：已鎖定方案 CSV 下載
+  const exportLockedCSV=()=>{
+    const fmtEq=(eq)=>{
+      if(!eq)return"";
+      const mainStr=eq.mt+" "+fE(eq.mt,eq.mv);
+      const subsStr=Object.entries(eq.subs).map(([k,v])=>k+fE(k,v)).join(" ");
+      return"("+eq.set+")"+mainStr+(subsStr?" "+subsStr:"");
+    };
+    const rows=[["角色","方案",
+      "武器","頭盔","鎧甲","項鍊","戒指","鞋子",
+      "套裝","速度","爆率","爆傷","攻擊","防禦","生命","命中","抗性","坦度","傷害指數"
+    ]];
+    Object.entries(locked).forEach(([charName,data])=>{
+      (data.plans||[]).forEach((plan,pi)=>{
+        if(!plan)return;
+        const s=plan.stats||{};
+        const slotMap={};
+        (plan.combo||[]).forEach(eq=>{slotMap[eq.slot]=eq;});
+        const slotCols=SLOTS.map(sl=>fmtEq(slotMap[sl]));
+        rows.push([charName,pi+1,
+          ...slotCols,
+          s.套裝?.join("+")||"",
+          Math.floor(s.速度||0),s.爆率||0,s.爆傷||0,Math.floor(s.攻擊||0),Math.floor(s.防禦||0),Math.floor(s.生命||0),s.命中||0,s.抗性||0,Math.floor(s.坦度||0),Math.floor(s.傷害指數||0)
+        ]);
+      });
+    });
+    const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="arkrecode_locked_plans.csv";a.click();
+  };
+
+  // ★ 清除本地快取
+  const clearLocalCache=(includeEquips)=>{
+    const keys=["arkrecode_locked_plans","arkrecode_super_locked","arkrecode_chars_version"];
+    if(includeEquips)keys.push("arkrecode_equips","arkrecode_equips_meta","arkrecode_build_recom_data");
+    else keys.push("arkrecode_build_recom_data");
+    keys.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    setLocked({});setSuperLocked(new Set());
+    if(includeEquips){setEquips([]);setEquipCacheMeta(null);}
+    setShowClearModal(false);
+    const _msg=includeEquips?"已清除（含裝備），角色資料與推薦方案將在下次載入時自動重新抓取":"已清除，角色資料與推薦方案將在下次載入時自動重新抓取";alert(_msg);
+  };
+
   const canRun=selChar&&equips.length>0&&!running;
+  // ★ 自動儲存鎖定方案到 localStorage
+  useEffect(()=>{
+    try{
+      if(Object.keys(locked).length>0)localStorage.setItem("arkrecode_locked_plans",JSON.stringify(locked));
+      else localStorage.removeItem("arkrecode_locked_plans");
+    }catch(e){}
+  },[locked]);
+  // ★ 自動儲存超級鎖定到 localStorage
+  useEffect(()=>{
+    try{
+      if(superLocked.size>0)localStorage.setItem("arkrecode_super_locked",JSON.stringify([...superLocked]));
+      else localStorage.removeItem("arkrecode_super_locked");
+    }catch(e){}
+  },[superLocked]);
   const iCls="rounded-lg px-2 py-1 text-[14px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
   const iSty={background:"#151D2E",color:"#CBD5E1"};
   const spdV=sc["速度"];
@@ -1080,11 +1179,19 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.3.6</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.4.0</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
           </button>
+          <div className="flex items-center gap-1 border-l border-slate-800 pl-2 ml-1">
+            <a href="https://zzasqas.github.io/ArkRecodetools/" target="_blank" rel="noopener noreferrer"
+              className="text-[13px] px-2 py-1 rounded-lg border border-slate-800 text-slate-500 hover:text-blue-300 hover:border-blue-900/60 transition-colors"
+              title="返回首頁">🏠</a>
+            <a href="https://zzasqas.github.io/ArkRecodetools/battle-recorder.html" target="_blank" rel="noopener noreferrer"
+              className="text-[13px] px-2 py-1 rounded-lg border border-slate-800 text-slate-500 hover:text-green-300 hover:border-green-900/60 transition-colors"
+              title="對戰記錄器">⚔️</a>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-[15px]">
           <label className="cursor-pointer flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-300 transition-colors">
@@ -1924,6 +2031,19 @@ function App(){
                   });
                 })()}
                 {Object.keys(locked).length>0&&<button onClick={()=>{if(confirm("確定全部解鎖?"))setLocked({})}} className="text-[13px] text-red-400 hover:text-red-300 transition-colors px-2 py-1">🗑️ 全部解鎖</button>}
+                {/* ★ 匯出 + 清除快取 */}
+                <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800/40">
+                  {Object.keys(locked).length>0&&(
+                    <button onClick={exportLockedCSV}
+                      className="text-[13px] px-2.5 py-1 rounded-lg border border-green-800/50 text-green-400 hover:bg-green-900/20 transition-colors">
+                      ⬇ 下載 CSV
+                    </button>
+                  )}
+                  <button onClick={()=>setShowClearModal(true)}
+                    className="text-[13px] px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-500 hover:text-amber-400 hover:border-amber-700/40 transition-colors ml-auto">
+                    🗑 清除快取
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1947,8 +2067,57 @@ function App(){
               <span className="text-slate-700 text-[13px]">候選池：{Object.entries(res.poolInfo).map(([s,n])=>s+String(n)).join(" / ")}</span>
             )}
             {calcMode==="B"&&<span className="ml-auto" style={{color:"#93C5FD"}}>B模式 · 最大化: {MODE_B_GOALS.find(g=>g.key===mb.goal)?.label||mb.goal}</span>}
-            <button onClick={()=>setShowResults(false)} className="ml-auto text-[12px] text-slate-600 hover:text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/40 hover:border-slate-600 transition-colors shrink-0" title="收合結果面板">✕</button>
+            {/* ★ 對比模式開關 — 結果數 ≥ 2 時顯示 */}
+            {res?.results?.length>=2&&(
+              <button onClick={()=>{setCompareMode(v=>{if(v){setCompareSelected([]);setShowComparePanel(false);}return!v;});}}
+                className="text-[13px] px-2 py-0.5 rounded-lg border transition-colors ml-auto"
+                style={compareMode?{background:"#1E3A5F",color:"#93C5FD",borderColor:"#3B82F688"}:{background:"#151D2E",color:"#64748B",borderColor:"#1E293B"}}>
+                {compareMode?"✓ 對比中":"⚖ 對比"}
+              </button>
+            )}
+            <button onClick={()=>setShowResults(false)} className="text-[12px] text-slate-600 hover:text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/40 hover:border-slate-600 transition-colors shrink-0" title="收合結果面板">✕</button>
           </div>
+
+          {/* ★ Compare Panel — 選滿兩張後自動展開 */}
+          {compareMode&&compareSelected.length===2&&res?.results&&(()=>{
+            const [iA,iB]=compareSelected;
+            const rA=res.results[iA],rB=res.results[iB];
+            if(!rA||!rB)return null;
+            const statKeys=[["攻擊","#F87171"],["生命","#4ADE80"],["防禦","#60A5FA"],["速度","#FBBF24"],["爆率","#FB923C"],["爆傷","#F87171"],["命中","#A78BFA"],["抗性","#34D399"],["坦度","#FBBF24"],["傷害指數","#F87171"]];
+            return(
+              <div className="border-b border-slate-800/60 px-3 py-2.5" style={{background:"#05080F"}}>
+                <div className="text-[12px] text-slate-500 mb-1.5 font-semibold">⚖ 方案 {iA+1} vs 方案 {iB+1}</div>
+                {/* header */}
+                <div className="grid gap-x-0 text-[11px] mb-1" style={{gridTemplateColumns:"3.5rem 1fr auto 1fr"}}>
+                  <div/>
+                  <div className="text-center font-bold" style={{color:"#93C5FD"}}>#{iA+1}</div>
+                  <div className="text-center text-slate-600 px-1">差</div>
+                  <div className="text-center font-bold" style={{color:"#60A5FA"}}>#{iB+1}</div>
+                </div>
+                {/* rows */}
+                <div className="space-y-0.5">
+                  {statKeys.map(([k,col])=>{
+                    const vA=rA.stats[k]??0,vB=rB.stats[k]??0;
+                    const diff=Math.round((vA-vB)*10)/10;
+                    const isPct=["爆率","爆傷","命中","抗性"].includes(k);
+                    const fmt=v=>isPct?(Math.round(v*10)/10+"%"):Math.round(v).toLocaleString();
+                    const diffStr=diff===0?"—":(diff>0?"+"+(isPct?diff.toFixed(1):Math.round(diff))+(isPct?"%":""):(isPct?diff.toFixed(1):Math.round(diff))+(isPct?"%":""));
+                    const colA=diff>0?"#4ADE80":diff<0?"#F87171":"#94A3B8";
+                    const colB=diff<0?"#4ADE80":diff>0?"#F87171":"#94A3B8";
+                    const colD=diff===0?"#475569":diff>0?"#4ADE80":"#F87171";
+                    return(
+                      <div key={k} className="grid gap-x-0 text-[12px]" style={{gridTemplateColumns:"3.5rem 1fr auto 1fr"}}>
+                        <div className="font-semibold text-right pr-2 leading-5" style={{color:col}}>{k}</div>
+                        <div className="text-center font-mono font-bold leading-5" style={{color:colA}}>{fmt(vA)}</div>
+                        <div className="text-center font-mono text-[11px] leading-5 px-1.5 tabular-nums" style={{color:colD,minWidth:"3rem"}}>{diffStr}</div>
+                        <div className="text-center font-mono font-bold leading-5" style={{color:colB}}>{fmt(vB)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Progress bar + stop button */}
           {running&&progress&&(
@@ -2024,7 +2193,21 @@ function App(){
             {lockErr&&<div className="mx-4 mb-2 text-[14px] text-amber-400 bg-amber-950/40 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {lockErr}</div>}
             {res?.results?.map((r,i)=>(
               <div key={i} ref={el=>{resultRefs.current[i]=el;}}>
-                <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]} onLock={(slotNum)=>{lockRes(i,slotNum);setTab("locked");setLockedPlanTab(p=>({...p,[res.charName]:slotNum}));}}/>
+                <ResCard idx={i} r={r} goalType={calcMode==="B"?mb.goal:""} highlights={allHighlights[i]||[]}
+                  onLock={(slotNum)=>{lockRes(i,slotNum);setTab("locked");setLockedPlanTab(p=>({...p,[res.charName]:slotNum}));}}
+                  compareMode={compareMode}
+                  compareSelected={compareSelected}
+                  onCompareToggle={(idx)=>{
+                    setCompareSelected(prev=>{
+                      let next;
+                      if(prev.includes(idx)){next=prev.filter(x=>x!==idx);setShowComparePanel(false);}
+                      else if(prev.length<2){next=[...prev,idx];if(next.length===2)setShowComparePanel(true);}
+                      else{next=[prev[1],idx];setShowComparePanel(true);}
+                      return next;
+                    });
+                  }}
+                  onExportText={()=>exportResultText(r,res?.charName||"")}
+                />
               </div>
             ))}
           </div>
@@ -2086,6 +2269,36 @@ function App(){
         ):null}
       </div>
 
+      {/* ★ 清除快取 Modal */}
+      {showClearModal&&(
+        <>
+        <div className="fixed inset-0 z-[1000] bg-black/70" onClick={()=>setShowClearModal(false)}/>
+        <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
+          <div className="rounded-2xl border border-slate-700/60 p-6 space-y-4 pointer-events-auto shadow-2xl" style={{background:"#0D1525",maxWidth:"360px",width:"90%"}}>
+            <div className="text-base font-bold text-slate-200">🗑 清除本地快取</div>
+            <div className="text-[14px] text-slate-400 leading-relaxed space-y-2">
+              <p>清除後，已儲存的鎖定方案與超級鎖定將消失。</p>
+              <p className="text-slate-500">角色資料與推薦配裝將在下次載入時自動從伺服器重新抓取。</p>
+            </div>
+            <div className="space-y-2">
+              <button onClick={()=>clearLocalCache(false)}
+                className="w-full py-2.5 rounded-xl border border-amber-700/50 text-amber-400 hover:bg-amber-900/20 transition-colors font-semibold text-[14px]">
+                清除鎖定方案（保留裝備）
+              </button>
+              <button onClick={()=>clearLocalCache(true)}
+                className="w-full py-2.5 rounded-xl border border-red-700/50 text-red-400 hover:bg-red-900/20 transition-colors font-semibold text-[14px]">
+                清除全部（含裝備 JSON）
+              </button>
+              <button onClick={()=>setShowClearModal(false)}
+                className="w-full py-2 rounded-xl border border-slate-700/40 text-slate-500 hover:text-slate-300 transition-colors text-[14px]">
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
+      )}
+
     </div>
   );
 }
@@ -2093,16 +2306,29 @@ function App(){
 // ============================================================
 // RESULT CARD (enhanced UI)
 // ============================================================
-function ResCard({idx,r,goalType,highlights,onLock}){
+function ResCard({idx,r,goalType,highlights,onLock,compareMode,compareSelected,onCompareToggle,onExportText}){
   const[exp,setExp]=useState(idx===0);
   const[showLockMenu,setShowLockMenu]=useState(false);
   const s=r.stats;
   const statPairs=[["攻擊",s.攻擊,"#F87171"],["生命",s.生命,"#4ADE80"],["防禦",s.防禦,"#60A5FA"],["速度",s.速度,"#FBBF24"],["爆率",s.爆率,"#FB923C"],["爆傷",s.爆傷,"#F87171"],["命中",s.命中,"#A78BFA"],["抗性",s.抗性,"#34D399"]];
+  const isCompareChecked=compareSelected?.includes(idx);
+  const isCompareDisabled=compareMode&&compareSelected?.length>=2&&!isCompareChecked;
+  // Border color: compare checked = green, has highlights = blue, else default
+  const borderColor=isCompareChecked?"#16A34A":highlights.length?"#1E3A5F":"#1E293B";
   return(
-    <div className="rounded-xl border overflow-hidden transition-all" style={{background:"#0D1220",borderColor:highlights.length?"#1E3A5F":"#1E293B"}}>
+    <div className="rounded-xl border overflow-hidden transition-all" style={{background:"#0D1220",borderColor,boxShadow:isCompareChecked?"0 0 0 1px #16A34A55":"none"}}>
       <div className="p-3">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* ★ Compare checkbox */}
+            {compareMode&&(
+              <button onClick={()=>!isCompareDisabled&&onCompareToggle(idx)}
+                className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0"
+                style={{borderColor:isCompareChecked?"#16A34A":isCompareDisabled?"#1E293B":"#475569",background:isCompareChecked?"#052e16":"transparent",cursor:isCompareDisabled?"not-allowed":"pointer",opacity:isCompareDisabled?0.35:1}}
+                title={isCompareChecked?"取消選取":"選取比較"}>
+                {isCompareChecked&&<span style={{color:"#4ADE80",fontSize:"11px",lineHeight:1}}>✓</span>}
+              </button>
+            )}
             <span className="text-base font-bold px-2 py-0.5 rounded-md" style={{background:"#1E3A5F",color:"#93C5FD"}}>方案 {idx+1}</span>
             {highlights.map((h,hi)=>(
               <span key={hi} className="text-[13px] px-1.5 py-0.5 rounded-full font-bold"
@@ -2110,6 +2336,9 @@ function ResCard({idx,r,goalType,highlights,onLock}){
             ))}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* ★ Export text button */}
+            <button onClick={onExportText} className="text-[13px] px-2 py-1 rounded border transition-colors"
+              style={{background:"#0B1120",color:"#64748B",borderColor:"#1E293B"}} title="複製純文字">📋</button>
             <button onClick={()=>setExp(!exp)} className="text-[14px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded border border-slate-700/30 hover:border-slate-600">{exp?"▲ 收起":"▼ 詳情"}</button>
             <div className="relative">
               <button onClick={()=>setShowLockMenu(!showLockMenu)} className="text-[14px] px-3 py-1.5 rounded-lg border transition-all hover:bg-blue-900/30"
