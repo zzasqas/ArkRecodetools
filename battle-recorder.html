@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArkRecode 對戰紀錄器 v2.6.0</title>
+    <title>ArkRecode 對戰紀錄器 v2.7.0</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
@@ -157,7 +157,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.6.0</div>
+    <div class="author-info">by zzas | v2.7.0</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -320,7 +320,7 @@
                                 <p>如有問題或建議，歡迎回饋：</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• 開發者：zzas</li>
-                                    <li>• 版本：v2.6.0</li>
+                                    <li>• 版本：v2.7.0</li>
                                     <li>• 更新日期：{new Date().toLocaleDateString('zh-TW')}</li>
                                 </ul>
                             </div>
@@ -745,10 +745,10 @@
                     const exportData = {
                         ...data,
                         exportDate: new Date().toISOString(),
-                        version: '2.6.0',
+                        version: '2.7.0',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.6.0'
+                            exported_by: 'ArkRecode_v2.7.0'
                         }
                     };
                     
@@ -2015,6 +2015,18 @@
                 lastSync: null
             });
 
+            // 社群GvG資料庫
+            const COMMUNITY_GVG_URL = 'https://raw.githubusercontent.com/zzasqas/ArkRecodetools/main/data/community_gvg.json';
+            const [communityDB, setCommunityDB] = useState({
+                loaded: false,
+                loading: false,
+                mode: null,
+                description: null,
+                generated: null,
+                source_records: 0,
+                data: {}
+            });
+
             // 常數定義（更新角色名稱）
             const commonCombos = useMemo(() => [
                 { combo: ['光鞭', '暗飛', '蓋兒', '水琴'], winRate: 0.75 },
@@ -2502,6 +2514,53 @@
                 }
             }, [convertAlias, counterDatabase]);
 
+            const loadCommunityDB = useCallback(async () => {
+                const pwd = prompt('請輸入社群資料庫密碼：');
+                if (pwd === null) return;
+                if (pwd !== 'au3ek66ke') { alert('❌ 密碼錯誤'); return; }
+                setCommunityDB(prev => ({ ...prev, loading: true }));
+                try {
+                    const resp = await fetch(COMMUNITY_GVG_URL + '?t=' + Date.now());
+                    if (!resp.ok) throw new Error('無法讀取社群資料庫');
+                    const json = await resp.json();
+                    if (!json.counterDatabase || typeof json.counterDatabase !== 'object') {
+                        throw new Error('資料格式錯誤');
+                    }
+                    setCommunityDB({
+                        loaded: true,
+                        loading: false,
+                        mode: json.mode || 'gvg_3v3',
+                        description: json.description || '',
+                        generated: json.generated || '',
+                        source_records: json.source_records || 0,
+                        data: json.counterDatabase
+                    });
+                    // merge 進 counterDatabase，社群資料不覆蓋用戶已有的 key
+                    setCounterDatabase(prev => {
+                        const merged = { ...json.counterDatabase };
+                        Object.keys(prev).forEach(k => { merged[k] = prev[k]; });
+                        return merged;
+                    });
+                    alert('✅ 社群GvG資料庫已載入！\n來源筆數：' + (json.source_records || '?') + '\n產生日期：' + (json.generated || '?'));
+                } catch (err) {
+                    setCommunityDB(prev => ({ ...prev, loading: false }));
+                    alert('❌ 載入失敗：' + err.message);
+                }
+            }, []);
+
+            const clearCommunityDB = useCallback(() => {
+                if (!communityDB.loaded) { alert('尚未載入社群資料庫'); return; }
+                if (!confirm('確定要清除社群GvG資料庫？您手動新增的策略不受影響。')) return;
+                setCounterDatabase(prev => {
+                    const communityKeys = new Set(Object.keys(communityDB.data));
+                    const cleaned = {};
+                    Object.keys(prev).forEach(k => { if (!communityKeys.has(k)) cleaned[k] = prev[k]; });
+                    return cleaned;
+                });
+                setCommunityDB({ loaded: false, loading: false, mode: null, description: null, generated: null, source_records: 0, data: {} });
+                alert('✅ 社群資料庫已清除');
+            }, [communityDB]);
+
             const deleteRecord = useCallback((recordId) => {
                 if (confirm('確定要刪除此記錄嗎？此操作不可復原！')) {
                     setBattleRecords(prev => prev.filter(record => record.id !== recordId));
@@ -2681,7 +2740,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert('✅ 歡迎使用 ArkRecode v2.6.0！您的資料將存儲在本機瀏覽器中。');
+                alert('✅ 歡迎使用 ArkRecode v2.7.0！您的資料將存儲在本機瀏覽器中。');
             }, []);
 
             // 拒絕免責聲明
@@ -2718,9 +2777,9 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (dataVersion !== '2.6.0') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.6.0`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.6.0');
+                            if (dataVersion !== '2.7.0') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.7.0`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.7.0');
                             }
                             
                         } catch (parseError) {
@@ -2745,11 +2804,11 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.6.0！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.7.0！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
-                        localStorage.setItem('arkrecode_dataVersion', '2.6.0');
+                        localStorage.setItem('arkrecode_dataVersion', '2.7.0');
                     }
                     
                     if (savedAliases) {
@@ -2897,7 +2956,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    ArkRecode 對戰紀錄器 v2.6.0
+                                    ArkRecode 對戰紀錄器 v2.7.0
                                 </h1>
                                 <div className="flex gap-1">
                                     <button
@@ -3019,6 +3078,63 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
 
                         {currentView === 'settings' && (
                             <div className="space-y-4">
+                                {/* 社群GvG資料庫 */}
+                                <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                        <IconComponents.Target className="text-orange-500" size={20} />
+                                        📡 社群GvG資料庫
+                                    </h2>
+
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-orange-50 rounded-lg text-sm text-orange-800">
+                                            <div className="font-medium mb-1">🎯 GvG三打三勝場資料庫</div>
+                                            <div className="text-xs text-orange-700 space-y-1">
+                                                <div>• 載入後自動補充反制策略推薦（不覆蓋您手動新增的策略）</div>
+                                                <div>• 資料由社群統計，定期更新，清除後不影響個人記錄</div>
+                                                <div>• 需要網路連線才能讀取</div>
+                                            </div>
+                                        </div>
+
+                                        {communityDB.loaded && (
+                                            <div className="p-3 bg-green-50 rounded-lg text-sm text-green-800">
+                                                <div>✅ <strong>已載入：</strong>{communityDB.description}</div>
+                                                <div className="text-xs mt-1 text-green-700 space-y-0.5">
+                                                    <div>• 涵蓋勝場記錄：{communityDB.source_records.toLocaleString()} 筆</div>
+                                                    <div>• 資料日期：{communityDB.generated}</div>
+                                                    <div>• 模式：{communityDB.mode}</div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={loadCommunityDB}
+                                                disabled={communityDB.loading}
+                                                className={`flex-1 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-2 ${
+                                                    communityDB.loading
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : communityDB.loaded
+                                                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
+                                                            : 'bg-orange-500 text-white hover:bg-orange-600'
+                                                }`}
+                                            >
+                                                {communityDB.loading ? '⏳ 讀取中...' : communityDB.loaded ? '🔄 重新讀取' : '📥 讀取社群資料庫'}
+                                            </button>
+                                            <button
+                                                onClick={clearCommunityDB}
+                                                disabled={!communityDB.loaded}
+                                                className={`px-3 py-2 rounded text-sm flex items-center gap-1 ${
+                                                    communityDB.loaded
+                                                        ? 'bg-red-100 text-red-600 hover:bg-red-200 border border-red-300'
+                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                🗑 清除
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Google Sheets 同步設定 */}
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -3102,7 +3218,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                                                     result: '勝',
                                                                     rank: '測試排位',
                                                                     opponentName: '測試對手',
-                                                                    notes: `v2.6.0測試 - ${new Date().toLocaleString('zh-TW')}`
+                                                                    notes: `v2.7.0測試 - ${new Date().toLocaleString('zh-TW')}`
                                                                 };
                                                                 uploadToCommunity(testRecord);
                                                                 alert('測試上傳完成！請到您的私人Google Sheets確認');
@@ -3560,21 +3676,16 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        v2.6.0 更新說明
+                                        v2.7.0 更新說明
                                     </h2>
                                     
                                     <div className="space-y-3">
                                         <div className="p-3 bg-green-50 rounded-lg">
-                                            <h4 className="font-medium text-green-800 mb-2">🔧 v2.6.0 新功能與優化</h4>
+                                            <h4 className="font-medium text-green-800 mb-2">🔧 v2.7.0 新功能與優化</h4>
                                             <ul className="text-sm text-green-700 space-y-1">
-                                                <li>• <strong>加快搜尋後紀錄步驟</strong>：優化搜索功能，提升記錄效率</li>
-                                                <li>• <strong>角色資料庫連結</strong>：新增相關工具區塊，快速連結角色資料庫</li>
-                                                <li>• <strong>日期批次刪除</strong>：得以選擇日期批次刪除該日期前(不含)之紀錄</li>
-                                                <li>• <strong>歷史搜索新功能</strong>：輸入對手陣容快速找到相關記錄和我方勝場策略</li>
-                                                <li>• <strong>匹配系統</strong>：自動顯示完全/高度匹配記錄，高亮匹配角色</li>
-                                                <li>• <strong>別名緩存系統</strong>：預計算角色別名轉換，大幅提升搜索速度</li>
-                                                <li>• <strong>勝場策略推薦</strong>：基於歷史勝場記錄推薦最適我方陣容</li>
-                                                <li>• <strong>視覺化增強</strong>：搜索模式下不同匹配等級用不同背景色區分</li>
+                                                <li>• <strong>社群GvG資料庫</strong>：一鍵讀取/清除社群三打三勝場統計資料</li>
+                                                <li>• <strong>智能合併策略</strong>：社群資料自動補充反制推薦，不覆蓋個人記錄</li>
+                                                <li>• <strong>GvG / PvP 分離架構</strong>：社群資料庫依模式獨立存放，方便後續擴充</li>
                                             </ul>
                                         </div>
                                         
@@ -3603,12 +3714,12 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">📞 技術資訊</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>版本</strong>：v2.6.0</div>
+                                                <div>• <strong>版本</strong>：v2.7.0</div>
                                                 <div>• <strong>發布日期</strong>：{new Date().toLocaleDateString('zh-TW')}</div>
                                                 <div>• <strong>安全等級</strong>：高度 🛡️</div>
                                                 <div>• <strong>適用環境</strong>：離線使用，私人部署</div>
                                                 <div>• <strong>開發者</strong>：zzas</div>
-                                                <div>• <strong>主要改進</strong>：加快搜尋後紀錄步驟，新增角色資料庫連結</div>
+                                                <div>• <strong>主要改進</strong>：社群GvG資料庫一鍵讀取，策略推薦大幅增強</div>
                                             </div>
                                         </div>
                                     </div>
@@ -3617,7 +3728,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 對戰紀錄器 v2.6.0 | 離線使用 | 歷史搜索功能 + 策略推薦
+                            ArkRecode 對戰紀錄器 v2.7.0 | 離線使用 | 歷史搜索功能 + 策略推薦
                         </div>
                     </div>
                 </div>
