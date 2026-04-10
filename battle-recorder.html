@@ -1983,16 +1983,16 @@
                 { name: '可伊', aliases: ['可伊'] },
                 { name: '貝兒', aliases: ['貝兒'] },
                 { name: '天宮咲夜', aliases: ['天宮咲夜', '天宮', '咲夜'] },
-                { name: '光明女神玳蓮', aliases: ['光泰', '光玳蓮', '光明女神玳蓮', '光明女神'] },
+                { name: '光明女神玳蓮', aliases: ['光明女神玳蓮', '光明女神', '玳蓮', '光奶'] },
                 { name: '新春的蜜娜', aliases: ['新春的蜜娜', '新春', '蜜娜'] },
-                { name: '兔女郎愛莉卡', aliases: ['兔女郎', '兔女郎愛莉卡', '兔女'] },
-                { name: '啦啦隊蓓蕾卡', aliases: ['啦啦隊', '啦啦隊蓓蕾卡', '蓓蕾卡'] },
-                { name: '複製體卡洛琳', aliases: ['光卡', '複製體卡洛琳', '卡洛琳'] },
-                { name: '複製體喬依絲', aliases: ['小暗奶', '複製體喬依絲',] },
-                { name: '複製體迪爾德麗', aliases: ['血卡', '複製體迪爾德麗', '迪爾德', '複製迪爾德'] },
-                { name: '複製體卡麗希', aliases: ['暗熊', '複製體卡麗希', '卡麗希'] },
-                { name: '異變的奧普懷妮', aliases: ['按摩王', '暗魔王', '異變的奧普懷妮', '奧普懷妮'] },
-                { name: '追憶的瑪夏', aliases: ['瑪夏', '追憶的瑪夏', '追憶'] },
+                { name: '兔女郎愛莉卡', aliases: ['兔女郎愛莉卡', '兔女郎', '兔女', '愛莉卡'] },
+                { name: '啦啦隊蓓蕾卡', aliases: ['啦啦隊蓓蕾卡', '啦啦隊', '啦啦', '蓓蕾卡'] },
+                { name: '複製體卡洛琳', aliases: ['複製體卡洛琳', '卡洛琳'] },
+                { name: '複製體喬依絲', aliases: ['複製體喬依絲', '複製喬', '複製喬依絲'] },
+                { name: '複製體迪爾德麗', aliases: ['複製體迪爾德麗', '迪爾德', '複製迪爾德'] },
+                { name: '複製體卡麗希', aliases: ['複製體卡麗希', '卡麗希'] },
+                { name: '異變的奧普懷妮', aliases: ['異變的奧普懷妮', '奧普懷妮'] },
+                { name: '追憶的瑪夏', aliases: ['追憶的瑪夏', '追憶', '瑪夏'] },
                 // 新角色備用區
             ]);
 
@@ -2786,6 +2786,9 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                             if (dataVersion !== '2.7.0') {
                                 console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.7.0`);
                                 localStorage.setItem('arkrecode_dataVersion', '2.7.0');
+                                // 版本升級時清除舊別名快取，使用新版預設值
+                                localStorage.removeItem('arkrecode_characterAliases');
+                                console.log('已清除舊版別名快取，套用 v2.7.0 預設別名');
                             }
                             
                         } catch (parseError) {
@@ -3643,6 +3646,23 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                             <IconComponents.Shield size={16} />
                                             新增角色
                                         </button>
+                                    </div>
+
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('⚠️ 確定要重置角色別名嗎？\n\n您手動新增或修改的別名將全部清除，恢復為系統預設值。\n\n點擊「確定」繼續。')) {
+                                                    localStorage.removeItem('arkrecode_characterAliases');
+                                                    location.reload();
+                                                }
+                                            }}
+                                            className="w-full px-3 py-2 rounded text-sm bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 border border-gray-200 hover:border-red-200 transition-colors"
+                                        >
+                                            🔄 重置為系統預設別名
+                                        </button>
+                                        <div className="text-xs text-gray-400 mt-1 text-center">
+                                            重置後頁面會自動重新整理
+                                        </div>
                                     </div>
                                 </div>
 
