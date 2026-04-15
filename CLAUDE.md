@@ -136,3 +136,55 @@ ArkRecodetools/
 ### README.md 同時作為面板內容
 
 `README.md` 會被 `index.html` 動態 fetch 並解析顯示於 README 側邊面板。使用的是簡易自製 Markdown 解析器（支援 h1~h3、粗體、斜體、連結、code、hr、blockquote、清單），不支援表格渲染，勿在 README.md 中使用複雜 Markdown 語法。
+
+### 裝備部位判斷邏輯（equip-optimizer.html）
+
+靈燕外掛匯出的裝備 JSON **不含部位欄位**，部位須由程式推斷。遊戲靜態資料表以 StaticID 直查部位，但該表未隨 JSON 匯出，故採以下三層策略：
+
+#### 第一層：StaticID 末位數字（可信前綴集合）
+
+`RELIABLE_PFX` 列出已知符合「末位數字 1-6 = 部位」慣例的前綴；  
+`buildDynReliablePfx()` 在解析時掃描整包 JSON，以武器(1)、頭盔(2)、鎧甲(3) 的固定主屬性作驗證基準，自動偵測新前綴並加入可信集。  
+**注意**：鞋子(6) 主屬性並非固定為速度值，攻擊%/生命%/防禦% 均可出現，不得列為驗證基準。
+
+| 末位數字 | 部位 |
+|----------|------|
+| 1 | 武器 |
+| 2 | 頭盔 |
+| 3 | 鎧甲 |
+| 4 | 項鍊 |
+| 5 | 戒指 |
+| 6 | 鞋子 |
+
+#### 第二層：特殊前綴對映表（SPECIAL_PFX_SLOT）
+
+部分付費紅色裝備前綴不符合 1-6 慣例（如 E050，整組為飾品類，末位數字無法對應標準部位）。  
+此類前綴以 `SPECIAL_PFX_SLOT` 物件記錄主屬性→部位的個別對映，需由玩家回報後手動補入。
+
+#### 第三層：主屬性 Fallback
+
+| 主屬性 | 判斷部位 | 是否唯一 |
+|--------|----------|----------|
+| AttackValue（攻擊值） | 武器 | ✓ 唯一 |
+| HPValue（生命值） | 頭盔 | ✓ 唯一 |
+| DefenceValue（防禦值） | 鎧甲 | ✓ 唯一 |
+| SpeedValue（速度值） | 鞋子 | ✓ 唯一 |
+| CriticalRate / CriticalDamageRate（暴率/暴傷） | 項鍊 | ✓ 項鍊獨有 |
+| EffectHitRate / ResistanceRate（命中/抗性） | 戒指 | ✓ 戒指獨有 |
+| AttackRate / HPRate / DefenceRate（攻擊%/生命%/防禦%） | 項鍊（fallback） | ✗ 三部位共用，**無法靠主屬性分辨** |
+
+攻擊%/生命%/防禦% 三種主屬性同時可出現於項鍊、戒指、鞋子，Fallback 一律給「項鍊」，對戒指與鞋子而言是錯誤的。唯有靠第一層或第二層才能正確判斷。
+
+#### localStorage 部位 Mapping 持久化
+
+key：`arkrecode_slot_map`，格式 `{StaticID: "部位"}`（例：`{"E0501":"戒指"}`）。
+
+此 key **與裝備資料獨立**，清除裝備（`arkrecode_equips`）時不得一併刪除。
+匯入流程：解析時先查此 map → 有記錄直接用 → 無記錄才彈出部位確認 Modal → 確認後寫入此 map。
+
+#### 新增特殊裝備前綴的處理流程
+
+1. 若新前綴有武器/頭盔/鎧甲件 → `buildDynReliablePfx()` 會自動偵測，無需手動處理。
+2. 若新前綴只有飾品/鞋子件（無法自動偵測）→ 請玩家對照遊戲確認部位後：
+   - 符合 1-6 慣例 → 加入 `RELIABLE_PFX`
+   - 不符合慣例 → 加入 `SPECIAL_PFX_SLOT`
