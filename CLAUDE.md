@@ -175,6 +175,13 @@ ArkRecodetools/
 
 攻擊%/生命%/防禦% 三種主屬性同時可出現於項鍊、戒指、鞋子，Fallback 一律給「項鍊」，對戒指與鞋子而言是錯誤的。唯有靠第一層或第二層才能正確判斷。
 
+#### localStorage 部位 Mapping 持久化
+
+key：`arkrecode_slot_map`，格式 `{StaticID: "部位"}`（例：`{"E0501":"戒指"}`）。
+
+此 key **與裝備資料獨立**，清除裝備（`arkrecode_equips`）時不得一併刪除。
+匯入流程：解析時先查此 map → 有記錄直接用 → 無記錄才彈出部位確認 Modal → 確認後寫入此 map。
+
 #### 新增特殊裝備前綴的處理流程
 
 1. 若新前綴有武器/頭盔/鎧甲件 → `buildDynReliablePfx()` 會自動偵測，無需手動處理。
