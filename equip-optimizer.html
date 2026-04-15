@@ -89,13 +89,37 @@ const DEMO_CHARS=[
 // ============================================================
 // PARSERS
 // ============================================================
+function buildDynReliablePfx(items){
+  // 動態偵測符合「末位數字 1-6 = 部位」慣例的裝備前綴。
+  // 判斷方式：部位 1/2/3/6 的主屬性固定（武器=AttackValue、頭盔=HPValue、
+  // 鎧甲=DefenceValue、鞋子=SpeedValue），若前綴在這些固定部位有正確對應
+  // 且無矛盾，即視為可信。可處理遊戲新增套裝（含紅色付費裝）自動擴充。
+  const FIXED={1:"AttackValue",2:"HPValue",3:"DefenceValue",6:"SpeedValue"};
+  const ALL_EQUIP_PROPS=new Set(["AttackValue","HPValue","DefenceValue","SpeedValue",
+    "AttackRate","HPRate","DefenceRate","CriticalRate","CriticalDamageRate",
+    "EffectHitRate","HitRate","ResistanceRate"]);
+  const ok={},bad=new Set();
+  (Array.isArray(items)?items:[]).forEach(i=>{
+    const sid=i.StaticID||"",pfx=sid.slice(0,-1),d=+sid.slice(-1);
+    const me=i.MainProp?.PropertyType||"";
+    if(bad.has(pfx)||!FIXED[d]||!ALL_EQUIP_PROPS.has(me))return;
+    if(me===FIXED[d])ok[pfx]=true;       // 正確：固定部位有正確主屬性
+    else bad.add(pfx);                    // 矛盾：固定部位出現不符主屬性
+  });
+  const dyn=new Set(RELIABLE_PFX);
+  Object.keys(ok).forEach(p=>{if(!bad.has(p))dyn.add(p);});
+  return dyn;
+}
 function parseEquipJSON(raw){
   // ★ 強化等級 ≤9 的裝備不匯入（屬性太弱，配裝時也不會選到，過濾可簡化裝備庫）
-  return(Array.isArray(raw)?raw:[]).filter(i=>i.LV>9).map(i=>{
+  const all=Array.isArray(raw)?raw:[];
+  const dynReliable=buildDynReliablePfx(all);   // 第一遍：偵測前綴慣例
+  const SMAP={1:"武器",2:"頭盔",3:"鎧甲",4:"項鍊",5:"戒指",6:"鞋子"};
+  return all.filter(i=>i.LV>9).map(i=>{         // 第二遍：解析部位
     const sid=i.StaticID||"",pfx=sid.slice(0,-1),last=sid.slice(-1);
     const me=i.MainProp?.PropertyType||"",mt=PROP_MAP[me]||me,mv=i.MainProp?.Value||0;
     let slot;
-    if(RELIABLE_PFX.has(pfx)&&"123456".includes(last))slot={1:"武器",2:"頭盔",3:"鎧甲",4:"項鍊",5:"戒指",6:"鞋子"}[last];
+    if(dynReliable.has(pfx)&&"123456".includes(last))slot=SMAP[+last];
     else if(me==="AttackValue")slot="武器";else if(me==="HPValue")slot="頭盔";else if(me==="DefenceValue")slot="鎧甲";
     else if(me==="SpeedValue")slot="鞋子";else if(["CriticalRate","CriticalDamageRate"].includes(me))slot="項鍊";
     else if(["EffectHitRate","ResistanceRate"].includes(me))slot="戒指";else slot="項鍊";
