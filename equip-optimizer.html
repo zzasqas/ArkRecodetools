@@ -40,7 +40,15 @@ const { useState, useMemo, useEffect, useCallback, useRef } = React;
 // ============================================================
 const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊"};
 const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRate:"生命%",DefenceValue:"防禦",DefenceRate:"防禦%",SpeedValue:"速度",CriticalRate:"爆率",CriticalDamageRate:"爆傷",EffectHitRate:"命中",HitRate:"命中",ResistanceRate:"抗性"};
-const RELIABLE_PFX=new Set(["E010","E016","E022","E028","E034","E038","E040","E041","E087","E200","E300","E302"]);
+// 已驗證的可信前綴（末位數字 1-6 對應六部位）。
+// 除靜態清單外，parseEquipJSON 會動態偵測新前綴（以武器/頭盔/鎧甲的固定主屬性作驗證基準）。
+// E037/EH128 僅有末位 5-6 的件，無法被自動偵測，故手動加入。
+// E050 等紅色付費裝前綴結構特殊（不符合 1-6 慣例），單獨以 SPECIAL_PFX_SLOT 處理。
+const RELIABLE_PFX=new Set(["E010","E016","E022","E028","E034","E037","E038","E040","E041","E087","E200","E300","E302","EH128"]);
+// 特殊前綴：末位數字不符合標準慣例，改用「主屬性屬於哪個部位集合」做對映。
+// 格式：{前綴: {主屬性PropertyType: 部位}}
+// 其餘未列出的主屬性仍走原有 fallback。
+const SPECIAL_PFX_SLOT={"E050":{"AttackRate":"戒指","HPRate":"戒指","DefenceRate":"戒指"}};
 const SET_EFFECTS={"速度":{type:"four",effect:{"速度%_base":0.16}},"攻擊":{type:"four",effect:{"攻擊%":0.45}},"爆傷":{type:"four",effect:{"爆傷":0.50}},"生命":{type:"two",effect:{"生命%":0.20}},"防禦":{type:"two",effect:{"防禦%":0.20}},"命中":{type:"two",effect:{"命中":0.20}},"抗性":{type:"two",effect:{"抗性":0.20}},"暴擊":{type:"two",effect:{"爆率":0.12}},"吸血":{type:"four_trait",effect:{}},"免疫":{type:"two_trait",effect:{}},"反擊":{type:"four_trait",effect:{}},"復仇":{type:"four_trait",effect:{"速度%_base":0.12}},"貫穿":{type:"two_trait",effect:{}},"夾擊":{type:"two_trait",effect:{}},"暴怒":{type:"four_trait",effect:{}},"創傷":{type:"four_trait",effect:{}}};
 const getSetPcs=n=>{const e=SET_EFFECTS[n];return(!e)?4:(e.type==="two"||e.type==="two_trait")?2:4;};
 const getSetColor=n=>{const p=getSetPcs(n);return p===4?"#F87171":"#4ADE80";};
@@ -91,10 +99,10 @@ const DEMO_CHARS=[
 // ============================================================
 function buildDynReliablePfx(items){
   // 動態偵測符合「末位數字 1-6 = 部位」慣例的裝備前綴。
-  // 判斷方式：部位 1/2/3/6 的主屬性固定（武器=AttackValue、頭盔=HPValue、
-  // 鎧甲=DefenceValue、鞋子=SpeedValue），若前綴在這些固定部位有正確對應
-  // 且無矛盾，即視為可信。可處理遊戲新增套裝（含紅色付費裝）自動擴充。
-  const FIXED={1:"AttackValue",2:"HPValue",3:"DefenceValue",6:"SpeedValue"};
+  // 驗證基準：武器(1)=AttackValue、頭盔(2)=HPValue、鎧甲(3)=DefenceValue。
+  // 注意：鞋子(6)主屬性並非固定為速度，攻擊%/生命%/防禦% 均可能出現，故不列入驗證。
+  // 若前綴在三個固定部位有正確對應且無矛盾，即視為可信前綴，自動加入可信集合。
+  const FIXED={1:"AttackValue",2:"HPValue",3:"DefenceValue"};
   const ALL_EQUIP_PROPS=new Set(["AttackValue","HPValue","DefenceValue","SpeedValue",
     "AttackRate","HPRate","DefenceRate","CriticalRate","CriticalDamageRate",
     "EffectHitRate","HitRate","ResistanceRate"]);
@@ -120,6 +128,7 @@ function parseEquipJSON(raw){
     const me=i.MainProp?.PropertyType||"",mt=PROP_MAP[me]||me,mv=i.MainProp?.Value||0;
     let slot;
     if(dynReliable.has(pfx)&&"123456".includes(last))slot=SMAP[+last];
+    else if(SPECIAL_PFX_SLOT[pfx]?.[me])slot=SPECIAL_PFX_SLOT[pfx][me];
     else if(me==="AttackValue")slot="武器";else if(me==="HPValue")slot="頭盔";else if(me==="DefenceValue")slot="鎧甲";
     else if(me==="SpeedValue")slot="鞋子";else if(["CriticalRate","CriticalDamageRate"].includes(me))slot="項鍊";
     else if(["EffectHitRate","ResistanceRate"].includes(me))slot="戒指";else slot="項鍊";
