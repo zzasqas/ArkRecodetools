@@ -2761,13 +2761,6 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                 }
             }, []);
 
-            // 自動載入社群資料庫
-            useEffect(() => {
-                if (!disclaimerAccepted) return;
-                if (communityDB.loaded || communityDB.loading) return;
-                loadCommunityDB();
-            }, [disclaimerAccepted]);
-
             // 接受免責聲明
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');

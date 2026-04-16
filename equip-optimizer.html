@@ -40,11 +40,7 @@ const { useState, useMemo, useEffect, useCallback, useRef } = React;
 // ============================================================
 const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊"};
 const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRate:"生命%",DefenceValue:"防禦",DefenceRate:"防禦%",SpeedValue:"速度",CriticalRate:"爆率",CriticalDamageRate:"爆傷",EffectHitRate:"命中",HitRate:"命中",ResistanceRate:"抗性"};
-// 已驗證的可信前綴（末位數字 1-6 對應六部位）。
-// 除靜態清單外，parseEquipJSON 會動態偵測新前綴（以武器/頭盔/鎧甲的固定主屬性作驗證基準）。
-// E037/EH128 僅有末位 5-6 的件，無法被自動偵測，故手動加入。
-// E050 等紅色付費裝前綴結構特殊（不符合 1-6 慣例），單獨以 SPECIAL_PFX_SLOT 處理。
-const RELIABLE_PFX=new Set(["E010","E016","E022","E028","E034","E037","E038","E040","E041","E087","E200","E300","E302","EH128"]);
+// 末位數字 1-6 普遍對應六部位（規則全面適用，無需白名單）。
 // 特殊前綴：末位數字不符合標準慣例，改用「主屬性屬於哪個部位集合」做對映。
 // 格式：{前綴: {主屬性PropertyType: 部位}}
 // 其餘未列出的主屬性仍走原有 fallback。
@@ -101,47 +97,28 @@ const DEMO_CHARS=[
 // ============================================================
 // PARSERS
 // ============================================================
-function buildDynReliablePfx(items){
-  // 動態偵測符合「末位數字 1-6 = 部位」慣例的裝備前綴。
-  // 驗證基準：武器(1)=AttackValue、頭盔(2)=HPValue、鎧甲(3)=DefenceValue。
-  // 注意：鞋子(6)主屬性並非固定為速度，攻擊%/生命%/防禦% 均可能出現，故不列入驗證。
-  // 若前綴在三個固定部位有正確對應且無矛盾，即視為可信前綴，自動加入可信集合。
-  const FIXED={1:"AttackValue",2:"HPValue",3:"DefenceValue"};
-  const ALL_EQUIP_PROPS=new Set(["AttackValue","HPValue","DefenceValue","SpeedValue",
-    "AttackRate","HPRate","DefenceRate","CriticalRate","CriticalDamageRate",
-    "EffectHitRate","HitRate","ResistanceRate"]);
-  const ok={},bad=new Set();
-  (Array.isArray(items)?items:[]).forEach(i=>{
-    const sid=i.StaticID||"",pfx=sid.slice(0,-1),d=+sid.slice(-1);
-    const me=i.MainProp?.PropertyType||"";
-    if(bad.has(pfx)||!FIXED[d]||!ALL_EQUIP_PROPS.has(me))return;
-    if(me===FIXED[d])ok[pfx]=true;       // 正確：固定部位有正確主屬性
-    else bad.add(pfx);                    // 矛盾：固定部位出現不符主屬性
-  });
-  const dyn=new Set(RELIABLE_PFX);
-  Object.keys(ok).forEach(p=>{if(!bad.has(p))dyn.add(p);});
-  return dyn;
-}
 function parseEquipJSON(raw,savedSlotMap={}){
   // ★ 強化等級 ≤9 的裝備不匯入（屬性太弱，配裝時也不會選到，過濾可簡化裝備庫）
   // 回傳 {items:[已解析], ambiguous:[需用戶確認部位]}
-  // ambiguous 條件：主屬性為攻擊%/生命%/防禦%（三部位共用），且不在任何可信前綴或特殊對映中
+  // 部位判斷順序：
+  //   1. SPECIAL_PFX_SLOT（例外前綴，E050 等不符 1-6 慣例）
+  //   2. 末位數字 1-6（普遍規則，直接對應部位）
+  //   3. 主屬性 fallback（唯一性屬性直接判斷；攻擊%/生命%/防禦% 三部位共用需用戶確認）
   const all=Array.isArray(raw)?raw:[];
-  const dynReliable=buildDynReliablePfx(all);   // 第一遍：偵測前綴慣例
   const SMAP={1:"武器",2:"頭盔",3:"鎧甲",4:"項鍊",5:"戒指",6:"鞋子"};
   const AMBIGUOUS_ME=new Set(["AttackRate","HPRate","DefenceRate"]);
   const items=[],ambiguous=[];
-  all.filter(i=>i.LV>9).forEach(i=>{            // 第二遍：解析部位
+  all.filter(i=>i.LV>9).forEach(i=>{
     const sid=i.StaticID||"",pfx=sid.slice(0,-1),last=sid.slice(-1);
     const me=i.MainProp?.PropertyType||"",mt=PROP_MAP[me]||me,mv=i.MainProp?.Value||0;
     const subs={};(i.SubProps?.SourceValues||[]).forEach(s=>{const st=PROP_MAP[s.PropertyType]||s.PropertyType;subs[st]=(subs[st]||0)+s.Value;});
     const base={oid:i._id?.$oid||("m"+Math.random().toString(36).slice(2)),sid,set:SET_MAP[i.Set]||i.Set,lv:i.LV,mt,mv,subs};
     let slot;
-    if(dynReliable.has(pfx)&&"123456".includes(last))slot=SMAP[+last];
-    else if(SPECIAL_PFX_SLOT[pfx]?.[me])slot=SPECIAL_PFX_SLOT[pfx][me];
+    if(SPECIAL_PFX_SLOT[pfx]?.[me])slot=SPECIAL_PFX_SLOT[pfx][me];       // 第一層：特殊例外前綴
+    else if("123456".includes(last))slot=SMAP[+last];                      // 第二層：末位數字普遍規則
     else if(me==="AttackValue")slot="武器";else if(me==="HPValue")slot="頭盔";else if(me==="DefenceValue")slot="鎧甲";
     else if(me==="SpeedValue")slot="鞋子";else if(["CriticalRate","CriticalDamageRate"].includes(me))slot="項鍊";
-    else if(["EffectHitRate","ResistanceRate"].includes(me))slot="戒指";
+    else if(["EffectHitRate","ResistanceRate"].includes(me))slot="戒指";   // 第三層：主屬性 fallback
     else if(AMBIGUOUS_ME.has(me)){
       if(savedSlotMap[sid]){slot=savedSlotMap[sid];}  // 已有記憶：直接用
       else{ambiguous.push({...base,me});return;}       // 未知：暫不加入，等用戶確認
@@ -1296,7 +1273,7 @@ function App(){
                     <div className="text-[13px] text-slate-500 font-semibold tracking-widest uppercase">ArkRecode Tools</div>
                   </div>
                   {[
-                    {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./index.html"},
+                    {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./battle-recorder.html"},
                     {icon:"👤",zh:"角色資料庫",en:"Character DB",href:"./character-db.html"},
                     {icon:"⚙️",zh:"配裝計算器",en:"Equip Optimizer",href:"./equip-optimizer.html",active:true},
                   ].map(item=>(
