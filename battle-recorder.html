@@ -2543,9 +2543,6 @@
             }, [convertAlias, counterDatabase]);
 
             const loadCommunityDB = useCallback(async () => {
-                const pwd = prompt('請輸入社群資料庫密碼：');
-                if (pwd === null) return;
-                if (pwd !== 'au3ek66ke') { alert('❌ 密碼錯誤'); return; }
                 setCommunityDB(prev => ({ ...prev, loading: true }));
                 try {
                     const resp = await fetch(COMMUNITY_GVG_URL + '?t=' + Date.now());
@@ -2763,6 +2760,13 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                     alert('⚠️ 您的瀏覽器不支援本地存儲，建議使用現代瀏覽器以確保最佳體驗');
                 }
             }, []);
+
+            // 自動載入社群資料庫
+            useEffect(() => {
+                if (!disclaimerAccepted) return;
+                if (communityDB.loaded || communityDB.loading) return;
+                loadCommunityDB();
+            }, [disclaimerAccepted]);
 
             // 接受免責聲明
             const handleAcceptDisclaimer = useCallback(() => {
