@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArkRecode 角色資料庫 v1.4</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+    <meta property="og:title" content="ArkRecode Tools">
+    <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="./assets/brand.css">
+    <title>ArkRecode 角色資料庫 v1.5.0</title>
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
                    script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval'; 
                    style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';
-                   connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com;">
+                   connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -39,8 +44,10 @@
         .builds-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}
         .builds-popup{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:500px;max-width:95vw;max-height:88vh;overflow-y:auto}
     </style>
+    <script src="./assets/analytics.js"></script>
 </head>
 <body>
+    <script src="./assets/header.js"></script>
     <div id="root"></div>
     <div class="author-info">ArkRecode Character DB v1.4 | by zzas</div>
     <script type="text/babel">
@@ -590,7 +597,14 @@
         const App = () => {
             const [characters, setCharacters] = useState(CHARACTER_DATA);
             const [searchTerm, setSearchTerm] = useState('');
-            const [showEnglish, setShowEnglish] = useState(false);
+            const [showEnglish, setShowEnglish] = useState(
+                (localStorage.getItem('arkrecode_lang') || 'zh') === 'en'
+            );
+            React.useEffect(() => {
+                const handler = e => setShowEnglish(e.detail === 'en');
+                window.addEventListener('arkrecode-lang', handler);
+                return () => window.removeEventListener('arkrecode-lang', handler);
+            }, []);
             const [showAddModal, setShowAddModal] = useState(false);
             const [showEditModal, setShowEditModal] = useState(false);
             const [editingCharacter, setEditingCharacter] = useState(null);
@@ -752,11 +766,29 @@
                             </div>
                         </div>
 
-                        <div className="text-center mt-8">
-                            <button onClick={()=>window.location.href='./'}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                <IconComponents.Home size={16}/>返回對戰記錄器
-                            </button>
+                        {/* 工具導覽列 */}
+                        <div className="mt-10 mb-4">
+                            <div className="text-xs text-gray-400 text-center mb-3 tracking-widest uppercase">工具導覽</div>
+                            <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto">
+                                <a href="./battle-recorder.html"
+                                    className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 text-center">
+                                    <span className="text-2xl">📊</span>
+                                    <span className="text-sm font-semibold">對戰紀錄器</span>
+                                    <span className="text-xs text-blue-400">v2.8.0</span>
+                                </a>
+                                <a href="./character-db.html"
+                                    className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border-2 border-purple-400 bg-purple-50 text-purple-700 text-center cursor-default">
+                                    <span className="text-2xl">👤</span>
+                                    <span className="text-sm font-semibold">角色資料庫</span>
+                                    <span className="text-xs text-purple-400">v1.5.0 ← 目前</span>
+                                </a>
+                                <a href="./equip-optimizer.html"
+                                    className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 transition-colors text-teal-700 text-center">
+                                    <span className="text-2xl">⚙️</span>
+                                    <span className="text-sm font-semibold">配裝計算器</span>
+                                    <span className="text-xs text-teal-400">v1.5.0</span>
+                                </a>
+                            </div>
                         </div>
 
                         {/* 推薦配裝 Popup */}

@@ -3,11 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>配裝計算器 v1.4.1 - ArkRecode Tools</title>
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="ArkRecode Tools">
+<meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="./assets/brand.css">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval';
+               connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
+               style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
+<title>配裝計算器 v1.5.0 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 tailwind.config={
   theme:{
@@ -29,8 +41,10 @@ body{margin:0;padding:0;font-size:16px;-webkit-text-size-adjust:100%;text-size-a
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 input[type=number]{-moz-appearance:textfield;appearance:textfield;}
 </style>
+<script src="./assets/analytics.js"></script>
 </head>
 <body>
+<script src="./assets/header.js"></script>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useEffect, useCallback, useRef } = React;
@@ -47,8 +61,8 @@ const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRat
 const SPECIAL_PFX_SLOT={"E050":{"AttackRate":"戒指","HPRate":"戒指","DefenceRate":"戒指"}};
 // ★ 部位 mapping 持久化（獨立於裝備資料，清除裝備時不刪除）
 const LS_SLOT_MAP="arkrecode_slot_map";
-const getSlotMap=()=>{try{return JSON.parse(localStorage.getItem(LS_SLOT_MAP)||"{}");}catch{return{};}};
-const saveSlotMap=m=>{try{localStorage.setItem(LS_SLOT_MAP,JSON.stringify(m));}catch(e){}};
+const getSlotMap=()=>{try{return JSON.parse(localStorage.getItem(LS_SLOT_MAP)||"{}");}catch(e){ console.warn('[arkrecode]', e); return{};}};
+const saveSlotMap=m=>{try{localStorage.setItem(LS_SLOT_MAP,JSON.stringify(m));}catch(e){ console.warn('[arkrecode]', e); }};
 const SET_EFFECTS={"速度":{type:"four",effect:{"速度%_base":0.16}},"攻擊":{type:"four",effect:{"攻擊%":0.45}},"爆傷":{type:"four",effect:{"爆傷":0.50}},"生命":{type:"two",effect:{"生命%":0.20}},"防禦":{type:"two",effect:{"防禦%":0.20}},"命中":{type:"two",effect:{"命中":0.20}},"抗性":{type:"two",effect:{"抗性":0.20}},"暴擊":{type:"two",effect:{"爆率":0.12}},"吸血":{type:"four_trait",effect:{}},"免疫":{type:"two_trait",effect:{}},"反擊":{type:"four_trait",effect:{}},"復仇":{type:"four_trait",effect:{"速度%_base":0.12}},"貫穿":{type:"two_trait",effect:{}},"夾擊":{type:"two_trait",effect:{}},"暴怒":{type:"four_trait",effect:{}},"創傷":{type:"four_trait",effect:{}}};
 const getSetPcs=n=>{const e=SET_EFFECTS[n];return(!e)?4:(e.type==="two"||e.type==="two_trait")?2:4;};
 const getSetColor=n=>{const p=getSetPcs(n);return p===4?"#F87171":"#4ADE80";};
@@ -612,6 +626,12 @@ function SlotConfirmModal({ambiguous,onConfirm,onCancel}){
 // ============================================================
 
 function App(){
+  const[lang,setLang]=useState(localStorage.getItem('arkrecode_lang')||'zh');
+  useEffect(()=>{
+    const handler=e=>{ setLang(e.detail); console.log('[arkrecode] lang changed to', e.detail); };
+    window.addEventListener('arkrecode-lang',handler);
+    return ()=>window.removeEventListener('arkrecode-lang',handler);
+  },[]);
   const[chars,setChars]=useState(DEMO_CHARS);
   const[equips,setEquips]=useState([]);
   const[selChar,setSelChar]=useState(null);
@@ -666,6 +686,9 @@ function App(){
   // ★ 面板收合
   const[showResults,setShowResults]=useState(true);
   const[showEqPicker,setShowEqPicker]=useState(false);
+  // ★ 分享連結 modal
+  const[shareModal,setShareModal]=useState(null); // null | { url, qrCanvas }
+  const shareQrRef=useRef(null);
   // ★ 目前手動配套中的角色名（從鎖定 tab 觸發，供第四欄使用）
   const[manualCharName,setManualCharName]=useState(null);
   // ★ 鎖定 tab 每角色的方案 sub-tab（0-2=自動方案, 3=手動配套）
@@ -677,7 +700,7 @@ function App(){
   // ★ 裝備匯入工具
   const finalizeImport=useCallback((items)=>{
     setEquips(items);
-    try{const m={ts:Date.now(),count:items.length};localStorage.setItem("arkrecode_equips",JSON.stringify(items));localStorage.setItem("arkrecode_equips_meta",JSON.stringify(m));setEquipCacheMeta(m);}catch(e){}
+    try{const m={ts:Date.now(),count:items.length};localStorage.setItem("arkrecode_equips",JSON.stringify(items));localStorage.setItem("arkrecode_equips_meta",JSON.stringify(m));setEquipCacheMeta(m);}catch(e){ console.warn('[arkrecode]', e); }
   },[]);
   const handleEquipFile=useCallback((raw)=>{
     const savedMap=getSlotMap();
@@ -696,7 +719,7 @@ function App(){
   // ★ 角色切換時儲存/載入 Mode A 設定（sc 權重 + selSets 套裝）
   const saveCharConfig=useCallback((charName)=>{
     if(!charName)return;
-    try{localStorage.setItem("arkrecode_charConfig_"+charName,JSON.stringify({sc,selSets}));}catch(e){}
+    try{localStorage.setItem("arkrecode_charConfig_"+charName,JSON.stringify({sc,selSets}));}catch(e){ console.warn('[arkrecode]', e); }
   },[sc,selSets]);
 
   const loadCharConfig=useCallback((charName)=>{
@@ -704,7 +727,7 @@ function App(){
     try{
       const raw=localStorage.getItem("arkrecode_charConfig_"+charName);
       if(raw){const{sc:s,selSets:ss}=JSON.parse(raw);if(s)setSc(s);if(ss)setSelSets(ss);}
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
   },[]);
 
   // ★ 自動從 repo 載入 chars.csv，版本不同時靜默更新
@@ -731,7 +754,7 @@ function App(){
         const parsed=parseCharCSV(text);
         if(parsed.length){
           setChars(parsed);setHidden(parsed.filter(c=>c.star<=4).map(c=>c.name));
-          try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));if(remoteVer)localStorage.setItem(VER_KEY,remoteVer);}catch(e){}
+          try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));if(remoteVer)localStorage.setItem(VER_KEY,remoteVer);}catch(e){ console.warn('[arkrecode]', e); }
         }
       }catch(e){/* fetch 失敗（本地開發/無網路）沿用 DEMO_CHARS */}
     }
@@ -747,7 +770,7 @@ function App(){
         const parsed=JSON.parse(raw);
         if(Array.isArray(parsed)&&parsed.length){setEquips(parsed);setEquipCacheMeta(meta);}
       }
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
     // ★ 載入已鎖定方案快取
     try{
       const rawLocked=localStorage.getItem("arkrecode_locked_plans");
@@ -755,7 +778,7 @@ function App(){
         const parsed=JSON.parse(rawLocked);
         if(parsed&&typeof parsed==="object")setLocked(parsed);
       }
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
     // ★ 載入超級鎖定快取
     try{
       const rawSL=localStorage.getItem("arkrecode_super_locked");
@@ -763,7 +786,7 @@ function App(){
         const arr=JSON.parse(rawSL);
         if(Array.isArray(arr))setSuperLocked(new Set(arr));
       }
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
   },[]);
 
   // ★ URL 參數帶入（從 character-db 跳轉時）
@@ -843,6 +866,47 @@ function App(){
     }catch(e){console.log("URL param parse error",e);}
   },[]);
 
+  // ★ build 分享連結：讀取 #build= hash 並還原設定
+  useEffect(()=>{
+    const hash=location.hash;
+    if(!hash.startsWith('#build='))return;
+    try{
+      const json=LZString.decompressFromEncodedURIComponent(hash.slice(7));
+      const cfg=JSON.parse(json);
+      if(cfg.sc)setSc(cfg.sc);
+      if(cfg.selSets)setSelSets(cfg.selSets);
+      if(cfg.bondAtk!=null)setBondAtk(cfg.bondAtk);
+      if(cfg.bondHp!=null)setBondHp(cfg.bondHp);
+      if(cfg.breaks)setBreaks(cfg.breaks);
+      if(cfg.calcMode)setCalcMode(cfg.calcMode);
+      if(cfg.charName){
+        const poll=setInterval(()=>{
+          setChars(current=>{
+            const c=current.find(x=>x.name===cfg.charName);
+            if(c){clearInterval(poll);setSelChar(c);}
+            return current;
+          });
+        },150);
+        setTimeout(()=>clearInterval(poll),5000);
+      }
+      history.replaceState({},'',location.pathname+location.search);
+    }catch(e){console.warn('[arkrecode] Invalid share link',e);}
+  },[]);
+
+  // ★ 產生分享 URL
+  const generateShare=useCallback(()=>{
+    const cfg={
+      charName:selChar?.name||null,
+      sc,selSets,bondAtk,bondHp,breaks,calcMode
+    };
+    const compressed=LZString.compressToEncodedURIComponent(JSON.stringify(cfg));
+    const url=location.href.split('#')[0]+'#build='+compressed;
+    navigator.clipboard.writeText(url).catch(()=>{});
+    const canvas=document.createElement('canvas');
+    QRCode.toCanvas(canvas,url,{width:200,margin:2},()=>{});
+    setShareModal({url,canvas});
+  },[selChar,sc,selSets,bondAtk,bondHp,breaks,calcMode]);
+
   useEffect(()=>{setBreaks([]);},[selChar?.name]);
 
   // ★ 推薦配裝：每次都從 CSV fetch（不快取，確保 git 上最新版），fallback 到 localStorage
@@ -865,14 +929,14 @@ function App(){
       return parsed;
     };
     // 先從 localStorage 顯示（避免白屏等待）
-    try{const cached=localStorage.getItem(CACHE_KEY);if(cached){setBuildsData(JSON.parse(cached));}}catch(e){}
+    try{const cached=localStorage.getItem(CACHE_KEY);if(cached){setBuildsData(JSON.parse(cached));}}catch(e){ console.warn('[arkrecode]', e); }
     // 每次都嘗試 fetch 最新版本
     fetch("./build_recom.csv?_="+Date.now()).then(r=>r.ok?r.text():null).then(text=>{
       if(!text)return;
       const parsed=parseCsv(text);
       if(!parsed)return;
       setBuildsData(parsed);
-      try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));}catch(e){}
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify(parsed));}catch(e){ console.warn('[arkrecode]', e); }
     }).catch(()=>{});
   },[]);
 
@@ -1211,7 +1275,7 @@ function App(){
     const keys=["arkrecode_locked_plans","arkrecode_super_locked","arkrecode_chars_version"];
     if(includeEquips)keys.push("arkrecode_equips","arkrecode_equips_meta","arkrecode_build_recom_data");
     else keys.push("arkrecode_build_recom_data");
-    keys.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    keys.forEach(k=>{try{localStorage.removeItem(k);}catch(e){ console.warn('[arkrecode]', e); }});
     setLocked({});setSuperLocked(new Set());
     if(includeEquips){setEquips([]);setEquipCacheMeta(null);}
     setShowClearModal(false);
@@ -1224,14 +1288,14 @@ function App(){
     try{
       if(Object.keys(locked).length>0)localStorage.setItem("arkrecode_locked_plans",JSON.stringify(locked));
       else localStorage.removeItem("arkrecode_locked_plans");
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
   },[locked]);
   // ★ 自動儲存超級鎖定到 localStorage
   useEffect(()=>{
     try{
       if(superLocked.size>0)localStorage.setItem("arkrecode_super_locked",JSON.stringify([...superLocked]));
       else localStorage.removeItem("arkrecode_super_locked");
-    }catch(e){}
+    }catch(e){ console.warn('[arkrecode]', e); }
   },[superLocked]);
   const iCls="rounded-lg px-2 py-1 text-[14px] border border-slate-700/40 focus:outline-none focus:border-blue-700 transition-colors";
   const iSty={background:"#151D2E",color:"#CBD5E1"};
@@ -1321,7 +1385,7 @@ function App(){
             <span>📦</span><span>裝備JSON</span>
             <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{try{handleEquipFile(JSON.parse(r.result));}catch(err){alert("JSON解析錯誤: "+err.message)}};r.readAsText(f);}e.target.value="";}}/>
           </label>
-          {equips.length>0&&<button onClick={()=>{setEquips([]);setEquipCacheMeta(null);try{localStorage.removeItem("arkrecode_equips");localStorage.removeItem("arkrecode_equips_meta");}catch(e){}}} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
+          {equips.length>0&&<button onClick={()=>{setEquips([]);setEquipCacheMeta(null);try{localStorage.removeItem("arkrecode_equips");localStorage.removeItem("arkrecode_equips_meta");}catch(e){ console.warn('[arkrecode]', e); }}} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
           <div className="text-slate-500 text-[14px] border border-slate-800 px-2 py-1 rounded-lg flex items-center gap-1">
             <span style={{color:"#93C5FD"}}>{chars.length}</span> 角 · <span style={{color:"#4ADE80"}}>{equips.length}</span> 裝
             {equipCacheMeta&&<span className="text-[13px] cursor-default" style={{color:"#475569"}} title={"快取："+equips.length+"件，"+new Date(equipCacheMeta.ts).toLocaleString()}>💾</span>}
@@ -1828,6 +1892,11 @@ function App(){
                     {!selChar?"← 請先選擇角色":!equips.length?"請先匯入裝備":"🔍 開始配裝"}
                   </button>
                 )}
+                <button onClick={generateShare} disabled={!selChar}
+                  className="w-full py-2 rounded-xl text-sm transition-all border"
+                  style={!selChar?{background:"#1E293B",color:"#475569",cursor:"not-allowed",borderColor:"#334155"}:{background:"#0F2040",color:"#93C5FD",borderColor:"#1D4ED8"}}>
+                  🔗 分享此配裝設定
+                </button>
               </div>
             )}
 
@@ -2416,6 +2485,30 @@ function App(){
                 取消
               </button>
             </div>
+          </div>
+        </div>
+        </>
+      )}
+
+      {shareModal&&(
+        <>
+        <div className="fixed inset-0 z-[1000] bg-black/70" onClick={()=>setShareModal(null)}/>
+        <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
+          <div className="rounded-2xl border border-slate-700/60 p-6 space-y-4 pointer-events-auto shadow-2xl" style={{background:"#0D1525",maxWidth:"380px",width:"92%"}}>
+            <div className="text-base font-bold text-slate-200">🔗 分享此配裝設定</div>
+            <div className="text-[13px] text-green-400">已複製到剪貼簿！</div>
+            <div className="rounded-lg p-2 text-[11px] break-all select-all" style={{background:"#080D18",color:"#64748B",border:"1px solid #1E293B"}}>
+              {shareModal.url}
+            </div>
+            {shareModal.canvas&&(
+              <div className="flex justify-center">
+                <div ref={el=>{if(el&&shareModal.canvas){el.innerHTML='';el.appendChild(shareModal.canvas);}}}/>
+              </div>
+            )}
+            <button onClick={()=>setShareModal(null)}
+              className="w-full py-2 rounded-xl border border-slate-700/40 text-slate-400 hover:text-slate-200 transition-colors text-[14px]">
+              關閉
+            </button>
           </div>
         </div>
         </>
