@@ -1,4 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#080D18"/>
-  <text x="4" y="24" font-size="22" fill="#3B82F6">⚔</text>
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#080D18"/>
+
+  <!-- Sword blade — tapers to a point -->
+  <polygon points="16,3 17.8,17 16,18.5 14.2,17" fill="url(#blade)"/>
+
+  <!-- Crossguard -->
+  <rect x="10" y="17.5" width="12" height="2.8" rx="1.4" fill="#93C5FD"/>
+  <!-- Crossguard side gems -->
+  <circle cx="10.5" cy="18.9" r="1.2" fill="#3B82F6" opacity="0.7"/>
+  <circle cx="21.5" cy="18.9" r="1.2" fill="#3B82F6" opacity="0.7"/>
+
+  <!-- Handle -->
+  <rect x="14.8" y="20.3" width="2.4" height="5.5" rx="1.2" fill="#334155"/>
+  <!-- Pommel -->
+  <ellipse cx="16" cy="26.5" rx="2.2" ry="1.4" fill="#475569"/>
+
+  <!-- Blade gradient -->
+  <defs>
+    <linearGradient id="blade" x1="14" y1="3" x2="18" y2="19" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="60%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- zzas — subtle signature, bottom-right -->
+  <text x="30" y="31" text-anchor="end" font-size="4.2" fill="#1e3a5f"
+        font-family="monospace" font-weight="700" letter-spacing="-0.3">zzas</text>
 </svg>
