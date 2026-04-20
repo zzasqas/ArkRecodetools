@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArkRecode 對戰紀錄器 v2.7.1</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+    <meta property="og:title" content="ArkRecode Tools">
+    <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="./assets/brand.css">
+    <title>ArkRecode 對戰紀錄器 v2.8.0</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval'; 
-                   connect-src 'self' https://script.google.com https://script.googleapis.com https://raw.githubusercontent.com;
+          content="default-src 'self';
+                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval';
+                   connect-src 'self' https://script.google.com https://script.googleapis.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
                    style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
     
     <!-- React -->
@@ -152,8 +157,10 @@
             background-color: #fef2f2;
         }
     </style>
+    <script src="./assets/analytics.js"></script>
 </head>
 <body>
+    <script src="./assets/header.js"></script>
     <div id="root"></div>
     
     <!-- 作者資訊 -->
@@ -218,8 +225,9 @@
                         'script.google.com',
                         'script.googleapis.com'
                     ];
-                    
-                    return allowedHosts.some(host => 
+
+                    if (urlObj.protocol !== 'https:') return false;
+                    return allowedHosts.some(host =>
                         urlObj.hostname === host || urlObj.hostname.endsWith('.' + host)
                     );
                 } catch {
@@ -1927,10 +1935,24 @@
         });
 
         // ==================== 主應用組件 ====================
+        const T = {
+            zh: { title: '對戰紀錄器', addRecord: '新增紀錄', history: '歷史', strategy: '策略推薦', search: '查找', settings: '設定', searchPlaceholder: '搜尋角色...' },
+            en: { title: 'Battle Recorder', addRecord: 'Add Record', history: 'History', strategy: 'Strategy', search: 'Search', settings: 'Settings', searchPlaceholder: 'Search character...' }
+        };
+
         const App = () => {
             // 免責聲明狀態
             const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-            
+
+            const [lang, setLang] = React.useState(
+                localStorage.getItem('arkrecode_lang') || 'zh'
+            );
+            React.useEffect(() => {
+                const handler = e => setLang(e.detail);
+                window.addEventListener('arkrecode-lang', handler);
+                return () => window.removeEventListener('arkrecode-lang', handler);
+            }, []);
+
             // 狀態定義
             const [currentView, setCurrentView] = useState('record');
             const [battleRecords, setBattleRecords] = useState([]);

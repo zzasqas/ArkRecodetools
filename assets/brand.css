@@ -1,0 +1,64 @@
+/* ArkRecode Tools — shared design tokens */
+:root {
+  --brand-bg:      #080D18;
+  --brand-surface: #0F1628;
+  --brand-border:  #1e293b;
+  --brand-accent:  #3B82F6;
+  --brand-text:    #e2e8f0;
+  --brand-muted:   #94a3b8;
+  --brand-radius:  12px;
+}
+
+/* Shared sticky top-bar */
+.arkrecode-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(8,13,24,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--brand-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  font-family: 'Noto Sans TC', system-ui, sans-serif;
+}
+.arkrecode-header .logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--brand-text);
+}
+.arkrecode-header .logo-icon { font-size: 22px; }
+.arkrecode-header .logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+.arkrecode-header .logo-sub {
+  font-size: 11px;
+  color: var(--brand-muted);
+}
+.arkrecode-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.arkrecode-header .lang-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--brand-border);
+  background: transparent;
+  color: var(--brand-muted);
+  transition: all 0.15s;
+}
+.arkrecode-header .lang-btn.active,
+.arkrecode-header .lang-btn:hover {
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+  color: #fff;
+}
