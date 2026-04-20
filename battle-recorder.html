@@ -164,7 +164,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.7.1</div>
+    <div class="author-info">by zzas | v2.8.0</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -328,7 +328,7 @@
                                 <p>如有問題或建議，歡迎回饋：</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• 開發者：zzas</li>
-                                    <li>• 版本：v2.7.1</li>
+                                    <li>• 版本：v2.8.0</li>
                                     <li>• 更新日期：{new Date().toLocaleDateString('zh-TW')}</li>
                                 </ul>
                             </div>
@@ -761,10 +761,10 @@
                     const exportData = {
                         ...data,
                         exportDate: new Date().toISOString(),
-                        version: '2.7.1',
+                        version: '2.8.0',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.7.1'
+                            exported_by: 'ArkRecode_v2.8.0'
                         }
                     };
                     
@@ -2787,7 +2787,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert('✅ 歡迎使用 ArkRecode v2.7.1！您的資料將存儲在本機瀏覽器中。');
+                alert('✅ 歡迎使用 ArkRecode v2.8.0！您的資料將存儲在本機瀏覽器中。');
             }, []);
 
             // 拒絕免責聲明
@@ -2824,14 +2824,14 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (!['2.7.0', '2.7.1'].includes(dataVersion)) {
+                            if (!['2.7.0', '2.7.1', '2.8.0'].includes(dataVersion)) {
                                 // 舊版升級：清除別名快取
                                 localStorage.removeItem('arkrecode_characterAliases');
-                                console.log('已清除舊版別名快取，套用 v2.7.1 預設別名');
+                                console.log('已清除舊版別名快取，套用 v2.8.0 預設別名');
                             }
-                            if (dataVersion !== '2.7.1') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.7.1`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.7.1');
+                            if (dataVersion !== '2.8.0') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.8.0`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.8.0');
                             }
                             
                         } catch (parseError) {
@@ -2856,7 +2856,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.7.1！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.8.0！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
@@ -3008,7 +3008,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    ArkRecode 對戰紀錄器 v2.7.1
+                                    ArkRecode 對戰紀錄器 v2.8.0
                                 </h1>
                                 <div className="flex gap-1">
                                     <button
@@ -3820,12 +3820,12 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        v2.7.1 更新說明
+                                        v2.8.0 更新說明
                                     </h2>
 
                                     <div className="space-y-3">
                                         <div className="p-3 bg-blue-50 rounded-lg">
-                                            <h4 className="font-medium text-blue-800 mb-2">✨ v2.7.1 新功能</h4>
+                                            <h4 className="font-medium text-blue-800 mb-2">✨ v2.8.0 新功能</h4>
                                             <ul className="text-sm text-blue-700 space-y-1">
                                                 <li>• <strong>查找頁籤</strong>：新增獨立的 GvG 反制推薦查找介面</li>
                                                 <li>• <strong>輸入3位對手角色</strong>即可查詢社群 GvG 資料庫</li>
@@ -3866,7 +3866,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">📞 技術資訊</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>版本</strong>：v2.7.1</div>
+                                                <div>• <strong>版本</strong>：v2.8.0</div>
                                                 <div>• <strong>發布日期</strong>：{new Date().toLocaleDateString('zh-TW')}</div>
                                                 <div>• <strong>安全等級</strong>：高度 🛡️</div>
                                                 <div>• <strong>適用環境</strong>：離線使用，私人部署</div>
@@ -3880,7 +3880,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 對戰紀錄器 v2.7.1 | 離線使用 | 歷史搜索功能 + 策略推薦
+                            ArkRecode 對戰紀錄器 v2.8.0 | 離線使用 | 歷史搜索功能 + 策略推薦
                         </div>
                     </div>
                 </div>
