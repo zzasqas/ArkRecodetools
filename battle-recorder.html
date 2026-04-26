@@ -61,7 +61,8 @@
             visibility: hidden;
             transition: opacity 0.05s, visibility 0.05s;
             z-index: 1000;
-            max-width: 260px;
+            min-width: 280px;
+            max-width: 700px;
             white-space: pre-wrap;
             word-wrap: break-word;
             text-align: left;
@@ -890,7 +891,7 @@
         // ==================== 備註欄位組件 ====================
         const NoteCell = ({ notes }) => {
             const [expanded, setExpanded] = React.useState(false);
-            const MAX_LEN = 15;
+            const MAX_LEN = 8;
             const sanitized = notes ? SecurityUtils.sanitizeHtml(notes) : '';
             const truncated = sanitized.length > MAX_LEN;
 
