@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+    <meta property="og:title" content="ArkRecode Tools">
+    <meta property="og:description" content="Ark Re:Code 公會戰紀錄器">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="./assets/brand.css">
+    <title>ArkRecode 公會戰紀錄器 v1.0.0</title>
+
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval';
+                   connect-src 'self' https://script.google.com https://script.googleapis.com https://raw.githubusercontent.com;
+                   style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        .lucide-icon {
+            display: inline-block; width: 1em; height: 1em;
+            fill: none; stroke: currentColor;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .author-info {
+            position: fixed; bottom: 4px; right: 4px;
+            font-size: 8px; color: #9ca3af; opacity: 0.3; z-index: 10;
+        }
+        /* 隊伍左右欄：對手佔 3/5、我方佔 2/5 */
+        .team-grid {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 0;
+        }
+        @media (max-width: 640px) {
+            .team-grid { grid-template-columns: 1fr; }
+        }
+        /* 角色輸入列：4欄，對手與我方共用同一 grid */
+        .char-input-row {
+            display: grid;
+            grid-template-columns: 3fr 1.2fr 0.8fr 4fr;
+            gap: 5px;
+            align-items: center;
+            margin-bottom: 7px;
+            min-height: 34px;
+        }
+        @media (max-width: 640px) {
+            .char-input-row { grid-template-columns: 1fr 1fr; }
+        }
+        /* 我方欄位，靠左有間距分隔 */
+        .my-team-col {
+            padding-left: 16px;
+        }
+        /* 速度參考區塊：桌面最多50%、最少350px；手機全寬 */
+        .speed-ref-box {
+            max-width: 50%;
+            min-width: 350px;
+        }
+        @media (max-width: 640px) {
+            .speed-ref-box { max-width: 100%; min-width: 0; }
+        }
+        /* 我方角色列：只有名稱+速度兩欄 */
+        .my-char-row {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 5px;
+            align-items: center;
+            margin-bottom: 7px;
+            min-height: 34px;
+        }
+        /* 我方欄位標題：兩欄 */
+        .my-col-header {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 5px;
+            margin-bottom: 4px;
+        }
+        /* 勝負 toggle */
+        .result-toggle { display: flex; gap: 6px; }
+        .result-btn {
+            flex: 1; padding: 3px 10px; border-radius: 6px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.15s;
+        }
+        .result-btn.win  { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .result-btn.lose { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .result-btn.inactive { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+        /* 速度推算 */
+        .speed-hint {
+            position: absolute; right: 6px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px; color: #818cf8; pointer-events: none;
+        }
+        /* 隊伍區塊 */
+        .team-section {
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px; padding: 14px;
+            background: #fafafa;
+        }
+        .team-section.team-lose { border-color: #fca5a5; background: #fff5f5; }
+        .team-section.team-win  { border-color: #86efac; background: #f0fdf4; }
+        /* 歷史表格列 */
+        .history-row {
+            display: grid;
+            grid-template-columns: 56px 100px 90px 72px 1fr 1fr 88px;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+        .history-row:hover { background: #f9fafb; }
+        .history-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            background: #f9fafb;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        @media (max-width: 768px) {
+            .history-row { grid-template-columns: 48px 1fr 1fr; }
+        }
+        /* 欄位標題列 */
+        .col-header {
+            display: grid;
+            grid-template-columns: 3fr 1.2fr 0.8fr 4fr;
+            gap: 5px;
+            margin-bottom: 4px;
+        }
+        @media (max-width: 640px) {
+            .col-header { grid-template-columns: 1fr 1fr; }
+        }
+        /* 角色 tag */
+        .char-tag {
+            display: inline-block;
+            background: #fee2e2; color: #991b1b;
+            font-size: 11px; padding: 1px 6px; border-radius: 10px;
+            margin: 1px;
+        }
+        .char-tag.my { background: #dbeafe; color: #1e40af; }
+    </style>
+    <script src="./assets/analytics.js"></script>
+    <script src="./assets/char-name-data.js"></script>
+</head>
+<body>
+    <script src="./assets/header.js"></script>
+    <div id="root"></div>
+    <div class="author-info">by zzas | 公會戰紀錄器 v1.0.0</div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useCallback, useRef } = React;
+
+        // ==================== 安全工具 ====================
+        const S = {
+            clean: (v, allowSpace = false) => {
+                if (typeof v !== 'string') return v;
+                let s = v.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                          .replace(/<[^>]*>/g, '');
+                return allowSpace ? s.replace(/\s{3,}/g, '  ') : s.trim();
+            },
+            html: (v) => {
+                if (typeof v !== 'string') return String(v ?? '');
+                return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                        .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+            },
+            encode: (d) => { try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch { return JSON.stringify(d); } },
+            decode: (d) => {
+                try { return JSON.parse(decodeURIComponent(escape(atob(d)))); }
+                catch { try { return JSON.parse(d); } catch { return null; } }
+            },
+            validateGoogleUrl: (url) => {
+                try {
+                    const u = new URL(url);
+                    return u.hostname.endsWith('script.google.com') || u.hostname.endsWith('script.googleapis.com');
+                } catch { return false; }
+            }
+        };
+
+        // ==================== 剪貼簿（含 fallback）====================
+        async function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try { await navigator.clipboard.writeText(text); return true; } catch {}
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        }
+
+        // ==================== Toast ====================
+        const useToast = () => {
+            const [toast, setToast] = useState(null);
+            const timerRef = useRef(null);
+            const showToast = useCallback((msg, type = 'success') => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                setToast({ msg, type });
+                timerRef.current = setTimeout(() => setToast(null), 2500);
+            }, []);
+            return { toast, showToast };
+        };
+        const Toast = ({ toast }) => {
+            if (!toast) return null;
+            const bg = toast.type === 'error' ? 'bg-red-600' : toast.type === 'warn' ? 'bg-amber-500' : 'bg-gray-800';
+            return (
+                <div className={`fixed top-4 left-1/2 z-50 ${bg} text-white px-5 py-3 rounded-lg shadow-xl text-sm font-medium pointer-events-none`}
+                     style={{transform:'translateX(-50%)', whiteSpace:'nowrap'}}>
+                    {toast.msg}
+                </div>
+            );
+        };
+
+        // ==================== Icon ====================
+        const Icon = {
+            Shield: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            ),
+            Plus: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M5 12h14M12 5v14"/>
+                </svg>
+            ),
+            History: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+                </svg>
+            ),
+            Download: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" x2="12" y1="15" y2="3"/>
+                </svg>
+            ),
+            Search: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+            ),
+            Settings: ({size=16,cls=''}) => (
+                <svg className={`lucide-icon ${cls}`} width={size} height={size} viewBox="0 0 24 24">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            ),
+        };
+
+        // ==================== 塔位選項（不含括號，選項文字粗體由 select style 處理）====================
+        const TOWER_OPTIONS = ['上中','中中','下中','上小','中小','下小','主堡'];
+
+        const COMMUNITY_GVG_URL = 'https://raw.githubusercontent.com/zzasqas/ArkRecodetools/main/data/community_gvg.json';
+
+        // ==================== 角色資料 ====================
+        function loadCharacterAliases() {
+            const defaults = window.CHARACTER_ALIASES || [];
+            try {
+                const raw = localStorage.getItem('arkrecode_characterAliases');
+                if (!raw) return defaults;
+                const saved = S.decode(raw);
+                if (Array.isArray(saved) && saved.length > 0) return saved;
+            } catch {}
+            return defaults;
+        }
+
+        function convertAlias(input, aliases) {
+            if (!input) return input;
+            const clean = S.clean(input).toLowerCase();
+            for (const char of aliases) {
+                if (char.name.toLowerCase() === clean) return char.name;
+                for (const a of (char.aliases || [])) {
+                    if (a.toLowerCase() === clean) return char.name;
+                }
+            }
+            return S.clean(input);
+        }
+
+        // ==================== 空資料工廠 ====================
+        const emptyOp   = () => ({ name: '', initial: '', random: '', notes: '' });
+        const emptyMy   = () => ({ name: '', speed: '' });
+        const emptyTeam = () => ({
+            result: null,
+            opponents: [emptyOp(), emptyOp(), emptyOp()],
+            myChars:   [emptyMy(), emptyMy(), emptyMy()],
+        });
+        const emptyForm = () => ({
+            date:     new Date().toISOString().split('T')[0],
+            guild:    '',
+            playerId: '',
+            tower:    '',
+            myRef:    { speed: '', initial: '', random: '' },
+            team1:    emptyTeam(),
+            team2:    emptyTeam(),
+        });
+
+        // ==================== 速度推算 ====================
+        function calcSpeed(myRef, opInitial, opRandom) {
+            const ms = parseFloat(myRef.speed);
+            const mi = parseFloat(myRef.initial);
+            if (!ms || !mi || !opInitial) return null;
+            const oi = parseFloat(opInitial);
+            if (isNaN(oi)) return null;
+            const mr = myRef.random !== '' ? parseFloat(myRef.random) : null;
+            const or = opRandom    !== '' ? parseFloat(opRandom)    : null;
+            if (mr !== null && or !== null) {
+                const ratio = ms / (mi - mr);
+                const s = Math.round((oi - or) * ratio);
+                return { min: s, max: s };
+            }
+            const ratioMin = ms / mi;
+            const ratioMax = ms / Math.max(mi - 5, 1);
+            let sMin, sMax;
+            if (or !== null) {
+                sMin = Math.round((oi - or) * ratioMin);
+                sMax = Math.round((oi - or) * ratioMax);
+            } else {
+                sMin = Math.round((oi - 5) * ratioMin);
+                sMax = Math.round(oi * ratioMax);
+            }
+            if (sMin > sMax) [sMin, sMax] = [sMax, sMin];
+            return { min: sMin, max: sMax };
+        }
+        function speedLabel(r) {
+            if (!r) return '';
+            return r.min === r.max ? `≈${r.min}` : `≈${r.min}~${r.max}`;
+        }
+
+        const OP_INITIAL_PLACEHOLDER = ['90','80','60'];
+
+        // ==================== 對手角色列 ====================
+        const OpponentRow = React.memo(({ op, idx, teamKey, myRef, charOptions, onChange }) => {
+            const listId = `dl-op-${teamKey}-${idx}`;
+            const spd = calcSpeed(myRef, op.initial, op.random);
+            return (
+                <div className="char-input-row">
+                    <div className="relative">
+                        <input type="text" placeholder={`對手${idx+1}`} value={op.name}
+                            onChange={e => onChange(teamKey,'opponents',idx,'name',S.clean(e.target.value))}
+                            list={listId} maxLength="50"
+                            className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-red-400"/>
+                        <datalist id={listId}>{charOptions.map(o=><option key={o} value={o}/>)}</datalist>
+                    </div>
+                    <input type="number" placeholder={OP_INITIAL_PLACEHOLDER[idx] || '90'} value={op.initial}
+                        onChange={e => onChange(teamKey,'opponents',idx,'initial',e.target.value)}
+                        className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-red-400"/>
+                    <input type="number" placeholder="0~5" value={op.random}
+                        onChange={e => onChange(teamKey,'opponents',idx,'random',e.target.value)}
+                        className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-red-400"/>
+                    <div className="relative">
+                        <input type="text" placeholder="免疫與否/高抗等" value={op.notes}
+                            onChange={e => onChange(teamKey,'opponents',idx,'notes',S.clean(e.target.value,true))}
+                            onFocus={e => { if (!e.currentTarget.value) { onChange(teamKey,'opponents',idx,'notes','有免疫'); setTimeout(()=>e.currentTarget.select(),0); } }}
+                            maxLength="30"
+                            className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-red-300"
+                            style={spd ? {paddingRight:'52px'} : {}}/>
+                        {spd && <span className="speed-hint">{speedLabel(spd)}</span>}
+                    </div>
+                </div>
+            );
+        });
+
+        // ==================== 我方角色列 ====================
+        const MyCharRow = React.memo(({ ch, idx, teamKey, charOptions, onChange }) => {
+            const listId = `dl-my-${teamKey}-${idx}`;
+            return (
+                <div className="my-char-row">
+                    <div className="relative">
+                        <input type="text" placeholder={`我方${idx+1}`} value={ch.name}
+                            onChange={e => onChange(teamKey,'myChars',idx,'name',S.clean(e.target.value))}
+                            list={listId} maxLength="50"
+                            className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                        <datalist id={listId}>{charOptions.map(o=><option key={o} value={o}/>)}</datalist>
+                    </div>
+                    <input type="number" placeholder="例: 241" value={ch.speed}
+                        onChange={e => onChange(teamKey,'myChars',idx,'speed',e.target.value)}
+                        className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-300"/>
+                </div>
+            );
+        });
+
+        // ==================== 隊伍區塊 ====================
+        const TeamBlock = React.memo(({ teamKey, team, myRef, label, charOptions, onChange, onResult }) => {
+            const sectionCls = `team-section ${team.result==='win' ? 'team-win' : team.result==='lose' ? 'team-lose' : ''}`;
+            return (
+                <div className={sectionCls}>
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-bold text-gray-700">{label}</span>
+                        <div className="result-toggle">
+                            <button type="button"
+                                className={`result-btn ${team.result==='win' ? 'win' : 'inactive'}`}
+                                onClick={() => onResult(teamKey, team.result==='win' ? null : 'win')}>
+                                ✅ 勝
+                            </button>
+                            <button type="button"
+                                className={`result-btn ${team.result==='lose' ? 'lose' : 'inactive'}`}
+                                onClick={() => onResult(teamKey, team.result==='lose' ? null : 'lose')}>
+                                ❌ 敗
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="team-grid">
+                        {/* 左：對手 */}
+                        <div>
+                            <div className="col-header mb-1">
+                                <span className="text-xs font-semibold text-red-500">🔴 對手</span>
+                                <span className="text-xs text-gray-400">行動值</span>
+                                <span className="text-xs text-gray-400">隨機值</span>
+                                <span className="text-xs text-gray-400">備註</span>
+                            </div>
+                            {team.opponents.map((op,i) => (
+                                <OpponentRow key={i} op={op} idx={i} teamKey={teamKey}
+                                    myRef={myRef} charOptions={charOptions} onChange={onChange}/>
+                            ))}
+                        </div>
+                        {/* 右：我方（左側加間距區隔）*/}
+                        <div className="my-team-col">
+                            <div className="my-col-header mb-1">
+                                <span className="text-xs font-semibold text-blue-500">🔵 我方</span>
+                                <span className="text-xs text-gray-400">速度</span>
+                            </div>
+                            {team.myChars.map((ch,i) => (
+                                <MyCharRow key={i} ch={ch} idx={i} teamKey={teamKey}
+                                    charOptions={charOptions} onChange={onChange}/>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
+        // ==================== 分享文字 ====================
+        function buildShareText(rec, includeMyTeam) {
+            const dateStr = rec.date
+                ? new Date(rec.date+'T00:00:00').toLocaleDateString('zh-TW',{month:'numeric',day:'numeric'})
+                : '';
+            const lines = [`📅 ${dateStr}｜vs ${rec.guild}｜${rec.tower}`];
+            [rec.team1, rec.team2].forEach((team, ti) => {
+                const label = ti === 0 ? '第一隊' : '第二隊';
+                const mark  = team.result==='win' ? '✅' : team.result==='lose' ? '❌' : '　';
+                lines.push(`━ ${mark} ${label} ${mark} ━`);
+                const ops = team.opponents.filter(o => o.name);
+                if (ops.length) {
+                    const parts = ops.map(o => {
+                        let s = o.name;
+                        const spd = o.calcSpeed;
+                        if (spd?.min != null) s += `(${spd.min===spd.max ? spd.min : `${spd.min}~${spd.max}`})`;
+                        if (o.notes) s += `,${o.notes}`;
+                        return s;
+                    });
+                    // 單分享對手時不加紅點
+                    lines.push(includeMyTeam ? `🔴 ${parts.join(' · ')}` : parts.join(' · '));
+                }
+                if (includeMyTeam) {
+                    const mys = team.myChars.filter(c => c.name);
+                    if (mys.length) {
+                        lines.push(`🔵 ${mys.map(c => c.speed ? `${c.name}(${c.speed})` : c.name).join(' · ')}`);
+                    }
+                }
+                if (ti === 0) lines.push('');
+            });
+            return lines.join('\n');
+        }
+
+        // ==================== 歷史表格列 ====================
+        const HistoryRow = React.memo(({ rec, onDelete, showToast }) => {
+            const [expanded,   setExpanded]   = useState(false);
+            const [delConfirm, setDelConfirm] = useState(false);
+
+            const hasLoss = rec.team1.result==='lose' || rec.team2.result==='lose';
+            const allWin  = rec.team1.result==='win'  && rec.team2.result==='win';
+            const rowBorder = hasLoss ? 'border-l-4 border-l-red-400' : allWin ? 'border-l-4 border-l-green-400' : '';
+
+            const copyShare = useCallback(async (includeMyTeam) => {
+                const text = buildShareText(rec, includeMyTeam);
+                const ok = await copyToClipboard(text);
+                showToast(ok ? '✅ 已複製到剪貼簿！' : '❌ 複製失敗', ok ? 'success' : 'error');
+            }, [rec, showToast]);
+
+            const dateStr = rec.date
+                ? new Date(rec.date+'T00:00:00').toLocaleDateString('zh-TW',{month:'numeric',day:'numeric'})
+                : '';
+
+            const renderResult = (r) =>
+                r==='win'  ? <span className="text-green-600 font-bold text-xs">✅勝</span>
+              : r==='lose' ? <span className="text-red-600 font-bold text-xs">❌敗</span>
+              : <span className="text-gray-400 text-xs">—</span>;
+
+            const renderTeamSummary = (team) => {
+                const ops = team.opponents.filter(o=>o.name);
+                return (
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {renderResult(team.result)}
+                        {ops.map((o,i) => <span key={i} className="char-tag">{o.name}</span>)}
+                    </div>
+                );
+            };
+
+            return (
+                <div className={`border-b border-gray-100 ${rowBorder}`}>
+                    <div className="history-row" style={{borderBottom:'none'}}>
+                        <span className="text-gray-500 text-xs">{dateStr}</span>
+                        <span className="font-semibold text-gray-800 text-xs truncate">{S.html(rec.guild)}</span>
+                        <span className="text-gray-500 text-xs truncate">{S.html(rec.playerId)}</span>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">{rec.tower}</span>
+                        <div className="min-w-0">{renderTeamSummary(rec.team1)}</div>
+                        <div className="min-w-0">{renderTeamSummary(rec.team2)}</div>
+                        <div className="flex gap-1 items-center justify-end flex-wrap">
+                            <button onClick={() => copyShare(false)}
+                                className="px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 whitespace-nowrap">
+                                📋
+                            </button>
+                            <button onClick={() => copyShare(true)}
+                                className="px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 whitespace-nowrap">
+                                📋+
+                            </button>
+                            <button onClick={() => setExpanded(!expanded)}
+                                className="text-xs text-blue-500 hover:text-blue-700 px-1">
+                                {expanded ? '▲' : '▼'}
+                            </button>
+                            {delConfirm ? (
+                                <span className="flex items-center gap-0.5">
+                                    <button onClick={() => onDelete(rec.id)}
+                                        className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">是</button>
+                                    <button onClick={() => setDelConfirm(false)}
+                                        className="px-1.5 py-0.5 text-xs bg-gray-300 text-gray-700 rounded">否</button>
+                                </span>
+                            ) : (
+                                <button onClick={() => setDelConfirm(true)}
+                                    className="text-xs text-gray-400 hover:text-red-500 px-1">🗑</button>
+                            )}
+                        </div>
+                    </div>
+
+                    {expanded && (
+                        <div className="px-3 pb-3 pt-1 bg-gray-50 border-t border-gray-100">
+                            {[rec.team1, rec.team2].map((t,ti) => (
+                                <div key={ti} className="mb-3 last:mb-0">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-2">
+                                        {ti===0 ? '第一隊' : '第二隊'} {renderResult(t.result)}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            {t.opponents.filter(o=>o.name).map((o,i) => (
+                                                <div key={i} className="text-xs mb-1 flex flex-wrap gap-1 items-center">
+                                                    <span className="text-red-500">🔴</span>
+                                                    <span className="font-medium">{S.html(o.name)}</span>
+                                                    {o.calcSpeed?.min != null && (
+                                                        <span className="text-indigo-500">
+                                                            ≈{o.calcSpeed.min===o.calcSpeed.max ? o.calcSpeed.min : `${o.calcSpeed.min}~${o.calcSpeed.max}`}
+                                                        </span>
+                                                    )}
+                                                    {o.notes && <span className="text-gray-500">({S.html(o.notes)})</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div>
+                                            {t.myChars.filter(c=>c.name).map((c,i) => (
+                                                <div key={i} className="text-xs mb-1 flex flex-wrap gap-1 items-center">
+                                                    <span className="text-blue-500">🔵</span>
+                                                    <span className="font-medium">{S.html(c.name)}</span>
+                                                    {c.speed && <span className="text-gray-400">({c.speed})</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        });
+
+        // ==================== 反制推薦卡片（色系與 battle-recorder 一致）====================
+        const CounterCard = ({ suggestions }) => {
+            if (!suggestions.length) return null;
+            return (
+                <div className="space-y-2 mt-3">
+                    {suggestions.map((s, i) => {
+                        const ml = s.matchLevel || '';
+                        const comboClass =
+                            ml === '完全匹配' ? 'bg-green-200 text-green-800' :
+                            ml === '高度匹配' ? 'bg-blue-200 text-blue-800' :
+                            ml === '歷史記錄' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-200 text-gray-800';
+                        const labelClass =
+                            ml === '完全匹配' ? 'text-green-600' :
+                            ml === '高度匹配' ? 'text-blue-600' :
+                            ml === '歷史記錄' ? 'text-blue-500' :
+                            'text-gray-500';
+                        const isHighConf = (s.confidence || 0) >= 0.75;
+                        return (
+                            <div key={i} className="flex items-start gap-3 py-1.5">
+                                <div className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${comboClass}`}>
+                                    {(s.combo||[]).filter(Boolean).join('+')}
+                                    {isHighConf && <span>⭐</span>}
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    {s.notes && <span className="text-xs text-gray-500">({s.notes})</span>}
+                                    {ml && (
+                                        <span className={`text-xs font-medium ${labelClass}`}>
+                                            {ml}
+                                            {s.confidence && s.confidence < 1 && (
+                                                <span className="ml-1">({(s.confidence*100).toFixed(0)}%)</span>
+                                            )}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // ==================== 主應用 ====================
+        const App = () => {
+            const [view, setView]           = useState('record');
+            const [form, setForm]           = useState(emptyForm());
+            const [records, setRecords]     = useState([]);
+            const [filterGuild, setFilterGuild] = useState('');
+            const { toast, showToast }      = useToast();
+
+            // 查找相關
+            const [lookupOpponent, setLookupOpponent] = useState(['','','']);
+            const [lookupSuggestions, setLookupSuggestions] = useState([]);
+
+            // 社群GvG資料庫
+            const [counterDatabase, setCounterDatabase] = useState({});
+            const [communityDB, setCommunityDB] = useState({
+                loaded: false, loading: false,
+                description: null, generated: null, source_records: 0, data: {}
+            });
+
+            // Google Sheets 同步
+            const [gsSettings, setGsSettings] = useState({ enabled: false, apiUrl: '', recorder: '', lastSync: null });
+
+            const characterAliases = useMemo(() => loadCharacterAliases(), []);
+            const charOptions = useMemo(() => {
+                const all = [];
+                characterAliases.forEach(c => {
+                    all.push(c.name);
+                    (c.aliases||[]).forEach(a => { if (a !== c.name) all.push(a); });
+                });
+                return [...new Set(all)].sort();
+            }, [characterAliases]);
+
+            // 載入 localStorage
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('arkrecode_gvg_records');
+                    if (raw) { const d = S.decode(raw); if (Array.isArray(d)) setRecords(d); }
+                } catch {}
+                try {
+                    const raw = localStorage.getItem('arkrecode_gvg_counterDB');
+                    if (raw) { const d = S.decode(raw); if (d && typeof d === 'object') setCounterDatabase(d); }
+                } catch {}
+                try {
+                    const raw = localStorage.getItem('arkrecode_gvg_gsSettings');
+                    if (raw) { const d = S.decode(raw); if (d) setGsSettings(d); }
+                } catch {}
+            }, []);
+
+            useEffect(() => {
+                try { localStorage.setItem('arkrecode_gvg_records', S.encode(records)); } catch {}
+            }, [records]);
+
+            useEffect(() => {
+                try { localStorage.setItem('arkrecode_gvg_counterDB', S.encode(counterDatabase)); } catch {}
+            }, [counterDatabase]);
+
+            useEffect(() => {
+                try { localStorage.setItem('arkrecode_gvg_gsSettings', S.encode(gsSettings)); } catch {}
+            }, [gsSettings]);
+
+            // ==================== 查找反制 ====================
+            const getCounterSuggestions = useCallback((opTeam, setFn) => {
+                const full = opTeam.filter(Boolean).map(c => convertAlias(c, characterAliases));
+                if (full.length < 3) { setFn([]); return; }
+                const key = [...full].sort().join(',');
+                let suggestions = [];
+
+                // 1. 社群/手動反制資料庫
+                if (counterDatabase[key]) {
+                    suggestions = counterDatabase[key].map(s => ({ ...s, matchLevel: '完全匹配' }));
+                }
+
+                // 2. 從已保存勝場紀錄提取（任何一隊中有全部3個對手）
+                const histMatches = records.flatMap(rec =>
+                    [rec.team1, rec.team2].map(team => ({ team, rec }))
+                ).filter(({ team }) => {
+                    if (team.result !== 'win') return false;
+                    const ops = team.opponents.filter(o=>o.name).map(o => convertAlias(o.name, characterAliases));
+                    return full.every(c => ops.includes(c));
+                }).slice(0, 5);
+
+                histMatches.forEach(({ team, rec }) => {
+                    const combo = team.myChars.filter(c=>c.name).map(c=>c.name);
+                    if (combo.length) suggestions.push({
+                        combo,
+                        notes: `歷史勝場 ${rec.date}`,
+                        matchLevel: '歷史記錄'
+                    });
+                });
+
+                setFn(suggestions.slice(0, 7));
+            }, [characterAliases, counterDatabase, records]);
+
+            const handleLookupChange = useCallback((val, idx) => {
+                const next = lookupOpponent.map((c,i) => i===idx ? val : c);
+                setLookupOpponent(next);
+                getCounterSuggestions(next, setLookupSuggestions);
+            }, [lookupOpponent, getCounterSuggestions]);
+
+            // 重新查找（records變化後）
+            useEffect(() => {
+                if (lookupOpponent.filter(Boolean).length >= 3) {
+                    getCounterSuggestions(lookupOpponent, setLookupSuggestions);
+                }
+            }, [records, counterDatabase]);
+
+            // ==================== 社群GvG資料庫 ====================
+            const loadCommunityDB = useCallback(async () => {
+                setCommunityDB(p => ({ ...p, loading: true }));
+                try {
+                    const resp = await fetch(COMMUNITY_GVG_URL + '?t=' + Date.now());
+                    if (!resp.ok) throw new Error('無法讀取社群資料庫');
+                    const json = await resp.json();
+                    if (!json.counterDatabase || typeof json.counterDatabase !== 'object')
+                        throw new Error('資料格式錯誤');
+                    setCommunityDB({
+                        loaded: true, loading: false,
+                        description: json.description || '',
+                        generated: json.generated || '',
+                        source_records: json.source_records || 0,
+                        data: json.counterDatabase
+                    });
+                    setCounterDatabase(prev => {
+                        const merged = { ...json.counterDatabase };
+                        Object.keys(prev).forEach(k => { merged[k] = prev[k]; });
+                        return merged;
+                    });
+                    showToast(`✅ 社群資料庫已載入（${json.source_records || '?'}筆）`);
+                } catch (err) {
+                    setCommunityDB(p => ({ ...p, loading: false }));
+                    showToast('❌ 載入失敗：' + err.message, 'error');
+                }
+            }, [showToast]);
+
+            const clearCommunityDB = useCallback(() => {
+                if (!communityDB.loaded) { showToast('尚未載入社群資料庫', 'warn'); return; }
+                setCounterDatabase(prev => {
+                    const communityKeys = new Set(Object.keys(communityDB.data));
+                    const cleaned = {};
+                    Object.keys(prev).forEach(k => { if (!communityKeys.has(k)) cleaned[k] = prev[k]; });
+                    return cleaned;
+                });
+                setCommunityDB({ loaded: false, loading: false, description: null, generated: null, source_records: 0, data: {} });
+                showToast('✅ 社群資料庫已清除');
+            }, [communityDB, showToast]);
+
+            // ==================== Google Sheets 上傳 ====================
+            const uploadRecord = useCallback(async (rec) => {
+                if (!gsSettings.enabled || !gsSettings.apiUrl) return false;
+                if (!S.validateGoogleUrl(gsSettings.apiUrl)) {
+                    showToast('❌ Google Apps Script URL 格式錯誤', 'error'); return false;
+                }
+                const uploadTeam = (team, teamNum) => {
+                    const ops = team.opponents.filter(o => o.name);
+                    const myC = team.myChars.filter(c => c.name);
+                    const opStr = ops.map(o => {
+                        const spd = o.calcSpeed?.min != null ? (o.calcSpeed.min===o.calcSpeed.max ? String(o.calcSpeed.min) : `${o.calcSpeed.min}~${o.calcSpeed.max}`) : '';
+                        const parts = [spd, o.notes].filter(Boolean);
+                        return parts.length ? `${o.name}(${parts.join(',')})` : o.name;
+                    }).join(' ');
+                    const myStr = myC.map(c => c.speed ? `${c.name}(${c.speed})` : c.name).join(' ');
+                    const notes = `第${teamNum}隊 | 對手:${opStr} | 我方:${myStr}`;
+                    // opponentTeam / myTeam 各補齊至 4 格（對齊 PvP 格式）
+                    const opArr  = [ops[0]?.name||'', ops[1]?.name||'', ops[2]?.name||'', ''];
+                    const myArr  = [myC[0]?.name||'', myC[1]?.name||'', myC[2]?.name||'', ''];
+                    return {
+                        date:         rec.date,
+                        opponentName: `${rec.guild}·${rec.tower}·${rec.playerId}`,
+                        opponentTeam: opArr,
+                        myTeam:       myArr,
+                        result:       team.result==='win' ? '贏' : team.result==='lose' ? '輸' : '未知',
+                        rank:         rec.tower,
+                        recorder:     gsSettings.recorder || '',
+                        notes,
+                        uploaded:     false,
+                        uploadedAt:   null,
+                    };
+                };
+                const now = new Date().toISOString();
+                const team2Empty = !rec.team2.opponents.some(o => o.name) && !rec.team2.myChars.some(c => c.name);
+                try {
+                    const fetches = [fetch(gsSettings.apiUrl, { method:'POST', mode:'no-cors', body: JSON.stringify(uploadTeam(rec.team1, 1)) })];
+                    if (!team2Empty) fetches.push(fetch(gsSettings.apiUrl, { method:'POST', mode:'no-cors', body: JSON.stringify(uploadTeam(rec.team2, 2)) }));
+                    await Promise.all(fetches);
+                } catch (err) {
+                    console.warn('GvG upload fetch error (request may still have sent):', err);
+                }
+                // no-cors 無法確認回應，視同發送成功（與 battle-recorder 一致）
+                setRecords(prev => prev.map(r => r.id===rec.id ? {...r, uploaded:true, uploadedAt:now} : r));
+                setGsSettings(p => ({ ...p, lastSync: now }));
+                return true;
+            }, [gsSettings, showToast]);
+
+            const uploadAll = useCallback(async () => {
+                if (!gsSettings.enabled || !gsSettings.apiUrl) { showToast('請先設定 Google Sheets URL', 'warn'); return; }
+                const pending = records.filter(r => !r.uploaded);
+                if (!pending.length) { showToast('所有紀錄已上傳'); return; }
+                showToast(`⏳ 正在上傳 ${pending.length} 筆…`, 'warn');
+                let ok = 0;
+                for (const rec of pending) {
+                    const success = await uploadRecord(rec);
+                    if (success) ok++;
+                    await new Promise(r => setTimeout(r, 600));
+                }
+                showToast(`✅ 上傳完成：${ok}/${pending.length} 筆`);
+            }, [gsSettings, records, uploadRecord, showToast]);
+
+            // ==================== 表單處理 ====================
+            const handleFieldChange = useCallback((field, val) => setForm(p => ({...p, [field]: val})), []);
+            const handleMyRefChange = useCallback((field, val) => setForm(p => ({...p, myRef: {...p.myRef, [field]: val}})), []);
+            const handleTeamChange  = useCallback((teamKey, section, idx, field, val) => {
+                setForm(p => {
+                    const team = {...p[teamKey]};
+                    const arr  = [...team[section]];
+                    arr[idx]   = {...arr[idx], [field]: val};
+                    team[section] = arr;
+                    return {...p, [teamKey]: team};
+                });
+            }, []);
+            const handleResult = useCallback((teamKey, val) => {
+                setForm(p => ({...p, [teamKey]: {...p[teamKey], result: val}}));
+            }, []);
+
+            const handleSubmit = useCallback(() => {
+                if (!form.guild.trim())    { showToast('⚠️ 請填寫公會名稱！','warn'); return; }
+                if (!form.tower)           { showToast('⚠️ 請選擇塔位！','warn'); return; }
+                if (!form.playerId.trim()) { showToast('⚠️ 請填寫對手名稱/ID！','warn'); return; }
+
+                const normalizeOp = (o) => ({
+                    name:      o.name ? convertAlias(S.clean(o.name), characterAliases) : '',
+                    initial:   o.initial,
+                    random:    o.random,
+                    notes:     S.clean(o.notes, true),
+                    calcSpeed: calcSpeed(form.myRef, o.initial, o.random),
+                });
+                const normalizeTeam = (t) => ({
+                    result:    t.result,
+                    opponents: t.opponents.map(normalizeOp),
+                    myChars:   t.myChars.map(c => ({
+                        name:  c.name ? convertAlias(S.clean(c.name), characterAliases) : '',
+                        speed: c.speed,
+                    })),
+                });
+                const rec = {
+                    id:       Date.now(),
+                    date:     form.date,
+                    guild:    S.clean(form.guild),
+                    playerId: S.clean(form.playerId),
+                    tower:    form.tower,
+                    myRef:    {...form.myRef},
+                    uploaded: false,
+                    team1:    normalizeTeam(form.team1),
+                    team2:    normalizeTeam(form.team2),
+                };
+                setRecords(prev => [rec, ...prev]);
+                setForm(prev => ({
+                    ...emptyForm(),
+                    date:     prev.date,
+                    tower:    prev.tower,
+                    playerId: prev.playerId,
+                    guild:    prev.guild,
+                    myRef:    {...prev.myRef},
+                }));
+                showToast('✅ 公會戰紀錄已保存！');
+            }, [form, characterAliases, showToast]);
+
+            const handleDelete = useCallback((id) => {
+                setRecords(p => p.filter(r => r.id !== id));
+                showToast('🗑 紀錄已刪除');
+            }, [showToast]);
+
+            const filteredRecords = useMemo(() => records.filter(r => {
+                if (filterGuild && r.guild !== filterGuild) return false;
+                return true;
+            }), [records, filterGuild]);
+
+            const copyShareFromForm = useCallback(async (includeMyTeam) => {
+                const cn = (name) => name ? convertAlias(S.clean(name), characterAliases) : name;
+                const draftRec = {
+                    date: form.date, guild: form.guild, tower: form.tower,
+                    team1: {
+                        result: form.team1.result,
+                        opponents: form.team1.opponents.map(o => ({
+                            ...o, name: cn(o.name),
+                            calcSpeed: calcSpeed(form.myRef, o.initial, o.random),
+                        })),
+                        myChars: form.team1.myChars.map(c => ({...c, name: cn(c.name)})),
+                    },
+                    team2: {
+                        result: form.team2.result,
+                        opponents: form.team2.opponents.map(o => ({
+                            ...o, name: cn(o.name),
+                            calcSpeed: calcSpeed(form.myRef, o.initial, o.random),
+                        })),
+                        myChars: form.team2.myChars.map(c => ({...c, name: cn(c.name)})),
+                    },
+                };
+                const text = buildShareText(draftRec, includeMyTeam);
+                const ok = await copyToClipboard(text);
+                showToast(ok ? '✅ 已複製到剪貼簿！' : '❌ 複製失敗', ok ? 'success' : 'error');
+            }, [form, characterAliases, showToast]);
+
+            const tabBtn = (v, icon, label, count) => (
+                <button onClick={() => setView(v)}
+                    className={`px-3 py-1 rounded text-sm flex items-center gap-1 ${view===v ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                    {icon} {label}{count != null ? ` (${count})` : ''}
+                </button>
+            );
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2">
+                    <Toast toast={toast}/>
+                    <div className="max-w-5xl mx-auto">
+
+                        {/* 標題列 */}
+                        <div className="bg-white rounded-lg shadow-lg mb-4 p-3">
+                            <div className="flex flex-wrap gap-3 items-center justify-between">
+                                <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <Icon.Shield cls="text-yellow-500" size={22}/>
+                                    公會戰紀錄器 v1.0.0
+                                </h1>
+                                <div className="flex gap-1 flex-wrap">
+                                    {tabBtn('record',  <Icon.Plus size={13}/>, '記錄')}
+                                    {tabBtn('lookup',  <Icon.Search size={13}/>, '查找')}
+                                    {tabBtn('history', <Icon.History size={13}/>, '歷史', records.length)}
+                                    {tabBtn('settings',<Icon.Settings size={13}/>, '設定')}
+                                    <span style={{width:'1px',background:'#E5E7EB',margin:'0 4px',alignSelf:'stretch',display:'inline-block'}}/>
+                                    <a href="./battle-recorder.html"
+                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                        style={{textDecoration:'none'}}>🏆 對戰紀錄器</a>
+                                    <a href="./character-db.html"
+                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                        style={{textDecoration:'none'}}>👤 角色資料庫</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ====== 記錄頁 ====== */}
+                        {view === 'record' && (
+                            <div className="space-y-4">
+                                <div className="bg-white rounded-lg shadow-lg p-5">
+                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                        <Icon.Plus cls="text-blue-500" size={18}/>
+                                        新增公會戰紀錄
+                                    </h2>
+
+                                    {/* 基本資訊 */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">日期</label>
+                                            <input type="date" value={form.date}
+                                                onChange={e => handleFieldChange('date', e.target.value)}
+                                                className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                塔位 <span className="text-red-500">*</span>
+                                            </label>
+                                            <select value={form.tower}
+                                                onChange={e => handleFieldChange('tower', e.target.value)}
+                                                className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400 bg-white">
+                                                <option value="">選擇塔</option>
+                                                {TOWER_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">公會名稱 <span className="text-red-500">*</span></label>
+                                            <input type="text" placeholder="對手公會..."
+                                                value={form.guild}
+                                                onChange={e => handleFieldChange('guild', S.clean(e.target.value))}
+                                                maxLength="30"
+                                                className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">對手名稱/ID <span className="text-red-500">*</span></label>
+                                            <input type="text" placeholder="對手名稱..."
+                                                value={form.playerId}
+                                                onChange={e => handleFieldChange('playerId', S.clean(e.target.value))}
+                                                maxLength="30"
+                                                className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                        </div>
+                                    </div>
+
+                                    {/* 我方速度參考（50% 寬，靠左）*/}
+                                    <div className="speed-ref-box mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <div className="text-xs font-semibold text-blue-700 mb-2">
+                                            🔵 我方速度參考
+                                            <span className="font-normal text-blue-400 ml-1">（非必填）</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label className="text-xs text-gray-500 block mb-0.5">我方速度</label>
+                                                <input type="number" placeholder="例: 241"
+                                                    value={form.myRef.speed}
+                                                    onChange={e => handleMyRefChange('speed', e.target.value)}
+                                                    className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500 block mb-0.5">初始行動值</label>
+                                                <input type="number" placeholder="90"
+                                                    value={form.myRef.initial}
+                                                    onChange={e => handleMyRefChange('initial', e.target.value)}
+                                                    className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500 block mb-0.5">隨機值</label>
+                                                <input type="number" placeholder="0~5"
+                                                    value={form.myRef.random}
+                                                    onChange={e => handleMyRefChange('random', e.target.value)}
+                                                    className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 兩隊 */}
+                                    <div className="space-y-4">
+                                        <TeamBlock teamKey="team1" team={form.team1} myRef={form.myRef}
+                                            label="第一隊" charOptions={charOptions}
+                                            onChange={handleTeamChange} onResult={handleResult}/>
+                                        <TeamBlock teamKey="team2" team={form.team2} myRef={form.myRef}
+                                            label="第二隊" charOptions={charOptions}
+                                            onChange={handleTeamChange} onResult={handleResult}/>
+                                    </div>
+
+                                    {/* 操作按鈕 */}
+                                    <div className="mt-5 grid grid-cols-3 gap-2">
+                                        <button onClick={handleSubmit}
+                                            className="bg-blue-500 text-white py-2.5 px-4 rounded-lg hover:bg-blue-600 font-semibold text-sm transition-colors flex items-center justify-center gap-1.5">
+                                            <Icon.Download size={14}/> 保存紀錄
+                                        </button>
+                                        <button onClick={() => copyShareFromForm(false)}
+                                            className="bg-orange-100 text-orange-700 py-2.5 px-4 rounded-lg hover:bg-orange-200 font-semibold text-sm transition-colors">
+                                            📋 分享
+                                        </button>
+                                        <button onClick={() => copyShareFromForm(true)}
+                                            className="bg-indigo-100 text-indigo-700 py-2.5 px-4 rounded-lg hover:bg-indigo-200 font-semibold text-sm transition-colors">
+                                            📋 完整分享
+                                        </button>
+                                    </div>
+                                    <p className="mt-2 text-xs text-center text-gray-400">
+                                        分享 = 只含對手｜完整分享 = 含我方
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ====== 查找頁 ====== */}
+                        {view === 'lookup' && (
+                            <div className="bg-white rounded-lg shadow-lg p-4">
+                                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <Icon.Search cls="text-blue-500" size={18}/>
+                                    查找 GvG 反制推薦
+                                </h2>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        對手陣容（輸入3位角色）
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {lookupOpponent.map((char, idx) => (
+                                            <div key={idx} className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder={`對手${idx+1}`}
+                                                    value={char}
+                                                    onChange={e => handleLookupChange(S.clean(e.target.value), idx)}
+                                                    className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500"
+                                                    list={`lookup-${idx}-opts`}
+                                                    maxLength="50"/>
+                                                <datalist id={`lookup-${idx}-opts`}>
+                                                    {charOptions.map(o => <option key={o} value={o}/>)}
+                                                </datalist>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-2 flex gap-2">
+                                        <button onClick={() => { setLookupOpponent(['','','']); setLookupSuggestions([]); }}
+                                            className="px-3 py-1 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300">
+                                            清空
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {lookupOpponent.filter(Boolean).length < 3 && (
+                                    <p className="text-sm text-gray-400 text-center py-6">
+                                        請輸入 3 位對手角色以查找推薦反制配置
+                                    </p>
+                                )}
+                                {lookupOpponent.filter(Boolean).length >= 3 && lookupSuggestions.length === 0 && (
+                                    <div className="text-center py-6 text-gray-500 text-sm">
+                                        <p>查無推薦紀錄</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            可在「設定」中載入社群 GvG 資料庫，或累積勝場紀錄後查找
+                                        </p>
+                                    </div>
+                                )}
+                                {lookupSuggestions.length > 0 && (
+                                    <>
+                                        <div className="text-xs text-gray-500 mb-2">找到 {lookupSuggestions.length} 筆推薦：</div>
+                                        <CounterCard suggestions={lookupSuggestions}/>
+                                    </>
+                                )}
+
+                                {/* 社群DB狀態提示 */}
+                                <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-2">
+                                    <span>社群GvG資料庫：</span>
+                                    {communityDB.loaded
+                                        ? <span className="text-green-600">✅ 已載入（{communityDB.source_records.toLocaleString()} 筆）</span>
+                                        : <span>未載入 — <button className="text-blue-500 hover:underline" onClick={() => setView('settings')}>前往設定載入</button></span>
+                                    }
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ====== 歷史頁 ====== */}
+                        {view === 'history' && (
+                            <div className="bg-white rounded-lg shadow-lg p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                                        <Icon.History cls="text-blue-500" size={18}/>
+                                        歷史紀錄 ({filteredRecords.length}/{records.length} 筆)
+                                    </h2>
+                                    <div className="flex gap-2 flex-wrap items-center">
+                                        <select value={filterGuild} onChange={e => setFilterGuild(e.target.value)}
+                                            className="text-xs border rounded px-2 py-1 bg-white">
+                                            <option value="">全部公會</option>
+                                            {[...new Set(records.map(r=>r.guild).filter(Boolean))].map(g => (
+                                                <option key={g} value={g}>{g}</option>
+                                            ))}
+                                        </select>
+                                        {gsSettings.enabled && gsSettings.apiUrl && (
+                                            <button onClick={uploadAll}
+                                                className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                                                ☁️ 同步
+                                            </button>
+                                        )}
+                                        <button onClick={() => {
+                                            if (records.length === 0) return;
+                                            setView('_confirmClear');
+                                        }} disabled={records.length===0}
+                                            className={`px-3 py-1 text-xs rounded ${records.length===0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                                            重置
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {records.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-400">尚無公會戰紀錄</div>
+                                ) : filteredRecords.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-400">無符合篩選條件的紀錄</div>
+                                ) : (
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                        {/* 表頭 */}
+                                        <div className="history-row history-header">
+                                            <span>日期</span>
+                                            <span>公會</span>
+                                            <span>對手ID</span>
+                                            <span>塔位</span>
+                                            <span>第①隊</span>
+                                            <span>第②隊</span>
+                                            <span className="text-right">操作</span>
+                                        </div>
+                                        {filteredRecords.map(rec => (
+                                            <HistoryRow key={rec.id} rec={rec} onDelete={handleDelete} showToast={showToast}/>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="mt-3 text-right text-xs text-gray-400">
+                                    共 {records.length} 筆紀錄
+                                    {gsSettings.lastSync && ` · 上次同步 ${new Date(gsSettings.lastSync).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ====== 設定頁 ====== */}
+                        {view === 'settings' && (
+                            <div className="space-y-4">
+                                {/* 社群GvG資料庫 */}
+                                <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                        <span className="text-orange-500">📡</span>
+                                        社群 GvG 資料庫
+                                    </h2>
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-orange-50 rounded-lg text-sm text-orange-800">
+                                            <div className="font-medium mb-1">🎯 GvG 三打三勝場資料庫</div>
+                                            <div className="text-xs text-orange-700 space-y-1">
+                                                <div>• 載入後自動補充「查找」頁的反制推薦（不覆蓋您手動新增的策略）</div>
+                                                <div>• 資料由社群統計，定期更新，清除後不影響個人紀錄</div>
+                                                <div>• 需要網路連線才能讀取</div>
+                                            </div>
+                                        </div>
+
+                                        {communityDB.loaded && (
+                                            <div className="p-3 bg-green-50 rounded-lg text-sm text-green-800">
+                                                <div>✅ <strong>已載入：</strong>{communityDB.description}</div>
+                                                <div className="text-xs mt-1 text-green-700 space-y-0.5">
+                                                    <div>• 涵蓋勝場：{communityDB.source_records.toLocaleString()} 筆</div>
+                                                    <div>• 資料日期：{communityDB.generated}</div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <button onClick={loadCommunityDB}
+                                                disabled={communityDB.loading}
+                                                className={`flex-1 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-2 ${
+                                                    communityDB.loading ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : communityDB.loaded ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
+                                                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                                                }`}>
+                                                {communityDB.loading ? '⏳ 讀取中...' : communityDB.loaded ? '🔄 重新讀取' : '📥 讀取社群資料庫'}
+                                            </button>
+                                            <button onClick={clearCommunityDB}
+                                                disabled={!communityDB.loaded}
+                                                className={`px-3 py-2 rounded text-sm ${
+                                                    communityDB.loaded ? 'bg-red-100 text-red-600 hover:bg-red-200 border border-red-300'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                }`}>
+                                                🗑 清除
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Google Sheets 同步 */}
+                                <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                        <Icon.Shield cls="text-green-500" size={20}/>
+                                        Google Sheets 同步
+                                    </h2>
+                                    <div className="space-y-4">
+                                        <div className="p-3 bg-green-50 rounded-lg text-sm text-green-800">
+                                            <div className="font-medium mb-1">每筆紀錄上傳兩列（第①隊 + 第②隊）到您的私人 Google Sheet。</div>
+                                            <div className="text-xs text-green-700">需自行建立 Google Apps Script；URL 只允許 google.com 域名。</div>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4 space-y-3">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox"
+                                                    checked={gsSettings.enabled}
+                                                    onChange={e => setGsSettings(p => ({...p, enabled: e.target.checked}))}
+                                                    className="mr-1"/>
+                                                <span className="font-medium text-sm">啟用 Google Sheets 同步</span>
+                                            </label>
+
+                                            {gsSettings.enabled && (
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                        紀錄者名稱（recorder）
+                                                    </label>
+                                                    <input type="text"
+                                                        value={gsSettings.recorder}
+                                                        placeholder="玩家名"
+                                                        onChange={e => setGsSettings(p => ({...p, recorder: e.target.value}))}
+                                                        className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-green-400 mb-3"/>
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                        Google Apps Script URL
+                                                    </label>
+                                                    <input type="url"
+                                                        value={gsSettings.apiUrl}
+                                                        placeholder="https://script.google.com/macros/s/..."
+                                                        onChange={e => {
+                                                            const url = e.target.value;
+                                                            if (url && !S.validateGoogleUrl(url)) {
+                                                                showToast('⚠️ 請輸入有效的 Google Apps Script URL', 'warn');
+                                                                return;
+                                                            }
+                                                            setGsSettings(p => ({...p, apiUrl: url}));
+                                                        }}
+                                                        className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-green-400"/>
+                                                    <div className="mt-3 flex gap-2">
+                                                        <button onClick={uploadAll}
+                                                            disabled={!gsSettings.apiUrl}
+                                                            className={`flex-1 px-3 py-2 rounded text-sm font-medium ${
+                                                                gsSettings.apiUrl ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                            }`}>
+                                                            ☁️ 批量上傳未同步紀錄
+                                                        </button>
+                                                    </div>
+                                                    {gsSettings.lastSync && (
+                                                        <p className="text-xs text-gray-400 mt-2">
+                                                            最後同步：{new Date(gsSettings.lastSync).toLocaleString('zh-TW')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 重置確認 */}
+                        {view === '_confirmClear' && (
+                            <div className="bg-white rounded-lg shadow-lg p-6 text-center">
+                                <div className="text-2xl mb-3">⚠️</div>
+                                <p className="text-gray-800 font-semibold mb-1">確定清除所有公會戰紀錄？</p>
+                                <p className="text-gray-500 text-sm mb-5">此操作無法復原，共 {records.length} 筆紀錄將刪除。</p>
+                                <div className="flex gap-3 justify-center">
+                                    <button onClick={() => { setRecords([]); setView('history'); showToast('✅ 已清除所有紀錄'); }}
+                                        className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium text-sm">
+                                        確定清除
+                                    </button>
+                                    <button onClick={() => setView('history')}
+                                        className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm">
+                                        取消
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-4 text-center text-xs text-gray-500">
+                            ArkRecode 公會戰紀錄器 v1.0.0 | 離線使用 | 資料存於本機瀏覽器
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
