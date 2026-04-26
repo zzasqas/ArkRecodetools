@@ -112,14 +112,52 @@ ArkRecodetools/
 
 ### 版本號同步
 
-每次更新工具版本時，需同步修改以下位置：
+每次更新工具版本時，需同步修改以下所有位置（以對戰紀錄器 battle-recorder.html 為例）：
 
 | 檔案 | 位置 | 說明 |
 |------|------|------|
 | `battle-recorder.html` | `<title>` 標籤 | 工具頁面標題 |
+| `battle-recorder.html` | `<div class="author-info">` | 右下角版本浮水印 |
+| `battle-recorder.html` | `• 版本：v2.x.x` li 項目 | About/說明欄顯示版本 |
+| `battle-recorder.html` | `version: '2.x.x'` | 匯出 JSON 版本欄位 |
+| `battle-recorder.html` | `exported_by: 'ArkRecode_v2.x.x'` | 匯出安全標記 |
+| `battle-recorder.html` | `歡迎使用 ArkRecode v2.x.x` alert | 首次使用歡迎訊息 |
+| `battle-recorder.html` | `!['...'].includes(dataVersion)` 陣列 | 舊版升級清除邏輯白名單（加入新版號） |
+| `battle-recorder.html` | `dataVersion !== '2.x.x'` | 版本升級偵測條件 |
+| `battle-recorder.html` | `localStorage.setItem('arkrecode_dataVersion', '2.x.x')` | localStorage 版本寫入 |
+| `battle-recorder.html` | `歡迎首次使用 ArkRecode v2.x.x` console.log | 首次使用 log |
+| `battle-recorder.html` | `ArkRecode 對戰紀錄器 v2.x.x` h1 標題 | 頁面內標題 |
+| `battle-recorder.html` | `ArkRecode 對戰紀錄器 v2.x.x` footer 文字 | 頁尾版本 |
+| `battle-recorder.html` | 版本說明 h2 及 h4 標題 | 更新說明區塊標題 |
 | `index.html` | 對應工具卡片的 `<span class="tool-meta">` | 首頁版本標籤 |
 | `README.md` | 工具一覽表對應列 | 說明文件版本欄 |
 | `README.md` | `## 更新紀錄` 區塊（最上方新增） | 版本更新條目 |
+
+**公會戰紀錄器（guild-battle.html）版本同步位置相同，請比照處理。**
+
+> **快速做法**：在編輯器全域搜尋舊版號（例如 `2.9.0`），逐一替換為新版號，再新增 changelog 條目即可。
+
+### 新增角色更新說明
+
+新角色加入遊戲時，需要更新以下檔案（依重要度排序）：
+
+| 檔案 | 必須更新 | 說明 |
+|------|----------|------|
+| `assets/char-name-data.js` | ✅ 必須 | 角色本名 + 所有暱稱別名；battle-recorder 與 guild-battle 共用。格式：`{ name: '角色本名', aliases: ['本名', '暱稱1', '暱稱2'] }` |
+| `chars.csv` | ✅ 必須（角色資料庫） | 角色基礎數值一行，欄位依序：本名、星級、屬性、職業、基礎攻/防/生/速、攻/防/生/速加成、總攻/防/生/速、爆率、爆傷、命中、抗性、被動類型、被動效果。記得更新第一行版本標頭 `version:YYYYMMDD` |
+| `build_recom.csv` | 🔶 建議更新 | 新角色推薦配裝，格式參照現有行 |
+| `character-db.html` | ❌ 通常不需改 | UI 自動讀取 chars.csv，無需手動改 HTML |
+| `battle-recorder.html` | ❌ 通常不需改 | 別名自動從 char-name-data.js 載入，無需手動改 |
+| `guild-battle.html` | ❌ 通常不需改 | 別名自動從 char-name-data.js 載入，無需手動改 |
+
+**流程摘要**：
+1. 在 `assets/char-name-data.js` 的「新角色備用區」上方加入新角色條目（本名 + 常用暱稱）
+2. 在 `chars.csv` 末行加入角色數值，並更新版本標頭日期
+3. 若有推薦配裝資料，一併更新 `build_recom.csv`
+
+> 對戰紀錄器與公會戰紀錄器的角色搜尋均自動更新，不需額外動作。
+
+---
 
 ### 雙語內容維護
 

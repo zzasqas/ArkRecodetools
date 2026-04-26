@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 對戰紀錄器 v2.9.0</title>
+    <title>ArkRecode 對戰紀錄器 v2.9.1</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
@@ -55,18 +55,18 @@
             color: white;
             padding: 8px 12px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 16px;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.2s, visibility 0.2s;
+            transition: opacity 0.05s, visibility 0.05s;
             z-index: 1000;
-            max-width: 200px;
+            max-width: 260px;
             white-space: pre-wrap;
             word-wrap: break-word;
-            text-align: center;
+            text-align: left;
         }
-        
+
         .notes-cell .tooltip::after {
             content: '';
             position: absolute;
@@ -76,10 +76,17 @@
             border: 5px solid transparent;
             border-top-color: #1f2937;
         }
-        
+
         .notes-cell:hover .tooltip {
             opacity: 1;
             visibility: visible;
+        }
+
+        .notes-ellipsis {
+            color: #60a5fa;
+            font-weight: 700;
+            margin-left: 2px;
+            font-size: 11px;
         }
         
         /* 作者信息樣式 */
@@ -165,7 +172,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.9.0</div>
+    <div class="author-info">by zzas | v2.9.1</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -329,7 +336,7 @@
                                 <p>如有問題或建議，歡迎回饋：</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• 開發者：zzas</li>
-                                    <li>• 版本：v2.9.0</li>
+                                    <li>• 版本：v2.9.1</li>
                                     <li>• 更新日期：{new Date().toLocaleDateString('zh-TW')}</li>
                                 </ul>
                             </div>
@@ -762,10 +769,10 @@
                     const exportData = {
                         ...data,
                         exportDate: new Date().toISOString(),
-                        version: '2.9.0',
+                        version: '2.9.1',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.9.0'
+                            exported_by: 'ArkRecode_v2.9.1'
                         }
                     };
                     
@@ -878,6 +885,33 @@
                     </select>
                 </div>
             ))
+        };
+
+        // ==================== 備註欄位組件 ====================
+        const NoteCell = ({ notes }) => {
+            const [expanded, setExpanded] = React.useState(false);
+            const MAX_LEN = 15;
+            const sanitized = notes ? SecurityUtils.sanitizeHtml(notes) : '';
+            const truncated = sanitized.length > MAX_LEN;
+
+            return (
+                <td className="py-2 px-2 max-w-32 text-xs notes-cell"
+                    style={{ cursor: truncated ? 'pointer' : 'default' }}
+                    onClick={() => truncated && setExpanded(e => !e)}>
+                    {expanded ? (
+                        <span className="whitespace-pre-wrap break-words">{sanitized}</span>
+                    ) : (
+                        <>
+                            <span className="inline-block overflow-hidden whitespace-nowrap align-bottom"
+                                  style={{ maxWidth: truncated ? 'calc(100% - 28px)' : '100%', textOverflow: 'ellipsis' }}>
+                                {sanitized}
+                            </span>
+                            {truncated && <span className="notes-ellipsis">[...]</span>}
+                            {truncated && <div className="tooltip">{sanitized}</div>}
+                        </>
+                    )}
+                </td>
+            );
         };
 
         // ==================== 建議組件 ====================
@@ -1819,14 +1853,7 @@
                                                     {SecurityUtils.sanitizeHtml(record.rank)}
                                                 </span>
                                             </td>
-                                            <td className="py-2 px-2 max-w-32 truncate text-xs notes-cell" title={SecurityUtils.sanitizeHtml(record.notes)}>
-                                                {SecurityUtils.sanitizeHtml(record.notes)}
-                                                {record.notes && record.notes.length > 15 && (
-                                                    <div className="tooltip">
-                                                        {SecurityUtils.sanitizeHtml(record.notes)}
-                                                    </div>
-                                                )}
-                                            </td>
+                                            <NoteCell notes={record.notes} />
                                             <td className="py-2 px-2 text-center">
                                                 {communitySettings.enabled ? (
                                                     record.uploaded ? (
@@ -2518,10 +2545,20 @@
                         source_records: json.source_records || 0,
                         data: json.counterDatabase
                     });
-                    // merge 進 counterDatabase，社群資料不覆蓋用戶已有的 key
+                    // merge 進 counterDatabase：玩家自訂排前，社群補充排後（同組合去重）
                     setCounterDatabase(prev => {
                         const merged = { ...json.counterDatabase };
-                        Object.keys(prev).forEach(k => { merged[k] = prev[k]; });
+                        Object.keys(prev).forEach(k => {
+                            if (merged[k]) {
+                                const userCombos = new Set(prev[k].map(s => (s.combo || []).join(',')));
+                                merged[k] = [
+                                    ...prev[k],
+                                    ...merged[k].filter(s => !userCombos.has((s.combo || []).join(',')))
+                                ];
+                            } else {
+                                merged[k] = prev[k];
+                            }
+                        });
                         return merged;
                     });
                     alert('✅ 社群GvG資料庫已載入！\n來源筆數：' + (json.source_records || '?') + '\n產生日期：' + (json.generated || '?'));
@@ -2723,7 +2760,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert('✅ 歡迎使用 ArkRecode v2.9.0！您的資料將存儲在本機瀏覽器中。');
+                alert('✅ 歡迎使用 ArkRecode v2.9.1！您的資料將存儲在本機瀏覽器中。');
             }, []);
 
             // 拒絕免責聲明
@@ -2760,14 +2797,14 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0'].includes(dataVersion)) {
+                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.9.1'].includes(dataVersion)) {
                                 // 舊版升級：清除別名快取
                                 localStorage.removeItem('arkrecode_characterAliases');
-                                console.log('已清除舊版別名快取，套用 v2.9.0 預設別名');
+                                console.log('已清除舊版別名快取，套用 v2.9.1 預設別名');
                             }
-                            if (dataVersion !== '2.9.0') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.0`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.9.0');
+                            if (dataVersion !== '2.9.1') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.1`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.9.1');
                             }
                             
                         } catch (parseError) {
@@ -2792,7 +2829,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.9.0！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.9.1！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
@@ -2944,7 +2981,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    ArkRecode 對戰紀錄器 v2.9.0
+                                    ArkRecode 對戰紀錄器 v2.9.1
                                 </h1>
                                 <div className="flex gap-1">
                                     <button
@@ -3761,10 +3798,18 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        v2.9.0 更新說明
+                                        v2.9.1 更新說明
                                     </h2>
 
                                     <div className="space-y-3">
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                            <h4 className="font-medium text-blue-800 mb-2">✨ v2.9.1 改善</h4>
+                                            <ul className="text-sm text-blue-700 space-y-1">
+                                                <li>• <strong>備註 hover 優化</strong>：tooltip 即時顯示，字體加大 4px，長備註顯示 [...]  提示</li>
+                                                <li>• <strong>備註點擊展開</strong>：點擊備註欄可展開完整文字</li>
+                                                <li>• <strong>社群推薦排序</strong>：匯入社群資料後，玩家自訂反制排在社群推薦之前</li>
+                                            </ul>
+                                        </div>
                                         <div className="p-3 bg-blue-50 rounded-lg">
                                             <h4 className="font-medium text-blue-800 mb-2">✨ v2.9.0 新功能</h4>
                                             <ul className="text-sm text-blue-700 space-y-1">
@@ -3807,7 +3852,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">📞 技術資訊</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>版本</strong>：v2.9.0</div>
+                                                <div>• <strong>版本</strong>：v2.9.1</div>
                                                 <div>• <strong>發布日期</strong>：{new Date().toLocaleDateString('zh-TW')}</div>
                                                 <div>• <strong>安全等級</strong>：高度 🛡️</div>
                                                 <div>• <strong>適用環境</strong>：離線使用，私人部署</div>
@@ -3821,7 +3866,7 @@ ${recordsToDelete.slice(0, 5).map((record, index) =>
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 對戰紀錄器 v2.9.0 | 離線使用 | 歷史搜索功能 + 策略推薦
+                            ArkRecode 對戰紀錄器 v2.9.1 | 離線使用 | 歷史搜索功能 + 策略推薦
                         </div>
                     </div>
                 </div>
