@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 公會戰紀錄器">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 公會戰紀錄器 v1.0.0</title>
+    <title>ArkRecode 公會戰紀錄器 v1.0.1</title>
 
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
@@ -151,7 +151,7 @@
 <body>
     <script src="./assets/header.js"></script>
     <div id="root"></div>
-    <div class="author-info">by zzas | 公會戰紀錄器 v1.0.0</div>
+    <div class="author-info">by zzas | 公會戰紀錄器 v1.0.1</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback, useRef } = React;
@@ -307,11 +307,14 @@
 
         // ==================== 速度推算 ====================
         function calcSpeed(myRef, opInitial, opRandom) {
-            const ms = parseFloat(myRef.speed);
-            const mi = parseFloat(myRef.initial);
-            if (!ms || !mi || !opInitial) return null;
+            if (!opInitial) return null;
             const oi = parseFloat(opInitial);
             if (isNaN(oi)) return null;
+            // 行動值 > 101 時視為直接輸入速度值
+            if (oi > 101) return { min: oi, max: oi };
+            const ms = parseFloat(myRef.speed);
+            const mi = parseFloat(myRef.initial);
+            if (!ms || !mi) return null;
             const mr = myRef.random !== '' ? parseFloat(myRef.random) : null;
             const or = opRandom    !== '' ? parseFloat(opRandom)    : null;
             if (mr !== null && or !== null) {
@@ -419,14 +422,14 @@
                         <div className="grid grid-cols-3 gap-2">
                             <div>
                                 <label className="text-xs text-gray-500 block mb-0.5">我方速度</label>
-                                <input type="number" placeholder="例: 241"
+                                <input type="number" placeholder={teamKey === 'team2' ? "例: 255" : "例: 241"}
                                     value={myRef.speed}
                                     onChange={e => onMyRefChange('speed', e.target.value)}
                                     className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
                             </div>
                             <div>
                                 <label className="text-xs text-gray-500 block mb-0.5">初始行動值</label>
-                                <input type="number" placeholder="90"
+                                <input type="number" placeholder={teamKey === 'team2' ? "95" : "90"}
                                     value={myRef.initial}
                                     onChange={e => onMyRefChange('initial', e.target.value)}
                                     className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400"/>
@@ -811,16 +814,18 @@
                 const uploadTeam = (team, teamNum) => {
                     const ops = team.opponents.filter(o => o.name);
                     const myC = team.myChars.filter(c => c.name);
+                    const cn = (name) => name ? convertAlias(name, characterAliases) : '';
                     const opStr = ops.map(o => {
                         const spd = o.calcSpeed?.min != null ? (o.calcSpeed.min===o.calcSpeed.max ? String(o.calcSpeed.min) : `${o.calcSpeed.min}~${o.calcSpeed.max}`) : '';
                         const parts = [spd, o.notes].filter(Boolean);
-                        return parts.length ? `${o.name}(${parts.join(',')})` : o.name;
+                        const n = cn(o.name);
+                        return parts.length ? `${n}(${parts.join(',')})` : n;
                     }).join(' ');
-                    const myStr = myC.map(c => c.speed ? `${c.name}(${c.speed})` : c.name).join(' ');
+                    const myStr = myC.map(c => { const n = cn(c.name); return c.speed ? `${n}(${c.speed})` : n; }).join(' ');
                     const notes = `第${teamNum}隊 | 對手:${opStr} | 我方:${myStr}`;
-                    // opponentTeam / myTeam 各補齊至 4 格（對齊 PvP 格式）
-                    const opArr  = [ops[0]?.name||'', ops[1]?.name||'', ops[2]?.name||'', ''];
-                    const myArr  = [myC[0]?.name||'', myC[1]?.name||'', myC[2]?.name||'', ''];
+                    // opponentTeam / myTeam 各補齊至 4 格（對齊 PvP 格式），傳角色原名
+                    const opArr  = [cn(ops[0]?.name)||'', cn(ops[1]?.name)||'', cn(ops[2]?.name)||'', ''];
+                    const myArr  = [cn(myC[0]?.name)||'', cn(myC[1]?.name)||'', cn(myC[2]?.name)||'', ''];
                     return {
                         date:         rec.date,
                         opponentName: `${rec.guild}·${rec.tower}·${rec.playerId}`,
@@ -980,7 +985,7 @@
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <Icon.Shield cls="text-yellow-500" size={22}/>
-                                    公會戰紀錄器 v1.0.0
+                                    公會戰紀錄器 v1.0.1
                                 </h1>
                                 <div className="flex gap-1 flex-wrap">
                                     {tabBtn('record',  <Icon.Plus size={13}/>, '記錄')}
@@ -1002,10 +1007,15 @@
                         {view === 'record' && (
                             <div className="space-y-4">
                                 <div className="bg-white rounded-lg shadow-lg p-5">
-                                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                        <Icon.Plus cls="text-blue-500" size={18}/>
-                                        新增公會戰紀錄
-                                    </h2>
+                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                                        <h2 className="text-lg font-semibold flex items-center gap-2">
+                                            <Icon.Plus cls="text-blue-500" size={18}/>
+                                            新增公會戰紀錄
+                                        </h2>
+                                        <p className="text-xs text-gray-400">
+                                            💡 行動值 &gt;101 時自動視為速度值
+                                        </p>
+                                    </div>
 
                                     {/* 基本資訊 */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -1345,7 +1355,7 @@
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 公會戰紀錄器 v1.0.0 | 離線使用 | 資料存於本機瀏覽器
+                            ArkRecode 公會戰紀錄器 v1.0.1 | 離線使用 | 資料存於本機瀏覽器
                         </div>
                     </div>
                 </div>
