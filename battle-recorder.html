@@ -893,7 +893,8 @@
             const [expanded, setExpanded] = React.useState(false);
             const MAX_LEN = 8;
             const sanitized = notes ? SecurityUtils.sanitizeHtml(notes) : '';
-            const truncated = sanitized.length > MAX_LEN;
+            const isMobile = window.innerWidth <= 640;
+            const truncated = !isMobile && sanitized.length > MAX_LEN;
 
             return (
                 <td className="py-2 px-2 max-w-32 text-xs notes-cell"
