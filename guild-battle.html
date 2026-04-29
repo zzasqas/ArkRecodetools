@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 公會戰紀錄器">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 公會戰紀錄器 v1.0.1</title>
+    <title>ArkRecode 公會戰紀錄器 v1.0.2</title>
 
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
@@ -151,7 +151,7 @@
 <body>
     <script src="./assets/header.js"></script>
     <div id="root"></div>
-    <div class="author-info">by zzas | 公會戰紀錄器 v1.0.1</div>
+    <div class="author-info">by zzas | 公會戰紀錄器 v1.0.2</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback, useRef } = React;
@@ -269,7 +269,11 @@
                 const raw = localStorage.getItem('arkrecode_characterAliases');
                 if (!raw) return defaults;
                 const saved = S.decode(raw);
-                if (Array.isArray(saved) && saved.length > 0) return saved;
+                if (!Array.isArray(saved) || saved.length === 0) return defaults;
+                // window.CHARACTER_ALIASES 為權威來源，使用者自訂的非重複角色附加在後
+                const defaultNames = new Set(defaults.map(c => c.name));
+                const extra = saved.filter(c => !defaultNames.has(c.name));
+                return [...defaults, ...extra];
             } catch {}
             return defaults;
         }
@@ -293,6 +297,7 @@
             result: null,
             opponents: [emptyOp(), emptyOp(), emptyOp()],
             myChars:   [emptyMy(), emptyMy(), emptyMy()],
+            teamNotes: '',
         });
         const emptyForm = () => ({
             date:     new Date().toISOString().split('T')[0],
@@ -394,7 +399,7 @@
         });
 
         // ==================== 隊伍區塊 ====================
-        const TeamBlock = React.memo(({ teamKey, team, myRef, onMyRefChange, label, charOptions, onChange, onResult }) => {
+        const TeamBlock = React.memo(({ teamKey, team, myRef, onMyRefChange, label, charOptions, onChange, onResult, onTeamNotesChange }) => {
             const sectionCls = `team-section ${team.result==='win' ? 'team-win' : team.result==='lose' ? 'team-lose' : ''}`;
             return (
                 <div className={sectionCls}>
@@ -470,6 +475,17 @@
                             ))}
                         </div>
                     </div>
+
+                    {/* 整體備註 */}
+                    <div className="mt-3">
+                        <label className="text-xs text-gray-500 mb-1 block">📝 整體備註</label>
+                        <input type="text"
+                            placeholder="例：對方有免疫隊長、我方帶雙治療…"
+                            value={team.teamNotes || ''}
+                            onChange={e => onTeamNotesChange(S.clean(e.target.value, true))}
+                            maxLength="100"
+                            className="w-full text-sm border rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-400"/>
+                    </div>
                 </div>
             );
         });
@@ -479,7 +495,7 @@
             const dateStr = rec.date
                 ? new Date(rec.date+'T00:00:00').toLocaleDateString('zh-TW',{month:'numeric',day:'numeric'})
                 : '';
-            const lines = [`📅 ${dateStr}｜vs ${rec.guild}｜${rec.tower}`];
+            const lines = [`${dateStr}｜vs ${rec.guild}｜${rec.tower}`];
             [rec.team1, rec.team2].forEach((team, ti) => {
                 const label = ti === 0 ? '第一隊' : '第二隊';
                 const mark  = team.result==='win' ? '✅' : team.result==='lose' ? '❌' : '　';
@@ -502,6 +518,7 @@
                         lines.push(`🔵 ${mys.map(c => c.speed ? `${c.name}(${c.speed})` : c.name).join(' · ')}`);
                     }
                 }
+                if (team.teamNotes) lines.push(`📝 ${team.teamNotes}`);
                 if (ti === 0) lines.push('');
             });
             return lines.join('\n');
@@ -609,6 +626,9 @@
                                             ))}
                                         </div>
                                     </div>
+                                    {t.teamNotes && (
+                                        <div className="mt-1.5 text-xs text-gray-500">📝 {S.html(t.teamNotes)}</div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -822,7 +842,7 @@
                         return parts.length ? `${n}(${parts.join(',')})` : n;
                     }).join(' ');
                     const myStr = myC.map(c => { const n = cn(c.name); return c.speed ? `${n}(${c.speed})` : n; }).join(' ');
-                    const notes = `第${teamNum}隊 | 對手:${opStr} | 我方:${myStr}`;
+                    const notes = `第${teamNum}隊 | 對手:${opStr} | 我方:${myStr}${team.teamNotes ? ` | 備註:${team.teamNotes}` : ''}`;
                     // opponentTeam / myTeam 各補齊至 4 格（對齊 PvP 格式），傳角色原名
                     const opArr  = [cn(ops[0]?.name)||'', cn(ops[1]?.name)||'', cn(ops[2]?.name)||'', ''];
                     const myArr  = [cn(myC[0]?.name)||'', cn(myC[1]?.name)||'', cn(myC[2]?.name)||'', ''];
@@ -886,6 +906,9 @@
             const handleResult = useCallback((teamKey, val) => {
                 setForm(p => ({...p, [teamKey]: {...p[teamKey], result: val}}));
             }, []);
+            const handleTeamNotesChange = useCallback((teamKey, val) => {
+                setForm(p => ({...p, [teamKey]: {...p[teamKey], teamNotes: val}}));
+            }, []);
 
             const handleSubmit = useCallback(() => {
                 if (!form.guild.trim())    { showToast('⚠️ 請填寫公會名稱！','warn'); return; }
@@ -906,6 +929,7 @@
                         name:  c.name ? convertAlias(S.clean(c.name), characterAliases) : '',
                         speed: c.speed,
                     })),
+                    teamNotes: S.clean(t.teamNotes || '', true),
                 });
                 const rec = {
                     id:       Date.now(),
@@ -985,7 +1009,7 @@
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <Icon.Shield cls="text-yellow-500" size={22}/>
-                                    公會戰紀錄器 v1.0.1
+                                    公會戰紀錄器 v1.0.2
                                 </h1>
                                 <div className="flex gap-1 flex-wrap">
                                     {tabBtn('record',  <Icon.Plus size={13}/>, '記錄')}
@@ -1059,11 +1083,13 @@
                                         <TeamBlock teamKey="team1" team={form.team1} myRef={form.myRef1}
                                             onMyRefChange={(f,v) => handleMyRefChange('team1', f, v)}
                                             label="第一隊" charOptions={charOptions}
-                                            onChange={handleTeamChange} onResult={handleResult}/>
+                                            onChange={handleTeamChange} onResult={handleResult}
+                                            onTeamNotesChange={v => handleTeamNotesChange('team1', v)}/>
                                         <TeamBlock teamKey="team2" team={form.team2} myRef={form.myRef2}
                                             onMyRefChange={(f,v) => handleMyRefChange('team2', f, v)}
                                             label="第二隊" charOptions={charOptions}
-                                            onChange={handleTeamChange} onResult={handleResult}/>
+                                            onChange={handleTeamChange} onResult={handleResult}
+                                            onTeamNotesChange={v => handleTeamNotesChange('team2', v)}/>
                                     </div>
 
                                     {/* 操作按鈕 */}
@@ -1267,6 +1293,22 @@
                                     </div>
                                 </div>
 
+                                {/* 角色暱稱快取 */}
+                                <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                        <span>👤</span> 角色暱稱快取
+                                    </h2>
+                                    <p className="text-sm text-gray-600 mb-3">
+                                        若搜尋時找不到某個暱稱（例如「暗大哥」），可清除快取後重新整理頁面，讓工具讀取最新的別名資料。
+                                    </p>
+                                    <button onClick={() => {
+                                        localStorage.removeItem('arkrecode_characterAliases');
+                                        showToast('✅ 角色暱稱快取已清除，請重新整理頁面');
+                                    }} className="px-4 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm font-medium">
+                                        🗑 清除角色暱稱快取
+                                    </button>
+                                </div>
+
                                 {/* Google Sheets 同步 */}
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1355,7 +1397,7 @@
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            ArkRecode 公會戰紀錄器 v1.0.1 | 離線使用 | 資料存於本機瀏覽器
+                            ArkRecode 公會戰紀錄器 v1.0.2 | 離線使用 | 資料存於本機瀏覽器
                         </div>
                     </div>
                 </div>
