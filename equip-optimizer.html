@@ -55,10 +55,18 @@ const { useState, useMemo, useEffect, useCallback, useRef } = React;
 const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊"};
 const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRate:"生命%",DefenceValue:"防禦",DefenceRate:"防禦%",SpeedValue:"速度",CriticalRate:"爆率",CriticalDamageRate:"爆傷",EffectHitRate:"命中",HitRate:"命中",ResistanceRate:"抗性"};
 // 末位數字 1-6 普遍對應六部位（規則全面適用，無需白名單）。
-// 特殊前綴：末位數字不符合標準慣例，改用「主屬性屬於哪個部位集合」做對映。
-// 格式：{前綴: {主屬性PropertyType: 部位}}
-// 其餘未列出的主屬性仍走原有 fallback。
-const SPECIAL_PFX_SLOT={"E050":{"AttackRate":"戒指","HPRate":"戒指","DefenceRate":"戒指"}};
+// 特殊前綴：末位數字不符合標準慣例（如使用 0-9 或整組僅有武/頭/甲），
+// 改用「主屬性屬於哪個部位集合」做對映。
+// 格式：{前綴: {主屬性PropertyType: 部位}}；其餘未列出的主屬性仍走原有 fallback。
+const SPECIAL_PFX_SLOT={
+  // E050：付費飾品系列，末位不符 1-6 慣例，整組無武器/頭盔/鎧甲
+  "E050":{"AttackRate":"戒指","HPRate":"戒指","DefenceRate":"戒指","CriticalRate":"項鍊","CriticalDamageRate":"項鍊","SpeedValue":"鞋子","EffectHitRate":"戒指","ResistanceRate":"戒指"},
+  // E042~E045：活動兌換裝備，末位使用 0-9（超出 1-6 慣例），整組只有武器/頭盔/鎧甲
+  "E042":{"AttackValue":"武器","HPValue":"頭盔","DefenceValue":"鎧甲"},
+  "E043":{"AttackValue":"武器","HPValue":"頭盔","DefenceValue":"鎧甲"},
+  "E044":{"AttackValue":"武器","HPValue":"頭盔","DefenceValue":"鎧甲"},
+  "E045":{"AttackValue":"武器","HPValue":"頭盔","DefenceValue":"鎧甲"},
+};
 // ★ 部位 mapping 持久化（獨立於裝備資料，清除裝備時不刪除）
 const LS_SLOT_MAP="arkrecode_slot_map";
 const getSlotMap=()=>{try{return JSON.parse(localStorage.getItem(LS_SLOT_MAP)||"{}");}catch(e){ console.warn('[arkrecode]', e); return{};}};
