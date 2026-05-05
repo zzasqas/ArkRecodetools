@@ -13,7 +13,7 @@
                script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval';
                connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
                style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
-<title>配裝計算器 v1.5.0 - ArkRecode Tools</title>
+<title>配裝計算器 v1.6.0 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -701,6 +701,8 @@ function App(){
   const[manualCharName,setManualCharName]=useState(null);
   // ★ 鎖定 tab 每角色的方案 sub-tab（0-2=自動方案, 3=手動配套）
   const[lockedPlanTab,setLockedPlanTab]=useState({});
+  // ★ 鎖定 tab 每角色是否收合
+  const[lockedCollapsed,setLockedCollapsed]=useState({});
   const cancelRef=useRef(true);
   const resultRefs=useRef({});
   const lockedCharRefs=useRef({});
@@ -1340,7 +1342,7 @@ function App(){
                 {/* 點外部關閉 */}
                 <div className="fixed inset-0 z-[9990]" onClick={()=>setNavOpen(false)}/>
                 <div className="absolute left-0 top-full mt-2 z-[9999] rounded-xl border border-slate-600 overflow-hidden shadow-2xl"
-                  style={{background:"#0F1628",minWidth:"200px"}}>
+                  style={{background:"#0F1628",minWidth:"260px"}}>
                   <div className="px-3 py-2 border-b border-slate-700/50">
                     <div className="text-[13px] text-slate-500 font-semibold tracking-widest uppercase">ArkRecode Tools</div>
                   </div>
@@ -1370,7 +1372,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.5.0</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.6.0</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -1930,7 +1932,9 @@ function App(){
                     <option value="攻擊">攻擊 ↓</option>
                     <option value="攻擊%">攻擊% ↓</option>
                     <option value="防禦">防禦 ↓</option>
+                    <option value="防禦%">防禦% ↓</option>
                     <option value="生命">生命 ↓</option>
+                    <option value="生命%">生命% ↓</option>
                     <option value="命中">命中 ↓</option>
                     <option value="抗性">抗性 ↓</option>
                   </select>
@@ -2006,23 +2010,26 @@ function App(){
                   const savedStats=isManualTab&&char&&mSaved?calcFinal(char,savedComboEqs.filter(Boolean),bondAtk,bondHp,breakBonus):null;
                   const hasSaved=mSaved&&Object.keys(mSaved).length===6;
                   const hasAnyChange=mSaved&&SLOTS.some(s=>mSlots[s]!==mSaved[s]);
+                  const isCollapsed=!!lockedCollapsed[name];
                   return(
                   <div key={name} ref={el=>lockedCharRefs.current[name]=el}
                     className="rounded-xl border border-slate-700/50 overflow-hidden" style={{background:"#0D1525"}}>
                     {/* 角色標題列 */}
                     <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-700/40" style={{background:"#111B2E"}}>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 cursor-pointer" onClick={()=>setLockedCollapsed(p=>({...p,[name]:!p[name]}))}>
+                        <span className="text-[11px] text-slate-500">{isCollapsed?"▶":"▼"}</span>
                         {(()=>{const c=chars.find(x=>x.name===name);return c?(
                           <><span className="w-2 h-2 rounded-full shrink-0" style={{background:EC[c.element]||"#94A3B8"}}/>
                           <Bg color={JC[c.job]||"#94A3B8"}>{c.job}</Bg></>
                         ):null;})()}
                         <span className="font-bold text-[14px] text-slate-100">{name}</span>
+                        {isCollapsed&&plans.length>0&&<span className="text-[11px] text-slate-500">（{plans.filter(Boolean).length} 方案）</span>}
                       </div>
                       {plans.length>0&&<button onClick={()=>unlockChar(name)} className="text-[12px] text-red-400 hover:text-red-300 transition-colors">全部解鎖</button>}
                     </div>
 
-                    {/* 方案 Tab 列 */}
-                    <div className="flex border-b border-slate-800/50" style={{background:"#0A1018"}}>
+                    {/* 方案 Tab 列（收合時隱藏） */}
+                    {!isCollapsed&&<div className="flex border-b border-slate-800/50" style={{background:"#0A1018"}}>
                       {[0,1,2].map(n=>{
                         const has=!!plans[n];
                         return(
@@ -2041,10 +2048,10 @@ function App(){
                         style={isManualTab?{background:"#052e1688",color:"#4ADE80",borderBottom:"2px solid #16A34A"}:{color:hasSaved?"#16A34A":"#475569"}}>
                         🖐 手動{hasSaved?" ✓":""}
                       </button>
-                    </div>
+                    </div>}
 
                     {/* ── 自動方案內容 ── */}
-                    {!isManualTab&&(
+                    {!isCollapsed&&!isManualTab&&(
                       <div className="p-3 space-y-2">
                         {activePlan?(
                           <>
@@ -2106,7 +2113,7 @@ function App(){
                     )}
 
                     {/* ── 手動配套內容（遊戲風格佈局） ── */}
-                    {isManualTab&&(
+                    {!isCollapsed&&isManualTab&&(
                       <div className="p-2 space-y-2">
                         {/* 快速帶入 + 全部復原 */}
                         <div className="flex items-center gap-1.5 flex-wrap">
