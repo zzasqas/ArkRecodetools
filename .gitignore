@@ -1,0 +1,18 @@
+# 裝備匯出檔（個人資料，不上雲端）
+Equipment_*.json
+
+# 開發文件（不需要版本控制）
+EQUIP_PLANNER_SPEC.md
+
+# Claude Code 設定（開發工具，不需版本控制）
+.claude/
+
+# 個人分析資料
+*.xlsx
+
+# 裝備計算器 Python 版（開發中，後續考慮合併至主分支）
+equip-planner-py/
+
+# 系統檔
+.DS_Store
+Thumbs.db
