@@ -13,7 +13,7 @@
                script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval';
                connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
                style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
-<title>配裝計算器 v1.6.0 - ArkRecode Tools</title>
+<title>配裝計算器 v1.6.1 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -658,7 +658,7 @@ function App(){
   const[runError,setRunError]=useState(null);
   const[locked,setLocked]=useState({});
   const[tab,setTab]=useState("config");
-  const[eqF,setEqF]=useState({slot:"",set:"",q:"",sort:""});
+  const[eqF,setEqF]=useState({slot:"",set:"",q:"",sort:"",nosubs:[]});
   const[newEq,setNewEq]=useState(false);
   const[showHelp,setShowHelp]=useState(false);
   const[progress,setProgress]=useState(null);
@@ -687,7 +687,7 @@ function App(){
   const[manualSaved,setManualSaved]=useState({});  // {charName:{武器:oid,...}} snapshot
   const[manualOpen,setManualOpen]=useState(null);  // charName | null
   const[manualCurSlot,setManualCurSlot]=useState("武器");
-  const[mEqF,setMEqF]=useState({main:[],sets:[],subs:[],sort:""});
+  const[mEqF,setMEqF]=useState({main:[],sets:[],subs:[],nosubs:[],sort:""});
   // ★ 裝備鎖定策略
   const[useIncludeLocked,setUseIncludeLocked]=useState(true); // true=搜索含已鎖定裝備（預設）
   const[superLocked,setSuperLocked]=useState(new Set()); // 超級鎖定的 oid — 所有配裝一律排除
@@ -979,6 +979,7 @@ function App(){
   const fEquips=useMemo(()=>{
     let l=equips;if(eqF.slot)l=l.filter(e=>e.slot===eqF.slot);if(eqF.set)l=l.filter(e=>e.set===eqF.set);
     if(eqF.q){const q=eqF.q.toLowerCase();l=l.filter(e=>e.mt.includes(q)||e.set.includes(q)||Object.keys(e.subs).some(k=>k.includes(q)));}
+    if(eqF.nosubs?.length)l=l.filter(e=>eqF.nosubs.every(s=>!(s in e.subs)));
     if(eqF.sort){
       const k=eqF.sort;
       l=[...l].sort((a,b)=>{
@@ -1372,7 +1373,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.6.0</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.6.1</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -1938,6 +1939,15 @@ function App(){
                     <option value="命中">命中 ↓</option>
                     <option value="抗性">抗性 ↓</option>
                   </select>
+                </div>
+                <div className="flex gap-1.5 items-center flex-wrap">
+                  <span className="text-[14px] text-slate-600 shrink-0">副屬不要</span>
+                  {MP_ALL_SUBS.map(s=>{const on=(eqF.nosubs||[]).includes(s);const dim=!on&&(eqF.nosubs||[]).length>=2;return(
+                    <span key={s} onClick={()=>{if(dim)return;const cur=eqF.nosubs||[];const next=cur.includes(s)?cur.filter(x=>x!==s):[...cur,s];setEqF(f=>({...f,nosubs:next}));}}
+                      className="text-[13px] px-2 py-0.5 rounded-full border cursor-pointer select-none transition-all"
+                      style={{background:on?"#450a0a":"#0D1525",color:on?"#f87171":"#64748B",borderColor:on?"#b91c1c88":"#1E293B",opacity:dim?0.35:1}}>{s}</span>
+                  );})}
+                  {(eqF.nosubs||[]).length>0&&<button onClick={()=>setEqF(f=>({...f,nosubs:[]}))} className="text-[12px] text-red-700 hover:text-red-500 ml-1">清除</button>}
                 </div>
                 {newEq&&<ManualForm onAdd={eq=>{setEquips(p=>[...p,{...eq,oid:"m_"+Date.now()+"_"+Math.random().toString(36).slice(2)}]);setNewEq(false);}} onCancel={()=>setNewEq(false)}/>}
                 <div className="text-[14px] text-slate-500 px-1">{fEquips.length} 件裝備</div>
@@ -2715,12 +2725,13 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
     if(eqF.main.length)l=l.filter(e=>eqF.main.includes(e.mt));
     if(eqF.sets.length)l=l.filter(e=>eqF.sets.includes(e.set));
     if(eqF.subs.length)l=l.filter(e=>eqF.subs.every(s=>s in e.subs||e.mt===s));
+    if(eqF.nosubs?.length)l=l.filter(e=>eqF.nosubs.every(s=>!(s in e.subs)));
     if(sk)l.sort((a,b)=>getSubN(b,sk)-getSubN(a,sk));
     else l.sort((a,b)=>(b.lv||0)-(a.lv||0));
     // saved always first
     if(savedOid){const si=l.findIndex(e=>e.oid===savedOid);if(si>0){const[it]=l.splice(si,1);l.unshift(it);}else if(si<0){const se=equips.find(e=>e.oid===savedOid);if(se)l.unshift(se);}}
     return l;
-  },[equips,slot,eqF.main,eqF.sets,eqF.subs,sk,savedOid]);
+  },[equips,slot,eqF.main,eqF.sets,eqF.subs,eqF.nosubs,sk,savedOid]);
 
   const togglePill=(arr,val,max,key)=>{
     const next=arr.includes(val)?arr.filter(x=>x!==val):arr.length<max?[...arr,val]:arr;
@@ -2729,7 +2740,7 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
 
   return(
     <div className="space-y-2">
-      {/* Filters: 套裝 → 主屬 → 副屬 */}
+      {/* Filters: 套裝 → 主屬 → 副屬含 */}
       <div className="grid grid-cols-3 gap-2">
         {[["套裝",MP_ALL_SETS,"sets",3],["主屬",curMT,"main",2],["副屬含",MP_ALL_SUBS,"subs",3]].map(([label,opts,key,max])=>(
           <div key={key}>
@@ -2746,6 +2757,21 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
             </div>
           </div>
         ))}
+      </div>
+      {/* 副屬不要：最多 2 選，紅色 */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-[12px] text-slate-500 font-semibold">副屬不要</span>
+          <span className="text-[11px] text-slate-700">（最多 2 項）</span>
+          {(eqF.nosubs||[]).length>0&&<button onClick={()=>setEqF(f=>({...f,nosubs:[]}))} className="text-[11px] text-red-600 hover:text-red-400">清除</button>}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {MP_ALL_SUBS.map(o=>{const on=(eqF.nosubs||[]).includes(o);const dim=!on&&(eqF.nosubs||[]).length>=2;
+            return(<span key={o} onClick={()=>{if(dim)return;const cur=eqF.nosubs||[];const next=cur.includes(o)?cur.filter(x=>x!==o):[...cur,o];setEqF(f=>({...f,nosubs:next}));}}
+              className="text-[14px] px-2 py-0.5 rounded-full border cursor-pointer select-none transition-all"
+              style={{background:on?"#450a0a":"#0D1525",color:on?"#f87171":"#64748B",borderColor:on?"#b91c1c88":"#1E293B",opacity:dim?0.3:1}}>{o}</span>);
+          })}
+        </div>
       </div>
       {/* Sort + count */}
       <div className="flex items-center gap-2">
