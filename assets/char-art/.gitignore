@@ -1,0 +1,7 @@
+# 原始圖檔只留本機，只推 WebP
+*.png
+*.jpg
+*.jpeg
+*.PNG
+*.JPG
+*.JPEG

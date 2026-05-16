@@ -43,6 +43,17 @@
         /* Popup */
         .builds-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}
         .builds-popup{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:500px;max-width:95vw;max-height:88vh;overflow-y:auto}
+        /* 角色插圖 */
+        .char-art-bg{position:absolute;inset:0;border-radius:inherit;background-size:cover;background-position:center top;opacity:0.18;filter:blur(3px);z-index:0;pointer-events:none}
+        .char-art-btn{position:absolute;bottom:8px;right:8px;z-index:3;background:rgba(0,0,0,0.45);color:white;border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;padding:0}
+        .character-card:hover .char-art-btn{opacity:1}
+        .char-art-content{position:relative;z-index:1}
+        .art-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px}
+        .art-modal-inner{position:relative;display:inline-block}
+        .art-modal-img{max-height:92vh;max-width:88vw;object-fit:contain;border-radius:8px;display:block;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+        .art-modal-close{position:absolute;top:-14px;right:-14px;background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:18px;line-height:1;transition:background 0.2s;display:flex;align-items:center;justify-content:center}
+        .art-modal-close:hover{background:rgba(255,255,255,0.35)}
+        .art-modal-name{text-align:center;color:rgba(255,255,255,0.85);margin-top:10px;font-size:15px;font-weight:600;letter-spacing:0.05em}
     </style>
     <script src="./assets/analytics.js"></script>
 </head>
@@ -485,7 +496,14 @@
         };
 
         // ==================== 角色卡片 ====================
-        const CharacterCard = ({ character, showEnglish, onContextMenu, onViewBuilds, hasBuilds }) => {
+        const CharacterCard = ({ character, showEnglish, onContextMenu, onViewBuilds, hasBuilds, onViewArt }) => {
+            const [hasArt, setHasArt] = useState(false);
+            const artUrl = `./assets/char-art/${encodeURIComponent(character.nameCN)}.webp`;
+            useEffect(() => {
+                const img = new window.Image();
+                img.onload = () => setHasArt(true);
+                img.src = artUrl;
+            }, [artUrl]);
             const attribute = ATTRIBUTES[character.attribute];
             const job = JOBS[character.job];
             const displayName = showEnglish ? character.nameEN : character.nameCN;
@@ -493,10 +511,15 @@
                 <div className={`character-card p-4 rounded-lg border-2 attribute-${character.attribute} relative`}
                     onClick={() => onViewBuilds(character)}
                     onContextMenu={e=>{e.preventDefault();onContextMenu(e,character);}}>
+                    {hasArt && <div className="char-art-bg" style={{backgroundImage:`url(${artUrl})`}}/>}
+                    {hasArt && (
+                        <button className="char-art-btn" title="查看角色插圖"
+                            onClick={e=>{e.stopPropagation();onViewArt(character,artUrl);}}>🖼</button>
+                    )}
                     <div className="build-hint">
                         {hasBuilds ? '⚙️ 查看推薦配裝' : '⚙️ 前往配裝計算器'}
                     </div>
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="char-art-content flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
                             <div className={`px-2 py-1 rounded-lg bg-${attribute.color}-100 text-${attribute.color}-700 flex items-center gap-1 text-sm font-bold`}>
                                 <span className="text-base">{attribute.icon}</span>
@@ -514,7 +537,7 @@
                             </span>
                         )}
                     </div>
-                    <div>
+                    <div className="char-art-content">
                         <h3 className="text-lg font-bold text-gray-800 mb-1">{displayName}</h3>
                         {!showEnglish && (
                             <div className="text-sm text-gray-600">
@@ -525,6 +548,26 @@
                         {showEnglish && (
                             <div className="text-sm text-gray-600">暱稱：<span className="font-bold text-blue-600">{character.aliases.join('、')}</span></div>
                         )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 角色插圖 Modal ====================
+        const ArtModal = ({ character, artUrl, onClose }) => {
+            useEffect(() => {
+                if (!character) return;
+                const handler = e => { if (e.key === 'Escape') onClose(); };
+                window.addEventListener('keydown', handler);
+                return () => window.removeEventListener('keydown', handler);
+            }, [character, onClose]);
+            if (!character) return null;
+            return (
+                <div className="art-modal-overlay" onClick={onClose}>
+                    <div className="art-modal-inner" onClick={e => e.stopPropagation()}>
+                        <button className="art-modal-close" onClick={onClose}>×</button>
+                        <img className="art-modal-img" src={artUrl} alt={character.nameCN}/>
+                        <div className="art-modal-name">{character.nameCN}</div>
                     </div>
                 </div>
             );
@@ -678,6 +721,8 @@
             const handleContextMenu = useCallback((e,c)=>setContextMenu({show:true,x:e.clientX,y:e.clientY,character:c}),[]);
             const handleCloseContextMenu = useCallback(()=>setContextMenu({show:false,x:0,y:0,character:null}),[]);
             const handleViewBuilds = useCallback(c=>setBuildsPopup(c),[]);
+            const [artModal, setArtModal] = useState(null);
+            const handleViewArt = useCallback((c,url)=>setArtModal({character:c,url}),[]);
 
             const filterDescription = useMemo(()=>{
                 const conds=[];
@@ -752,7 +797,8 @@
                                     <CharacterCard key={c.id} character={c} showEnglish={showEnglish}
                                         onContextMenu={handleContextMenu}
                                         onViewBuilds={handleViewBuilds}
-                                        hasBuilds={!!(buildsData[c.nameCN]?.length)}/>
+                                        hasBuilds={!!(buildsData[c.nameCN]?.length)}
+                                        onViewArt={handleViewArt}/>
                                 ))}
                             </div>
                         ) : (
@@ -810,6 +856,9 @@
 
                         {/* 推薦配裝 Popup */}
                         {buildsPopup && <BuildsPopup character={buildsPopup} builds={buildsData} onClose={()=>setBuildsPopup(null)}/>}
+
+                        {/* 角色插圖 Modal */}
+                        {artModal && <ArtModal character={artModal.character} artUrl={artModal.url} onClose={()=>setArtModal(null)}/>}
 
                         {/* 右鍵選單 */}
                         {contextMenu.show && <ContextMenu x={contextMenu.x} y={contextMenu.y} character={contextMenu.character} onEdit={handleEditCharacter} onClose={handleCloseContextMenu} onViewBuilds={handleViewBuilds}/>}

@@ -1,0 +1,55 @@
+name: Compress Character Art to WebP
+
+on:
+  push:
+    paths:
+      - 'assets/char-art/**'
+
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pillow
+        run: pip install Pillow
+
+      - name: Convert and compress images to WebP
+        run: |
+          python3 << 'EOF'
+          import os
+          from PIL import Image
+
+          art_dir = "assets/char-art"
+          exts = {'.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'}
+          converted = 0
+
+          for fname in sorted(os.listdir(art_dir)):
+              stem, ext = os.path.splitext(fname)
+              if ext not in exts:
+                  continue
+              src = os.path.join(art_dir, fname)
+              dst = os.path.join(art_dir, stem + '.webp')
+
+              img = Image.open(src).convert('RGBA' if ext.lower() == '.png' else 'RGB')
+              w, h = img.size
+              # 最大寬度 800px，等比縮放
+              if w > 800:
+                  img = img.resize((800, int(h * 800 / w)), Image.LANCZOS)
+              img.save(dst, 'WEBP', quality=82, method=6)
+              print(f"  {fname}  ({w}x{h}) → {stem}.webp ({img.size[0]}x{img.size[1]})")
+              converted += 1
+
+          print(f"\n完成：共轉換 {converted} 張圖片")
+          EOF
+
+      - name: Commit WebP files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/char-art/*.webp 2>/dev/null || true
+          git diff --staged --quiet && echo "No changes to commit" || git commit -m "chore: auto-compress char art to WebP"
+          git push
