@@ -645,7 +645,7 @@ function App(){
   const[selChar,setSelChar]=useState(null);
   const[elemTab,setElemTab]=useState("水");
   const[search,setSearch]=useState("");
-  const[favs,setFavs]=useState(["望月"]);
+  const[favs,setFavs]=useState(()=>{try{const s=localStorage.getItem("arkrecode_favs");if(s){const p=JSON.parse(s);if(Array.isArray(p))return p;}}catch(e){}return["望月"];});
   const[hidden,setHidden]=useState(DEMO_CHARS.filter(c=>c.star<=4).map(c=>c.name));
   const[showHid,setShowHid]=useState(false);
   const[bondAtk,setBondAtk]=useState(0);
@@ -973,8 +973,13 @@ function App(){
     if(search){const q=search.toLowerCase();list=list.filter(c=>c.name.toLowerCase().includes(q));}
     if(elemTab==="⭐")list=list.filter(c=>favs.includes(c.name));
     else if(elemTab)list=list.filter(c=>c.element===elemTab);
-    return list.sort((a,b)=>{const af=favs.includes(a.name)?0:1,bf=favs.includes(b.name)?0:1;if(af!==bf)return af-bf;return b.star-a.star;});
-  },[chars,search,elemTab,favs,hidden,showHid]);
+    const hasBuild=n=>!!(locked[n]&&(locked[n].plans||[]).some(Boolean));
+    return list.sort((a,b)=>{
+      const ar=favs.includes(a.name)?0:hasBuild(a.name)?1:2;
+      const br=favs.includes(b.name)?0:hasBuild(b.name)?1:2;
+      return ar-br;
+    });
+  },[chars,search,elemTab,favs,hidden,showHid,locked]);
 
   const fEquips=useMemo(()=>{
     let l=equips;if(eqF.slot)l=l.filter(e=>e.slot===eqF.slot);if(eqF.set)l=l.filter(e=>e.set===eqF.set);
@@ -1295,6 +1300,9 @@ function App(){
 
   const canRun=selChar&&equips.length>0&&!running;
   // ★ 自動儲存鎖定方案到 localStorage
+  useEffect(()=>{
+    try{localStorage.setItem("arkrecode_favs",JSON.stringify(favs));}catch(e){ console.warn('[arkrecode]', e); }
+  },[favs]);
   useEffect(()=>{
     try{
       if(Object.keys(locked).length>0)localStorage.setItem("arkrecode_locked_plans",JSON.stringify(locked));
