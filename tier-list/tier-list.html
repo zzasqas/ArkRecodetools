@@ -52,7 +52,7 @@
 <body>
 <div id="root"></div>
 <script src="chars-data.js"></script>
-<script src="../../assets/char-name-data.js"></script>
+<script src="../assets/char-name-data.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
@@ -99,7 +99,7 @@ const LS_DEVICE_ID  = 'tierlist_device_id';
 const LS_SUBMITTED  = 'tierlist_submitted';
 const RAILWAY_URL   = 'https://arkrecodetools-production.up.railway.app';
 
-// 預設隱藏：所有 3★ 角色（下水道），首次載入自動套用
+// 預設隱藏：所有 3★ 角色（下水道）+ 強度較低的 4★/5★，首次載入自動套用
 const DEFAULT_HIDDEN = new Set([
   // 3★ 火
   '茵羅洛','貝琳','歐戴摩亞','拉娜','布洛瑟姆','珍','史嘉蕾','露比','葛瑞絲','伊娥絲熊熊',
@@ -111,6 +111,11 @@ const DEFAULT_HIDDEN = new Set([
   '希諾莉','潘黛希亞','費南雪','賈妮絲','珮忒菈','皮提特','凱蒂達','璀璨誓約的伊娥絲熊熊',
   // 3★ 暗
   '華勒弗','穆麗兒','伊比','塔琳','潘倪克思','萊拉','涅瓦','維爾莉特',
+  // 額外隱藏（強度較低）
+  '瑪蒂爾達','菲莉斯','哈蒂','蛛美','喬依絲','瑟妮卡',   // 火
+  '泰里莎','蓓蕾卡',                                       // 水
+  '黛琳娜','巴爾托絲',                                     // 木
+  '復仇的路易絲',                                          // 暗
 ]);
 
 // ── 工具 ──────────────────────────────────────────────────────────────────────
@@ -198,8 +203,8 @@ function saveModeData(modeId, tiersConfig, tierMembers, charNotes, charPlusMinus
   }));
 }
 
-function iconPath(n) { return `../星隕角色圖標/${n}.png`; }
-function artPath(n)  { return `../../assets/char-art/${n}.webp`; }
+function iconPath(n) { return `../local/星隕角色圖標/${n}.png`; }
+function artPath(n)  { return `../assets/char-art/${n}.webp`; }
 function getNamesFromEl(el) { return Array.from(el.children).map(c=>c.dataset.name).filter(Boolean); }
 
 function makeSortableHandler(onEndRef) {
@@ -737,6 +742,7 @@ function App() {
   const [noteModal,     setNoteModal]     = useState(null);
   const [voteMode,      setVoteMode]      = useState(()=>localStorage.getItem('tierlist_vote_mode')==='1');
   const [submitModal,   setSubmitModal]   = useState(null); // modeId or null
+  const [showGuide,     setShowGuide]     = useState(false);
 
   useEffect(() => { saveModeData(currentModeId, tiersConfig, tierMembers, charNotes, charPlusMinus); }, [tiersConfig, tierMembers, currentModeId, charNotes, charPlusMinus]);
   useEffect(() => { localStorage.setItem(LS_AUTHOR, author); }, [author]);
@@ -1021,12 +1027,18 @@ function App() {
         <div className="px-4 pt-2 flex items-center gap-3">
           <span className="font-bold text-slate-100">★ 星隕 Tier List</span>
           <div className="flex items-center gap-1 ml-4">
-            <span className="text-xs text-slate-500">作者</span>
+            <span className="text-xs" style={{color: voteMode && !author.trim() ? '#f87171' : '#64748b'}}>
+              作者{voteMode ? ' *' : ''}
+            </span>
             <input type="text" value={author} onChange={e=>setAuthor(e.target.value)}
-              placeholder="填入暱稱…"
-              style={{background:'#1e293b',border:'1px solid #334155',borderRadius:4,
-                padding:'2px 8px',fontSize:12,color:'#cbd5e1',width:120}}/>
+              placeholder={voteMode ? '必填…' : '填入暱稱…'}
+              style={{background:'#1e293b',
+                border:`1px solid ${voteMode && !author.trim() ? '#ef4444' : '#334155'}`,
+                borderRadius:4, padding:'2px 8px',fontSize:12,color:'#cbd5e1',width:120}}/>
           </div>
+          <button onClick={()=>setShowGuide(v=>!v)}
+            title="使用說明"
+            style={{...btnStyle(showGuide),padding:'2px 7px',fontSize:13,marginLeft:4}}>?</button>
           <div className="flex items-center gap-1 ml-auto">
             {!voteMode&&<>
               <button onClick={resetCurrentMode} style={btnStyle(false,'#7f1d1d')}>↺ 重置</button>
@@ -1040,8 +1052,10 @@ function App() {
             </>}
             {voteMode&&(
               canSubmitMode(currentModeId)
-                ? <button onClick={()=>setSubmitModal(currentModeId)}
-                    style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>
+                ? <button onClick={()=>{
+                    if(!author.trim()){alert('請先填入左上角的「作者」暱稱（必填）才能提交！');return;}
+                    setSubmitModal(currentModeId);
+                  }} style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>
                     📤 提交排名
                   </button>
                 : <button onClick={()=>setSubmitModal(currentModeId)}
@@ -1062,6 +1076,22 @@ function App() {
             onDelete={deleteMode} onRename={renameMode} onDuplicate={duplicateMode} locked={voteMode}/>
         </div>
       </header>
+
+      {showGuide&&(
+        <div style={{background:'#1e293b',borderBottom:'1px solid #334155',padding:'14px 20px',fontSize:13,color:'#94a3b8',lineHeight:1.75}}>
+          <div style={{fontWeight:700,color:'#e2e8f0',marginBottom:8,fontSize:14}}>📖 使用說明</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 24px'}}>
+            <div>① 從下方「池子」拖曳角色到 Tier 列進行排名</div>
+            <div>② 點角色左上角 × 可隱藏不需要的角色（初始已隱藏 3★）</div>
+            <div>③ 在左上角填入你的<span style={{color:'#fbbf24'}}> 作者暱稱（必填）</span></div>
+            <div>④ 點擊「🗳️ 投票模式」鎖定 Tier 結構（S/A/B/C/D），準備提交</div>
+            <div>⑤ 點擊「📤 提交排名」送出本週排名</div>
+            <div>⑥ 每個模式<span style={{color:'#fb923c'}}> 每週限提交一次</span>，提交後本週不可修改</div>
+            <div>⑦ 提交成功後會產生<span style={{color:'#60a5fa'}}> 分享連結</span>，可分享給其他玩家觀看</div>
+            <div>⑧ 社群統計結果會定期整理並公開發布</div>
+          </div>
+        </div>
+      )}
 
       <main className="p-4 space-y-3">
         <TierSection tiersConfig={tiersConfig} tierMembers={tierMembers} charMap={charMap}
