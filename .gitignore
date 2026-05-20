@@ -17,6 +17,13 @@ equip-planner-py/
 server/node_modules/
 server/submissions.jsonl
 
+# local/ 開發工具與分析產出（不上雲端）
+local/*.py
+local/*.txt
+local/rta_*.json
+local/row_name_map.json
+local/tier-list-plan.md
+
 # 系統檔
 .DS_Store
 Thumbs.db

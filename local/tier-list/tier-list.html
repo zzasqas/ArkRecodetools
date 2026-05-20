@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星隕 Tier List 編輯器 v0.1.0</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<style>
+  body { margin:0; background:#0f172a; color:#e2e8f0; font-family:'Segoe UI',sans-serif; }
+  .char-card { user-select:none; }
+  .hide-btn {
+    position:absolute; top:2px; left:2px; width:16px; height:16px;
+    background:rgba(0,0,0,0.75); color:#f87171; border:none; border-radius:3px;
+    font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity 0.12s; z-index:2;
+  }
+  .char-card-wrap:hover .hide-btn { opacity:1; }
+  .pin-btn {
+    width:100%; height:16px; margin-top:1px; background:transparent;
+    border:1px solid #334155; border-radius:3px; font-size:10px; cursor:pointer;
+    color:#64748b; opacity:0; transition:opacity 0.12s;
+    display:flex; align-items:center; justify-content:center; gap:2px;
+  }
+  .char-card-wrap:hover .pin-btn { opacity:1; }
+  .pin-btn.pinned { opacity:1; color:#fbbf24; border-color:#78350f; background:rgba(120,53,15,0.3); }
+  .sortable-ghost  { opacity:0.3; }
+  .sortable-chosen { cursor:grabbing; }
+  .tier-drop-zone  { flex:1; display:flex; flex-wrap:wrap; gap:4px; padding:6px; min-height:88px; }
+  .tier-drag-handle { cursor:grab; opacity:0.4; font-size:14px; padding:0 4px; transition:opacity 0.15s; }
+  .tier-row-wrap:hover .tier-drag-handle { opacity:0.8; }
+  .tier-ctrl-btn {
+    background:none; border:none; cursor:pointer; font-size:11px; padding:2px 4px;
+    border-radius:3px; transition:background 0.12s; color:#64748b;
+  }
+  .tier-ctrl-btn:hover { background:rgba(255,255,255,0.08); color:#e2e8f0; }
+  .tier-ctrl-btn.active { color:#fbbf24; }
+  .tier-del-btn { opacity:0; transition:opacity 0.15s; color:#f87171; }
+  .tier-row-wrap:hover .tier-del-btn { opacity:1; }
+  .mode-tab { padding:4px 12px; border-radius:6px 6px 0 0; border:1px solid #334155; border-bottom:none;
+    cursor:pointer; font-size:13px; background:transparent; color:#64748b; transition:all 0.15s; white-space:nowrap; }
+  .mode-tab.active { background:#1e293b; color:#e2e8f0; border-color:#475569; }
+  .mode-tab:hover:not(.active) { color:#94a3b8; }
+  .mode-tab-input { background:transparent; border:none; outline:none; color:inherit;
+    font-size:13px; width:80px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="chars-data.js"></script>
+<script src="../../assets/char-name-data.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+// ── 常數 ──────────────────────────────────────────────────────────────────────
+
+const ELEMENT_ORDER = ['火','水','木','光','暗'];
+const ROLE_ORDER    = ['狙擊','術師','戰士','重裝','先鋒','醫療','特種'];
+const ELEMENT_STYLE = {
+  '火':{ bg:'#7f1d1d', badge:'#ef4444', label:'#fca5a5' },
+  '水':{ bg:'#1e3a5f', badge:'#3b82f6', label:'#93c5fd' },
+  '木':{ bg:'#14532d', badge:'#22c55e', label:'#86efac' },
+  '光':{ bg:'#713f12', badge:'#eab308', label:'#fde047' },
+  '暗':{ bg:'#3b0764', badge:'#8b5cf6', label:'#c4b5fd' },
+};
+const DEFAULT_MODES = [
+  { id:'overall', name:'綜合強度' },
+  { id:'gvg', name:'GVG' },
+  { id:'pvp', name:'PVP' },
+  { id:'rta', name:'RTA' },
+];
+const DEFAULT_TIERS_CFG = [
+  { id:'S', name:'S', color:'#991b1b', textColor:'#fca5a5', desc:'' },
+  { id:'A', name:'A', color:'#92400e', textColor:'#fcd34d', desc:'' },
+  { id:'B', name:'B', color:'#3f6212', textColor:'#bef264', desc:'' },
+  { id:'C', name:'C', color:'#1e3a5f', textColor:'#93c5fd', desc:'' },
+  { id:'D', name:'D', color:'#3b0764', textColor:'#c4b5fd', desc:'' },
+];
+const TIER_COLORS = [
+  { color:'#991b1b', textColor:'#fca5a5' },
+  { color:'#92400e', textColor:'#fcd34d' },
+  { color:'#3f6212', textColor:'#bef264' },
+  { color:'#1e3a5f', textColor:'#93c5fd' },
+  { color:'#3b0764', textColor:'#c4b5fd' },
+  { color:'#334155', textColor:'#94a3b8' },
+];
+const SORTABLE_CHAR  = 'tier-list';
+const SORTABLE_TIERS = 'tier-rows';
+const LS_AUTHOR   = 'tierlist_author';
+const LS_MODES    = 'tierlist_modes';
+const LS_MODE_PFX = 'tierlist_mode_';
+const LS_HIDDEN   = 'tierlist_hidden';
+const LS_PINNED     = 'tierlist_keep_noimage';
+const LS_DEVICE_ID  = 'tierlist_device_id';
+const LS_SUBMITTED  = 'tierlist_submitted';
+const RAILWAY_URL   = 'https://arkrecodetools-production.up.railway.app';
+
+// 預設隱藏：所有 3★ 角色（下水道），首次載入自動套用
+const DEFAULT_HIDDEN = new Set([
+  // 3★ 火
+  '茵羅洛','貝琳','歐戴摩亞','拉娜','布洛瑟姆','珍','史嘉蕾','露比','葛瑞絲','伊娥絲熊熊',
+  // 3★ 水
+  '瓦妮莎','派狄亞','歐爾嘉','希蓓爾','彌卡伊勒','尤菲米亞','邦妮','翠西','西爾維納','梅芙',
+  // 3★ 木
+  '辛狄','耶莉卡','安特亞','塔亞','帕梅勒','緹娜','奎妮','薩菲爾','神樂',
+  // 3★ 光
+  '希諾莉','潘黛希亞','費南雪','賈妮絲','珮忒菈','皮提特','凱蒂達','璀璨誓約的伊娥絲熊熊',
+  // 3★ 暗
+  '華勒弗','穆麗兒','伊比','塔琳','潘倪克思','萊拉','涅瓦','維爾莉特',
+]);
+
+// ── 工具 ──────────────────────────────────────────────────────────────────────
+
+function sortChars(chars) {
+  return [...chars].sort((a,b) => {
+    const ea=ELEMENT_ORDER.indexOf(a.element), eb=ELEMENT_ORDER.indexOf(b.element);
+    if(ea!==eb) return ea-eb;
+    const ra=ROLE_ORDER.indexOf(a.role), rb=ROLE_ORDER.indexOf(b.role);
+    if(ra!==rb) return ra-rb;
+    return b.star-a.star;
+  });
+}
+function loadSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key)||'[]')); } catch { return new Set(); }
+}
+
+function getISOWeek(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const w = new Date(d.getFullYear(), 0, 4);
+  return d.getFullYear() + '-W' +
+    String(1 + Math.round(((d - w) / 86400000 - 3 + (w.getDay() + 6) % 7) / 7)).padStart(2, '0');
+}
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem(LS_DEVICE_ID);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(LS_DEVICE_ID, id); }
+  return id;
+}
+function getSubmitted() {
+  try { return JSON.parse(localStorage.getItem(LS_SUBMITTED) || '{}'); } catch { return {}; }
+}
+function canSubmitMode(modeId) {
+  const rec = getSubmitted()[modeId];
+  return !rec || rec.week !== getISOWeek();
+}
+
+// loadModes：Migration — 移除舊預設 ID (arena/guild)，確保 overall 在最前
+function loadModes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LS_MODES));
+    if (!stored?.length) return DEFAULT_MODES;
+    const OLD_IDS = new Set(['arena','guild']);
+    let result = stored.filter(m => !OLD_IDS.has(m.id));
+    if (!result.find(m => m.id === 'overall')) {
+      result.unshift({ id:'overall', name:'綜合強度' });
+      localStorage.setItem(LS_MODES, JSON.stringify(result));
+    }
+    return result;
+  } catch { return DEFAULT_MODES; }
+}
+function saveModes(modes) { localStorage.setItem(LS_MODES, JSON.stringify(modes)); }
+
+function emptyTierMembers(cfg) {
+  const m = {};
+  cfg.forEach(t => { m[t.id] = []; });
+  return m;
+}
+
+function loadModeData(modeId) {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_MODE_PFX + modeId));
+    if (d) {
+      const cfg = (d.tiersConfig?.length ? d.tiersConfig : DEFAULT_TIERS_CFG)
+        .map(t => { const { plusMinus, ...rest } = t; return rest; }); // strip old plusMinus field
+      const mem = d.tierMembers || emptyTierMembers(cfg);
+      // migrate old S+/S- sub-tier keys back into base tier
+      const baseIds = new Set(cfg.map(t => t.id));
+      Object.keys(mem).forEach(key => {
+        const base = key.replace(/[+\-]$/, '');
+        if (!baseIds.has(key) && baseIds.has(base)) {
+          mem[base] = [...(mem[base]||[]), ...mem[key]];
+          delete mem[key];
+        }
+      });
+      return { tiersConfig: cfg, tierMembers: mem, charNotes: d.charNotes || {}, charPlusMinus: d.charPlusMinus || {} };
+    }
+  } catch {}
+  return { tiersConfig: DEFAULT_TIERS_CFG, tierMembers: emptyTierMembers(DEFAULT_TIERS_CFG), charNotes: {}, charPlusMinus: {} };
+}
+function saveModeData(modeId, tiersConfig, tierMembers, charNotes, charPlusMinus) {
+  localStorage.setItem(LS_MODE_PFX + modeId, JSON.stringify({
+    version:'0.1.0', tiersConfig, tierMembers, charNotes: charNotes||{}, charPlusMinus: charPlusMinus||{}, updatedAt: new Date().toISOString(),
+  }));
+}
+
+function iconPath(n) { return `../星隕角色圖標/${n}.png`; }
+function artPath(n)  { return `../../assets/char-art/${n}.webp`; }
+function getNamesFromEl(el) { return Array.from(el.children).map(c=>c.dataset.name).filter(Boolean); }
+
+function makeSortableHandler(onEndRef) {
+  return function(evt) {
+    const fromId=evt.from.dataset.id, toId=evt.to.dataset.id;
+    if(fromId===toId && evt.oldIndex===evt.newIndex) return;
+    const toNames=getNamesFromEl(evt.to);
+    const fromNames=fromId!==toId ? getNamesFromEl(evt.from) : null;
+    const {item,from,oldIndex}=evt;
+    if(item.parentNode) item.parentNode.removeChild(item);
+    // 還原時只計算有 data-name 的兄弟節點（避免 pool 裡的 header divs 干擾 index）
+    const named=Array.from(from.children).filter(c=>c.dataset.name);
+    if(oldIndex<named.length) from.insertBefore(item,named[oldIndex]);
+    else from.appendChild(item);
+    onEndRef.current(fromId,toId,toNames,fromNames);
+  };
+}
+
+// ── 角色卡 ────────────────────────────────────────────────────────────────────
+
+function CharCard({ char, dimmed, showNoImage=false, isHidden, showHidden,
+                    onToggleHidden, isPinned, onTogglePin, compact=false,
+                    onNoteClick, hasNote=false, pm='', preferLargeArt=false }) {
+  const primaryPath = preferLargeArt ? artPath(char.name) : iconPath(char.name);
+  const fallbackPath= preferLargeArt ? iconPath(char.name) : artPath(char.name);
+  const [src,setSrc]=useState(()=>primaryPath);
+  const [imgFailed,setImgFailed]=useState(false);
+  const mdRef=useRef(0);
+  const es=ELEMENT_STYLE[char.element]||{bg:'#374151',badge:'#6b7280',label:'#d1d5db'};
+  useEffect(()=>{ setSrc(primaryPath); setImgFailed(false); },[preferLargeArt,char.name]);
+  function handleError() {
+    if(src===primaryPath) setSrc(fallbackPath);
+    else setImgFailed(true);
+  }
+  if(imgFailed&&!isPinned&&!showNoImage) return null;
+  if(isHidden&&!showHidden) return null;
+  const sz=compact?64:80;
+  return (
+    <div className="char-card-wrap char-card flex flex-col" data-name={char.name}
+      onMouseDown={()=>{ mdRef.current=Date.now(); }}
+      onClick={()=>{ if(onNoteClick&&Date.now()-mdRef.current<280) onNoteClick(char.name); }}
+      style={{width:sz,opacity:dimmed?0.22:1,transition:'opacity 0.15s',cursor:'grab',position:'relative'}}>
+      {pm&&<span style={{position:'absolute',top:-5,right:-5,zIndex:3,background:es.badge,color:'#fff',
+        fontSize:11,fontWeight:700,padding:'1px 0',borderRadius:4,lineHeight:1.4,
+        display:'inline-block',width:16,textAlign:'center',boxShadow:'0 1px 4px rgba(0,0,0,0.5)'}}>{pm}</span>}
+      <div style={{width:sz,height:sz,borderRadius:6,overflow:'hidden',
+        border:isHidden?'2px dashed #475569':isPinned&&imgFailed?'2px solid #92400e':`2px solid ${es.badge}`,
+        background:es.bg,position:'relative',flexShrink:0,
+        filter:isHidden?'grayscale(80%) brightness(0.5)':'none'}}>
+        {!imgFailed
+          ? <img src={src} alt={char.name} onError={handleError}
+              style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block',
+                ...(src===artPath(char.name)?{transform:'scale(2.1) translateY(-10%)',transformOrigin:'top center'}:{})}}/>
+          : <div style={{width:'100%',height:'100%',background:es.bg,display:'flex',alignItems:'center',
+              justifyContent:'center',padding:4,textAlign:'center',fontSize:compact?10:11,
+              lineHeight:1.3,color:es.label,fontWeight:600}}>{char.name}</div>}
+        {hasNote&&<span style={{position:'absolute',bottom:2,left:2,width:6,height:6,
+          borderRadius:'50%',background:'#fbbf24',boxShadow:'0 0 4px rgba(251,191,36,0.8)'}}/>}
+        {onToggleHidden&&(
+          <button className="hide-btn" title={isHidden?'還原':'隱藏'}
+            onClick={e=>{e.stopPropagation();onToggleHidden(char.name);}}>
+            {isHidden?'↩':'×'}
+          </button>
+        )}
+      </div>
+      {(imgFailed&&(showNoImage||isPinned))&&onTogglePin&&(
+        <button className={`pin-btn${isPinned?' pinned':''}`}
+          onClick={e=>{e.stopPropagation();onTogglePin(char.name);}}>
+          📌 {isPinned?'已保留':'保留'}
+        </button>
+      )}
+      <div style={{fontSize:9,lineHeight:1.2,textAlign:'center',marginTop:2,
+        color:isHidden?'#475569':'#94a3b8',wordBreak:'keep-all',overflow:'hidden',
+        display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',
+        minHeight:compact?18:22}}>{char.name}</div>
+    </div>
+  );
+}
+
+// ── Desc Popover ──────────────────────────────────────────────────────────────
+
+function DescPopover({ tierId, value, onSave, onClose }) {
+  const [val, setVal] = useState(value);
+  useEffect(() => {
+    const fn = e => { if(e.key==='Escape') onClose(); };
+    document.addEventListener('keydown', fn);
+    return () => document.removeEventListener('keydown', fn);
+  }, []);
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:500,display:'flex',alignItems:'center',justifyContent:'center'}}
+      onClick={onClose}>
+      <div style={{background:'#1e293b',border:'1px solid #475569',borderRadius:8,padding:16,width:320,
+        boxShadow:'0 8px 24px rgba(0,0,0,0.6)'}}
+        onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>Tier 描述（短評）</div>
+        <textarea value={val} onChange={e=>setVal(e.target.value)} autoFocus
+          style={{width:'100%',height:90,background:'#0f172a',border:'1px solid #334155',
+            borderRadius:4,padding:8,fontSize:13,color:'#e2e8f0',resize:'vertical'}}/>
+        <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
+          <button onClick={onClose} style={btnStyle()}>取消</button>
+          <button onClick={()=>{onSave(tierId,val);onClose();}} style={btnStyle(true)}>儲存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Char Note Modal ───────────────────────────────────────────────────────────
+
+function CharNoteModal({ char, note, pm, onSaveNote, onSavePm, onClose, preferLargeArt=false }) {
+  const [val, setVal] = useState(note || '');
+  const [pmVal, setPmVal] = useState(pm || '');
+  const es = ELEMENT_STYLE[char.element] || { bg:'#374151', badge:'#6b7280', label:'#d1d5db' };
+  const primaryPath = preferLargeArt ? artPath(char.name) : iconPath(char.name);
+  const fallbackPath= preferLargeArt ? iconPath(char.name) : artPath(char.name);
+  const [src, setSrc] = useState(() => primaryPath);
+  const [imgFailed, setImgFailed] = useState(false);
+  function handleError() {
+    if (src === primaryPath) setSrc(fallbackPath);
+    else setImgFailed(true);
+  }
+  useEffect(() => {
+    const fn = e => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', fn);
+    return () => document.removeEventListener('keydown', fn);
+  }, []);
+  const PM_OPTIONS = [
+    { v:'+', label:'＋', title:'上位（+）' },
+    { v:'',  label:'普', title:'普通' },
+    { v:'-', label:'－', title:'下位（−）' },
+  ];
+  function save() { onSaveNote(char.name, val); onSavePm(char.name, pmVal); onClose(); }
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:600,display:'flex',alignItems:'center',
+      justifyContent:'center',background:'rgba(0,0,0,0.72)'}}
+      onClick={onClose}>
+      <div style={{background:'#1e293b',border:'1px solid #475569',borderRadius:10,padding:20,
+        width:360,boxShadow:'0 12px 32px rgba(0,0,0,0.7)'}}
+        onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',gap:12,marginBottom:14,alignItems:'center'}}>
+          <div style={{width:76,height:76,borderRadius:8,overflow:'hidden',
+            border:`2px solid ${es.badge}`,background:es.bg,flexShrink:0}}>
+            {!imgFailed
+              ? <img src={src} alt={char.name} onError={handleError}
+                  style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block',
+                    ...(src===artPath(char.name)?{transform:'scale(2.1) translateY(-10%)',transformOrigin:'top center'}:{})}}/>
+              : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',
+                  justifyContent:'center',fontSize:11,color:es.label,textAlign:'center',padding:4}}>{char.name}</div>}
+          </div>
+          <div>
+            <div style={{fontSize:18,fontWeight:700,color:'#f1f5f9',marginBottom:6}}>{char.name}</div>
+            <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+              <span style={{background:es.badge,color:'#fff',borderRadius:3,fontSize:11,padding:'1px 7px'}}>{char.element}</span>
+              <span style={{background:'#334155',color:'#94a3b8',borderRadius:3,fontSize:11,padding:'1px 7px'}}>{char.role}</span>
+              <span style={{background:'#334155',color:'#fbbf24',borderRadius:3,fontSize:11,padding:'1px 7px'}}>{'★'.repeat(char.star)+'☆'.repeat(Math.max(0,3-char.star))}</span>
+            </div>
+          </div>
+        </div>
+        {/* +/- 評級 */}
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+          <span style={{fontSize:12,color:'#94a3b8',flexShrink:0}}>評級</span>
+          <div style={{display:'flex',gap:6}}>
+            {PM_OPTIONS.map(({v,label,title})=>{
+              const active=pmVal===v;
+              return <button key={v||'n'} title={title} onClick={()=>setPmVal(v)}
+                style={{padding:'4px 14px',borderRadius:5,fontSize:14,fontWeight:700,cursor:'pointer',
+                  border:`1px solid ${active?'#fbbf24':'#334155'}`,
+                  background:active?'rgba(251,191,36,0.18)':'transparent',
+                  color:active?'#fbbf24':'#475569',transition:'all 0.12s'}}>{label}</button>;
+            })}
+          </div>
+        </div>
+        {/* 備註 */}
+        <div style={{fontSize:12,color:'#94a3b8',marginBottom:5}}>角色備註</div>
+        <textarea value={val} onChange={e=>setVal(e.target.value)} autoFocus
+          placeholder="輸入備註（隊伍搭配、注意事項等）…"
+          style={{width:'100%',height:90,background:'#0f172a',border:'1px solid #334155',
+            borderRadius:4,padding:8,fontSize:13,color:'#e2e8f0',resize:'vertical',
+            boxSizing:'border-box'}}/>
+        <div style={{display:'flex',gap:8,marginTop:12,justifyContent:'flex-end'}}>
+          <button onClick={onClose} style={btnStyle()}>關閉</button>
+          <button onClick={save} style={btnStyle(true)}>儲存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tier 列 ───────────────────────────────────────────────────────────────────
+
+const PM_ORDER = { '+': 0, '': 1, '-': 2 };
+function pmSortChars(chars, charPlusMinus) {
+  return [...chars].sort((a, b) =>
+    (PM_ORDER[charPlusMinus?.[a.name] ?? ''] ?? 1) - (PM_ORDER[charPlusMinus?.[b.name] ?? ''] ?? 1)
+  );
+}
+
+function TierRow({ tier, getMemberChars, onEndRef, containerRefs,
+                   onRename, onSetDesc, onDelete, canDelete,
+                   onNoteClick, charNotes, charPlusMinus, preferLargeArt, locked }) {
+  const ref        = useRef(null);
+  const [editing,  setEditing] = useState(false);
+  const [editVal,  setEditVal] = useState(tier.name);
+  const [showDesc, setShowDesc] = useState(false);
+
+  useEffect(() => {
+    if(!ref.current||!window.Sortable) return;
+    containerRefs.current[tier.id] = ref.current;
+    const s = window.Sortable.create(ref.current, {
+      group:SORTABLE_CHAR, animation:120,
+      ghostClass:'sortable-ghost', chosenClass:'sortable-chosen',
+      onEnd: makeSortableHandler(onEndRef),
+    });
+    return () => { s.destroy(); delete containerRefs.current[tier.id]; };
+  }, []);
+
+  function commitRename() {
+    if(editVal.trim()) onRename(tier.id, editVal.trim());
+    setEditing(false);
+  }
+
+  const controls = locked ? null : (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+      gap:2,padding:'2px 0'}}>
+      <button className="tier-ctrl-btn" title="設定描述" onClick={()=>setShowDesc(true)}>📝</button>
+      {canDelete&&(
+        <button className="tier-ctrl-btn tier-del-btn" title="刪除此列"
+          onClick={()=>onDelete(tier.id)}>🗑</button>
+      )}
+    </div>
+  );
+
+  const displayChars = pmSortChars(getMemberChars(tier.id), charPlusMinus);
+
+  return (
+    <div className="tier-row-wrap" style={{display:'flex',minHeight:88,marginBottom:3,
+      borderRadius:6,overflow:'hidden',border:'1px solid #1e293b'}}>
+      {showDesc&&<DescPopover tierId={tier.id} value={tier.desc} onSave={onSetDesc} onClose={()=>setShowDesc(false)}/>}
+      {/* 左側標籤 */}
+      <div style={{width:90,flexShrink:0,display:'flex',background:tier.color}}>
+        <span className="tier-drag-handle" style={{display:'flex',alignItems:'center',color:tier.textColor,padding:'0 2px'}}>⠿</span>
+        <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:locked?'default':'pointer'}}
+          onClick={()=>{ if(!locked){ setEditing(true); setEditVal(tier.name); } }}>
+          {editing
+            ? <input autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={e=>{if(e.key==='Enter')commitRename();if(e.key==='Escape')setEditing(false);}}
+                style={{background:'transparent',border:'none',outline:'1px solid rgba(255,255,255,0.4)',
+                  color:tier.textColor,fontSize:22,fontWeight:900,width:50,textAlign:'center',borderRadius:3}}/>
+            : <span style={{fontSize:26,fontWeight:900,color:tier.textColor,letterSpacing:-1}}>{tier.name}</span>
+          }
+        </div>
+        {controls}
+      </div>
+      {/* 放置區 */}
+      <div ref={ref} data-id={tier.id} className="tier-drop-zone"
+        style={{background:`${tier.color}22`}}>
+        {displayChars.map(c=><CharCard key={c.name} char={c} compact showNoImage={true}
+          onNoteClick={onNoteClick} hasNote={!!(charNotes&&charNotes[c.name])}
+          pm={charPlusMinus?.[c.name]||''} preferLargeArt={preferLargeArt}/>)}
+      </div>
+      {tier.desc&&(
+        <div style={{width:100,padding:'4px 6px',fontSize:11,color:'rgba(255,255,255,0.45)',
+          background:`${tier.color}11`,display:'flex',alignItems:'center'}}>
+          {tier.desc}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tier Section ──────────────────────────────────────────────────────────────
+
+function TierSection({ tiersConfig, tierMembers, charMap, onEndRef, containerRefs,
+                        onRename, onSetDesc, onDeleteTier, onReorder, onAddTier,
+                        onNoteClick, charNotes, charPlusMinus, preferLargeArt, locked }) {
+  const sectionRef  = useRef(null);
+  const reorderRef  = useRef(null);
+  reorderRef.current = onReorder;
+
+  useEffect(() => {
+    if (!sectionRef.current || !window.Sortable) return;
+    const s = window.Sortable.create(sectionRef.current, {
+      group: SORTABLE_TIERS, animation:150,
+      handle:'.tier-drag-handle', ghostClass:'sortable-ghost',
+      onEnd: evt => {
+        const newIds = Array.from(sectionRef.current.children)
+          .map(el => el.dataset.tierId).filter(Boolean);
+        const {item,from,oldIndex}=evt;
+        if(item.parentNode) item.parentNode.removeChild(item);
+        if(oldIndex<from.children.length) from.insertBefore(item,from.children[oldIndex]);
+        else from.appendChild(item);
+        reorderRef.current(newIds);
+      },
+    });
+    return () => s.destroy();
+  }, []);
+
+  return (
+    <div ref={sectionRef}>
+      {tiersConfig.map(tier => {
+        const getMemberChars = id => (tierMembers[id]||[]).map(n=>charMap[n]).filter(Boolean);
+        return (
+          <div key={tier.id} data-tier-id={tier.id}>
+            <TierRow tier={tier} getMemberChars={getMemberChars}
+              onEndRef={onEndRef} containerRefs={containerRefs}
+              onRename={onRename} onSetDesc={onSetDesc}
+              onDelete={onDeleteTier} canDelete={tiersConfig.length > 1}
+              onNoteClick={onNoteClick} charNotes={charNotes} charPlusMinus={charPlusMinus}
+              preferLargeArt={preferLargeArt} locked={locked}/>
+          </div>
+        );
+      })}
+      {!locked&&<button onClick={onAddTier}
+        style={{width:'100%',marginTop:2,padding:'6px',fontSize:12,
+          background:'transparent',border:'1px dashed #334155',borderRadius:6,
+          color:'#475569',cursor:'pointer'}}>
+        ＋ 新增 Tier 列
+      </button>}
+    </div>
+  );
+}
+
+// ── Context Menu ──────────────────────────────────────────────────────────────
+
+function ContextMenu({ menu, onRename, onDuplicate, onDelete, canDelete, onClose }) {
+  useEffect(() => {
+    const close=()=>onClose();
+    const onKey=e=>{ if(e.key==='Escape') onClose(); };
+    document.addEventListener('click', close);
+    document.addEventListener('contextmenu', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('contextmenu', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+  if(!menu) return null;
+  const x=Math.min(menu.x, window.innerWidth-160);
+  return (
+    <div style={{position:'fixed',left:x,top:menu.y,zIndex:9999,background:'#1e293b',
+      border:'1px solid #475569',borderRadius:6,padding:'4px 0',minWidth:148,
+      boxShadow:'0 6px 20px rgba(0,0,0,0.6)'}}
+      onClick={e=>e.stopPropagation()} onContextMenu={e=>e.preventDefault()}>
+      <CMenuItem label="✏️  重新命名" onClick={()=>{onRename();onClose();}}/>
+      <CMenuItem label="📋  複製 Tab"  onClick={()=>{onDuplicate();onClose();}}/>
+      {canDelete&&<>
+        <div style={{height:1,background:'#334155',margin:'4px 0'}}/>
+        <CMenuItem label="🗑️  刪除" danger onClick={()=>{onDelete();onClose();}}/>
+      </>}
+    </div>
+  );
+}
+function CMenuItem({label,onClick,danger=false}) {
+  const [h,setH]=useState(false);
+  return <div style={{padding:'7px 14px',cursor:'pointer',fontSize:13,userSelect:'none',
+    color:danger?'#f87171':'#cbd5e1',background:h?'#334155':'transparent',transition:'background 0.1s'}}
+    onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} onClick={onClick}>{label}</div>;
+}
+
+// ── Mode Tabs ─────────────────────────────────────────────────────────────────
+
+function ModeTabs({ modes, currentId, onSwitch, onAdd, onDelete, onRename, onDuplicate, locked }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editVal,   setEditVal]   = useState('');
+  const [ctxMenu,   setCtxMenu]   = useState(null);
+
+  function openCtx(mode, e) { e.preventDefault(); e.stopPropagation(); if(!locked) setCtxMenu({modeId:mode.id,x:e.clientX,y:e.clientY}); }
+  function startRename(id) { const m=modes.find(m=>m.id===id); setEditingId(id); setEditVal(m?.name||''); }
+  function commitEdit() { if(editVal.trim()) onRename(editingId,editVal.trim()); setEditingId(null); }
+
+  return (<>
+    <div className="flex items-end gap-1 overflow-x-auto">
+      {modes.map(mode=>(
+        <div key={mode.id} className={`mode-tab${mode.id===currentId?' active':''}`}
+          onClick={()=>{ if(editingId!==mode.id) onSwitch(mode.id); }}
+          onContextMenu={e=>openCtx(mode,e)} title="右鍵開選單">
+          {editingId===mode.id
+            ? <input className="mode-tab-input" value={editVal} autoFocus
+                onChange={e=>setEditVal(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={e=>{if(e.key==='Enter')commitEdit();if(e.key==='Escape')setEditingId(null);}}
+                onClick={e=>e.stopPropagation()}/>
+            : <span>{mode.name}</span>}
+        </div>
+      ))}
+      {!locked&&<button style={{padding:'4px 8px',fontSize:13,borderRadius:'6px 6px 0 0',border:'1px dashed #334155',
+        borderBottom:'none',background:'transparent',color:'#475569',cursor:'pointer'}}
+        onClick={onAdd}>+</button>}
+    </div>
+    {ctxMenu&&<ContextMenu menu={ctxMenu} canDelete={modes.length>1}
+      onRename={()=>startRename(ctxMenu.modeId)}
+      onDuplicate={()=>onDuplicate(ctxMenu.modeId)}
+      onDelete={()=>onDelete(ctxMenu.modeId)}
+      onClose={()=>setCtxMenu(null)}/>}
+  </>);
+}
+
+// ── Submit Modal ──────────────────────────────────────────────────────────────
+
+function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClose, onSuccess }) {
+  const deviceId = getOrCreateDeviceId();
+  const week     = getISOWeek();
+  const submitted = getSubmitted();
+  const prevRec   = submitted[modeId];
+  const alreadyThisWeek = prevRec && prevRec.week === week;
+
+  const [phase,    setPhase]    = useState(alreadyThisWeek ? 'already' : 'confirm');
+  const [shareUrl, setShareUrl] = useState(alreadyThisWeek ? (prevRec.shareUrl||'') : '');
+
+  const sTier  = tiersConfig[0];
+  const sChars = sTier ? (tierMembers[sTier.id] || []) : [];
+
+  useEffect(() => {
+    const fn = e => { if(e.key==='Escape') onClose(); };
+    document.addEventListener('keydown', fn);
+    return () => document.removeEventListener('keydown', fn);
+  }, []);
+
+  async function doSubmit() {
+    setPhase('submitting');
+    try {
+      const exportData = {
+        version:'0.1.0', author, exportedAt: new Date().toISOString(),
+        modes: [{ id: modeId, name: modeName }],
+        modeData: { [modeId]: { tiersConfig, tierMembers, charNotes:{}, charPlusMinus:{} } },
+      };
+      const payload = window.LZString.compressToEncodedURIComponent(JSON.stringify(exportData));
+      const url = location.href.split('#')[0] + '#share=' + payload;
+
+      const resp = await fetch(`${RAILWAY_URL}/submit`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ deviceId, nickname: author||'匿名', mode: modeId, payload }),
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        const sub = getSubmitted();
+        sub[modeId] = { week, submittedAt: new Date().toISOString(), shareUrl: url };
+        localStorage.setItem(LS_SUBMITTED, JSON.stringify(sub));
+        setShareUrl(url);
+        setPhase('success');
+        if (onSuccess) onSuccess(modeId);
+      } else if (data.error === 'duplicate') {
+        setPhase('duplicate');
+      } else {
+        setPhase('error');
+      }
+    } catch(e) {
+      setPhase('error');
+    }
+  }
+
+  function copyUrl() {
+    navigator.clipboard.writeText(shareUrl).then(()=>alert('分享連結已複製！')).catch(()=>prompt('請手動複製：',shareUrl));
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:700,display:'flex',alignItems:'center',
+      justifyContent:'center',background:'rgba(0,0,0,0.75)'}} onClick={onClose}>
+      <div style={{background:'#1e293b',border:'1px solid #475569',borderRadius:10,padding:24,
+        width:400,boxShadow:'0 16px 40px rgba(0,0,0,0.7)'}} onClick={e=>e.stopPropagation()}>
+
+        <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9',marginBottom:16}}>
+          📤 提交「{modeName}」排名
+        </div>
+
+        {phase==='confirm'&&<>
+          <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
+            暱稱：<span style={{color:'#e2e8f0'}}>{author||'（未填）'}</span>
+            <span style={{marginLeft:8,color:'#475569'}}>· 週次：{week}</span>
+          </div>
+          <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>S Tier 角色：</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:14,minHeight:26}}>
+            {sChars.length===0
+              ? <span style={{color:'#475569',fontSize:12}}>（S tier 尚未放入角色）</span>
+              : sChars.map(n=><span key={n} style={{background:'#991b1b',color:'#fca5a5',
+                  fontSize:11,padding:'2px 8px',borderRadius:4}}>{n}</span>)}
+          </div>
+          <div style={{fontSize:11,color:'#475569',marginBottom:16}}>
+            每週每個模式限提交一次，提交後本週不可修改。
+          </div>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+            <button onClick={onClose} style={btnStyle()}>取消</button>
+            <button onClick={doSubmit} style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>確認提交</button>
+          </div>
+        </>}
+
+        {phase==='submitting'&&(
+          <div style={{textAlign:'center',padding:'24px 0',color:'#94a3b8'}}>提交中…</div>
+        )}
+
+        {(phase==='success'||phase==='already'||phase==='duplicate')&&<>
+          <div style={{color:phase==='duplicate'?'#fbbf24':'#4ade80',fontSize:13,marginBottom:12}}>
+            {phase==='success'?'✅ 提交成功！':phase==='duplicate'?'⚠️ 本週已在伺服器提交過':'✅ 本週已提交'}
+          </div>
+          <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>分享連結：</div>
+          <div style={{background:'#0f172a',borderRadius:4,padding:'8px 10px',fontSize:11,
+            color:'#93c5fd',wordBreak:'break-all',marginBottom:14,border:'1px solid #334155'}}>
+            {shareUrl||'（無記錄）'}
+          </div>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+            {shareUrl&&<button onClick={copyUrl} style={{...btnStyle(),background:'#0f4c81',color:'#93c5fd',borderColor:'#1e3a5f'}}>📋 複製連結</button>}
+            <button onClick={onClose} style={btnStyle()}>關閉</button>
+          </div>
+        </>}
+
+        {phase==='error'&&<>
+          <div style={{color:'#f87171',fontSize:13,marginBottom:12}}>❌ 提交失敗，請確認網路後再試</div>
+          <div style={{display:'flex',justifyContent:'flex-end'}}>
+            <button onClick={onClose} style={btnStyle()}>關閉</button>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+
+function App() {
+  const allChars = useMemo(()=>window.CHARS_DATA?sortChars(window.CHARS_DATA):[], []);
+  const charMap  = useMemo(()=>Object.fromEntries(allChars.map(c=>[c.name,c])), [allChars]);
+
+  const [modes,         setModes]         = useState(()=>loadModes());
+  const [currentModeId, setCurrentModeId] = useState(()=>loadModes()[0]?.id||'gvg');
+  const [author,        setAuthor]         = useState(()=>localStorage.getItem(LS_AUTHOR)||'');
+
+  const [tiersConfig,   setTiersConfig]   = useState(()=>loadModeData(currentModeId).tiersConfig);
+  const [tierMembers,   setTierMembers]   = useState(()=>loadModeData(currentModeId).tierMembers);
+  const [charNotes,     setCharNotes]     = useState(()=>loadModeData(currentModeId).charNotes);
+  const [charPlusMinus, setCharPlusMinus] = useState(()=>loadModeData(currentModeId).charPlusMinus);
+  const [noteModal,     setNoteModal]     = useState(null);
+  const [voteMode,      setVoteMode]      = useState(()=>localStorage.getItem('tierlist_vote_mode')==='1');
+  const [submitModal,   setSubmitModal]   = useState(null); // modeId or null
+
+  useEffect(() => { saveModeData(currentModeId, tiersConfig, tierMembers, charNotes, charPlusMinus); }, [tiersConfig, tierMembers, currentModeId, charNotes, charPlusMinus]);
+  useEffect(() => { localStorage.setItem(LS_AUTHOR, author); }, [author]);
+
+  const [activeElements, setActiveElements] = useState(new Set());
+  const [activeRoles,    setActiveRoles]    = useState(new Set());
+  const [search,         setSearch]         = useState('');
+  const [showNoImage,    setShowNoImage]    = useState(false);
+  const [preferLargeArt, setPreferLargeArt] = useState(false);
+  const [hiddenChars,    setHiddenChars]    = useState(()=>{
+    const stored = localStorage.getItem(LS_HIDDEN);
+    if (stored !== null) return new Set(JSON.parse(stored));
+    localStorage.setItem(LS_HIDDEN, JSON.stringify([...DEFAULT_HIDDEN]));
+    return new Set(DEFAULT_HIDDEN);
+  });
+  const [showHidden,     setShowHidden]     = useState(false);
+  const [pinnedNoImage,  setPinnedNoImage]  = useState(()=>loadSet(LS_PINNED));
+
+  const containerRefs  = useRef({});
+  const poolRef        = useRef(null);
+  const onEndRef       = useRef(null);
+  const importFileRef  = useRef(null);
+
+  const aliasMap = useMemo(()=>{
+    const map={};
+    if(window.CHARACTER_ALIASES) window.CHARACTER_ALIASES.forEach(({name,aliases})=>{ map[name]=aliases||[name]; });
+    return map;
+  }, []);
+
+  const allTierSet = useMemo(()=>new Set(Object.values(tierMembers).flat()), [tierMembers]);
+  const poolChars  = useMemo(()=>allChars.filter(c=>!allTierSet.has(c.name)), [allChars,allTierSet]);
+
+  const poolElementOrder = useMemo(()=>{
+    if(activeElements.size>0){
+      const active=ELEMENT_ORDER.filter(el=>activeElements.has(el));
+      const rest=ELEMENT_ORDER.filter(el=>!activeElements.has(el));
+      return [...active,...rest];
+    }
+    if(search.trim()){
+      const q=search.trim().toLowerCase();
+      const matchEls=new Set(
+        poolChars.filter(c=>(aliasMap[c.name]||[c.name]).some(a=>a.toLowerCase().includes(q))).map(c=>c.element)
+      );
+      const matched=ELEMENT_ORDER.filter(el=>matchEls.has(el));
+      const rest=ELEMENT_ORDER.filter(el=>!matchEls.has(el));
+      return [...matched,...rest];
+    }
+    return ELEMENT_ORDER;
+  },[activeElements,search,poolChars,aliasMap]);
+
+  onEndRef.current = (fromId,toId,toNames,fromNames) => {
+    setTierMembers(prev=>{
+      const next={...prev};
+      if(toId!=='pool')   next[toId]=toNames;
+      if(fromId!=='pool'&&fromNames!==null) next[fromId]=fromNames;
+      return next;
+    });
+  };
+
+  useEffect(()=>{
+    if(!poolRef.current||!window.Sortable) return;
+    containerRefs.current['pool']=poolRef.current;
+    const s=window.Sortable.create(poolRef.current,{
+      group:SORTABLE_CHAR, animation:120, draggable:'[data-name]',
+      ghostClass:'sortable-ghost', chosenClass:'sortable-chosen',
+      onEnd:makeSortableHandler(onEndRef),
+    });
+    return ()=>{ s.destroy(); delete containerRefs.current['pool']; };
+  },[]);
+
+  // ── Mode ops ──
+  function switchMode(id) {
+    if(id===currentModeId) return;
+    const d=loadModeData(id);
+    setCurrentModeId(id);
+    setTiersConfig(d.tiersConfig);
+    setTierMembers(d.tierMembers);
+    setCharNotes(d.charNotes);
+    setCharPlusMinus(d.charPlusMinus);
+  }
+  function addMode() {
+    const id='mode_'+Date.now(), name='新模式';
+    const nm=[...modes,{id,name}];
+    setModes(nm); saveModes(nm); switchMode(id);
+  }
+  function deleteMode(id) {
+    if(!window.confirm(`刪除模式「${modes.find(m=>m.id===id)?.name}」？`)) return;
+    localStorage.removeItem(LS_MODE_PFX+id);
+    const nm=modes.filter(m=>m.id!==id);
+    setModes(nm); saveModes(nm);
+    if(id===currentModeId) switchMode(nm[0]?.id||DEFAULT_MODES[0].id);
+  }
+  function renameMode(id,name) {
+    const nm=modes.map(m=>m.id===id?{...m,name}:m);
+    setModes(nm); saveModes(nm);
+  }
+  function duplicateMode(id) {
+    const src=modes.find(m=>m.id===id);
+    const newId='mode_'+Date.now(), newName=(src?.name||'模式')+' (複製)';
+    const srcData=id===currentModeId?{tiersConfig,tierMembers,charNotes,charPlusMinus}:loadModeData(id);
+    saveModeData(newId,srcData.tiersConfig,srcData.tierMembers,srcData.charNotes||{},srcData.charPlusMinus||{});
+    const idx=modes.findIndex(m=>m.id===id);
+    const nm=[...modes.slice(0,idx+1),{id:newId,name:newName},...modes.slice(idx+1)];
+    setModes(nm); saveModes(nm); switchMode(newId);
+  }
+
+  // ── Tier ops ──
+  function resetCurrentMode() {
+    const name = modes.find(m=>m.id===currentModeId)?.name||'目前模式';
+    if(!window.confirm(`確定重置「${name}」？\n所有角色回到池子，Tier 設定與備註保留。`)) return;
+    setTierMembers(emptyTierMembers(tiersConfig));
+  }
+  function renameTier(id,name) { setTiersConfig(p=>p.map(t=>t.id===id?{...t,name}:t)); }
+  function setTierDesc(id,desc) { setTiersConfig(p=>p.map(t=>t.id===id?{...t,desc}:t)); }
+  function addTier() {
+    const id='tier_'+Date.now();
+    const c=TIER_COLORS[tiersConfig.length%TIER_COLORS.length];
+    setTiersConfig(p=>[...p,{id,name:'?',color:c.color,textColor:c.textColor,desc:''}]);
+    setTierMembers(p=>({...p,[id]:[]}));
+  }
+  function deleteTier(id) {
+    if(!window.confirm('刪除此 Tier 列？（角色會回到池子）')) return;
+    setTierMembers(p=>{ const n={...p}; delete n[id]; delete n[`${id}+`]; delete n[`${id}-`]; return n; });
+    setTiersConfig(p=>p.filter(t=>t.id!==id));
+  }
+  function reorderTiers(newIds) {
+    setTiersConfig(p=>{
+      const map=Object.fromEntries(p.map(t=>[t.id,t]));
+      return newIds.map(id=>map[id]).filter(Boolean);
+    });
+  }
+
+  // ── Note / pm ──
+  function saveNote(charName, note) {
+    setCharNotes(p => {
+      const n = {...p};
+      if(note.trim()) n[charName] = note.trim();
+      else delete n[charName];
+      return n;
+    });
+  }
+  function saveCharPlusMinus(charName, pm) {
+    setCharPlusMinus(p => {
+      const n = {...p};
+      if(pm) n[charName] = pm;
+      else delete n[charName];
+      return n;
+    });
+  }
+
+  // ── 匯出 / 匯入 / 分享 ──
+  function buildExportData() {
+    const modeData = {};
+    modes.forEach(m => {
+      if (m.id === currentModeId) {
+        modeData[m.id] = { tiersConfig, tierMembers, charNotes, charPlusMinus };
+      } else {
+        const d = loadModeData(m.id);
+        modeData[m.id] = { tiersConfig: d.tiersConfig, tierMembers: d.tierMembers, charNotes: d.charNotes, charPlusMinus: d.charPlusMinus };
+      }
+    });
+    return { version: '0.1.0', author, exportedAt: new Date().toISOString(), modes, modeData };
+  }
+
+  function exportJSON() {
+    const data = buildExportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tierlist_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function applyImportData(data) {
+    if (!data?.modes?.length || !data?.modeData) throw new Error('格式不符');
+    data.modes.forEach(m => {
+      const md = data.modeData[m.id];
+      if (md) saveModeData(m.id, md.tiersConfig||DEFAULT_TIERS_CFG, md.tierMembers||{}, md.charNotes||{}, md.charPlusMinus||{});
+    });
+    saveModes(data.modes);
+    setModes(data.modes);
+    if (data.author) { setAuthor(data.author); localStorage.setItem(LS_AUTHOR, data.author); }
+    const firstId = data.modes[0]?.id;
+    if (firstId) {
+      const d = loadModeData(firstId);
+      setCurrentModeId(firstId);
+      setTiersConfig(d.tiersConfig);
+      setTierMembers(d.tierMembers);
+      setCharNotes(d.charNotes);
+      setCharPlusMinus(d.charPlusMinus);
+    }
+  }
+
+  function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!window.confirm(`匯入將覆蓋目前所有模式資料，確定？`)) return;
+        applyImportData(data);
+      } catch(err) { alert('匯入失敗：' + err.message); }
+    };
+    reader.readAsText(file);
+  }
+
+  function toggleVoteMode() {
+    setVoteMode(v => {
+      const next = !v;
+      localStorage.setItem('tierlist_vote_mode', next ? '1' : '0');
+      return next;
+    });
+  }
+
+  function copyShareLink() {
+    if (!window.LZString) { alert('lz-string 尚未載入'); return; }
+    const compressed = window.LZString.compressToEncodedURIComponent(JSON.stringify(buildExportData()));
+    const url = location.href.split('#')[0] + '#share=' + compressed;
+    navigator.clipboard.writeText(url)
+      .then(() => alert('分享連結已複製到剪貼簿！'))
+      .catch(() => prompt('請手動複製此連結：', url));
+  }
+
+  // 從 URL hash 自動載入分享資料
+  useEffect(() => {
+    const hash = location.hash;
+    if (!hash.startsWith('#share=') || !window.LZString) return;
+    try {
+      const data = JSON.parse(window.LZString.decompressFromEncodedURIComponent(hash.slice(7)));
+      const label = data.author ? `「${data.author}」的` : '';
+      if (!window.confirm(`偵測到分享連結，是否載入 ${label}Tier List？（將覆蓋目前資料）`)) return;
+      applyImportData(data);
+      history.replaceState(null, '', location.pathname);
+    } catch(e) { console.warn('分享連結解析失敗', e); }
+  }, []);
+
+  // ── Pool filter ──
+  function matchesSearch(char) {
+    if(!search.trim()) return true;
+    const q=search.trim().toLowerCase();
+    return (aliasMap[char.name]||[char.name]).some(a=>a.toLowerCase().includes(q));
+  }
+  function isHighlighted(char) {
+    return (activeElements.size===0||activeElements.has(char.element))
+        && (activeRoles.size===0||activeRoles.has(char.role))
+        && matchesSearch(char);
+  }
+  const toggleElement=el=>setActiveElements(p=>{const s=new Set(p);s.has(el)?s.delete(el):s.add(el);return s;});
+  const toggleRole=r=>setActiveRoles(p=>{const s=new Set(p);s.has(r)?s.delete(r):s.add(r);return s;});
+  const toggleHidden=useCallback(name=>{
+    setHiddenChars(p=>{const s=new Set(p);s.has(name)?s.delete(name):s.add(name);localStorage.setItem(LS_HIDDEN,JSON.stringify([...s]));return s;});
+  },[]);
+  const togglePin=useCallback(name=>{
+    setPinnedNoImage(p=>{const s=new Set(p);s.has(name)?s.delete(name):s.add(name);localStorage.setItem(LS_PINNED,JSON.stringify([...s]));return s;});
+  },[]);
+  const hasFilter=activeElements.size>0||activeRoles.size>0||search.trim();
+
+  if(!window.CHARS_DATA) return (
+    <div className="flex items-center justify-center h-screen text-red-400">
+      找不到 chars-data.js，請確認與 tier-list.html 在同一資料夾。
+    </div>
+  );
+
+  const noteChar = noteModal ? charMap[noteModal] : null;
+
+  return (
+    <div className="min-h-screen" style={{background:'#0f172a'}}>
+      {submitModal&&(()=>{
+        const m = modes.find(x=>x.id===submitModal);
+        return <SubmitModal modeId={submitModal} modeName={m?.name||submitModal}
+          tiersConfig={submitModal===currentModeId?tiersConfig:loadModeData(submitModal).tiersConfig}
+          tierMembers={submitModal===currentModeId?tierMembers:loadModeData(submitModal).tierMembers}
+          author={author} onClose={()=>setSubmitModal(null)}
+          onSuccess={()=>setSubmitModal(null)}/>;
+      })()}
+      {noteChar&&<CharNoteModal char={noteChar}
+        note={charNotes[noteChar.name]||''} pm={charPlusMinus[noteChar.name]||''}
+        onSaveNote={saveNote} onSavePm={saveCharPlusMinus} onClose={()=>setNoteModal(null)}
+        preferLargeArt={preferLargeArt}/>}
+      <header className="sticky top-0 z-20 border-b border-slate-700" style={{background:'#0f172a'}}>
+        <div className="px-4 pt-2 flex items-center gap-3">
+          <span className="font-bold text-slate-100">★ 星隕 Tier List</span>
+          <div className="flex items-center gap-1 ml-4">
+            <span className="text-xs text-slate-500">作者</span>
+            <input type="text" value={author} onChange={e=>setAuthor(e.target.value)}
+              placeholder="填入暱稱…"
+              style={{background:'#1e293b',border:'1px solid #334155',borderRadius:4,
+                padding:'2px 8px',fontSize:12,color:'#cbd5e1',width:120}}/>
+          </div>
+          <div className="flex items-center gap-1 ml-auto">
+            {!voteMode&&<>
+              <button onClick={resetCurrentMode} style={btnStyle(false,'#7f1d1d')}>↺ 重置</button>
+              <span style={{color:'#334155',margin:'0 2px'}}>|</span>
+              <button onClick={exportJSON} style={btnStyle()}>↓ 匯出</button>
+              <button onClick={()=>importFileRef.current?.click()} style={btnStyle()}>↑ 匯入</button>
+              <button onClick={copyShareLink} style={btnStyle()}>🔗 分享</button>
+              <input ref={importFileRef} type="file" accept=".json" style={{display:'none'}}
+                onChange={e=>{ if(e.target.files[0]) { importJSON(e.target.files[0]); e.target.value=''; } }}/>
+              <span style={{color:'#334155',margin:'0 2px'}}>|</span>
+            </>}
+            {voteMode&&(
+              canSubmitMode(currentModeId)
+                ? <button onClick={()=>setSubmitModal(currentModeId)}
+                    style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>
+                    📤 提交排名
+                  </button>
+                : <button onClick={()=>setSubmitModal(currentModeId)}
+                    style={{...btnStyle(),color:'#4ade80',borderColor:'#166534'}}>
+                    ✅ 已提交（查看連結）
+                  </button>
+            )}
+            <button onClick={toggleVoteMode}
+              style={{...btnStyle(voteMode),borderColor:voteMode?'#1d4ed8':'#334155',color:voteMode?'#93c5fd':'#64748b'}}>
+              🗳️ {voteMode?'投票模式 ON':'投票模式'}
+            </button>
+          </div>
+          <span className="text-xs text-slate-600 ml-2">v0.1.0</span>
+        </div>
+        <div className="px-4 pt-1">
+          <ModeTabs modes={modes} currentId={currentModeId}
+            onSwitch={switchMode} onAdd={addMode}
+            onDelete={deleteMode} onRename={renameMode} onDuplicate={duplicateMode} locked={voteMode}/>
+        </div>
+      </header>
+
+      <main className="p-4 space-y-3">
+        <TierSection tiersConfig={tiersConfig} tierMembers={tierMembers} charMap={charMap}
+          onEndRef={onEndRef} containerRefs={containerRefs}
+          onRename={renameTier} onSetDesc={setTierDesc}
+          onDeleteTier={deleteTier} onReorder={reorderTiers} onAddTier={addTier}
+          onNoteClick={setNoteModal} charNotes={charNotes} charPlusMinus={charPlusMinus}
+          preferLargeArt={preferLargeArt} locked={voteMode}/>
+
+        <section className="rounded-lg border border-slate-700 overflow-hidden" style={{background:'#1e293b'}}>
+          <div className="px-3 pt-3 pb-2 space-y-2 border-b border-slate-700">
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="text" value={search}
+                onChange={e=>setSearch(e.target.value)}
+                onKeyDown={e=>e.key==='Escape'&&setSearch('')}
+                placeholder="搜尋（支援暱稱），Esc 清除"
+                className="px-2 py-1 rounded text-sm bg-slate-800 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                style={{width:220}}/>
+              {hasFilter&&<button onClick={()=>{setActiveElements(new Set());setActiveRoles(new Set());setSearch('');}} style={btnStyle()}>清除篩選</button>}
+              <button onClick={()=>setShowNoImage(v=>!v)} style={btnStyle(showNoImage)}>
+                {showNoImage?'隱藏無圖':'顯示無圖'}
+              </button>
+              <button onClick={()=>setPreferLargeArt(v=>!v)} style={btnStyle(preferLargeArt)}>
+                {preferLargeArt?'大圖':'小圖'}
+              </button>
+              {hiddenChars.size>0&&(
+                <button onClick={()=>setShowHidden(v=>!v)} style={btnStyle(showHidden,'#7f1d1d','#ef4444')}>
+                  {showHidden?'收起已隱藏':`已隱藏 ${hiddenChars.size} 個`}
+                </button>
+              )}
+              <span className="text-xs text-slate-500 ml-auto">池子 {poolChars.length} 位</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {ELEMENT_ORDER.map(el=>{const es=ELEMENT_STYLE[el],a=activeElements.has(el);return(
+                <button key={el} onClick={()=>toggleElement(el)} style={{background:a?es.badge:'transparent',border:`1px solid ${es.badge}`,color:a?'#fff':es.label,borderRadius:4,padding:'1px 8px',fontSize:12,cursor:'pointer'}}>{el}</button>
+              );})}
+              <span className="text-slate-700 mx-1">|</span>
+              {ROLE_ORDER.map(r=>{const a=activeRoles.has(r);return(
+                <button key={r} onClick={()=>toggleRole(r)} style={{background:a?'#475569':'transparent',border:'1px solid #334155',color:a?'#fff':'#64748b',borderRadius:4,padding:'1px 8px',fontSize:12,cursor:'pointer'}}>{r}</button>
+              );})}
+            </div>
+          </div>
+          <div ref={poolRef} data-id="pool" className="flex flex-wrap gap-2 p-3" style={{minHeight:80}}>
+            {poolElementOrder.map(el=>{
+              const elChars=poolChars.filter(c=>c.element===el);
+              if(!elChars.length) return null;
+              const visCount=elChars.filter(c=>!hiddenChars.has(c.name)||showHidden).length;
+              if(!visCount) return null;
+              const es=ELEMENT_STYLE[el];
+              return (
+                <React.Fragment key={el}>
+                  <div style={{width:'100%',display:'flex',alignItems:'center',gap:6,
+                    padding:'2px 0 2px 6px',marginTop:4,
+                    borderLeft:`3px solid ${es.badge}`,userSelect:'none',pointerEvents:'none'}}>
+                    <span style={{fontSize:11,fontWeight:600,color:es.label}}>{el}</span>
+                    <span style={{fontSize:10,color:'#475569'}}>{visCount} 位</span>
+                  </div>
+                  {elChars.map(char=>(
+                    <CharCard key={char.name} char={char}
+                      dimmed={hasFilter&&!isHighlighted(char)}
+                      showNoImage={showNoImage}
+                      isHidden={hiddenChars.has(char.name)}
+                      showHidden={showHidden}
+                      onToggleHidden={toggleHidden}
+                      isPinned={pinnedNoImage.has(char.name)}
+                      onTogglePin={togglePin}
+                      onNoteClick={setNoteModal}
+                      hasNote={!!charNotes[char.name]}
+                      preferLargeArt={preferLargeArt}/>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function btnStyle(active=false,borderColor='#334155',activeColor='#475569'){
+  return{fontSize:11,padding:'2px 8px',borderRadius:4,border:`1px solid ${borderColor}`,
+    cursor:'pointer',background:active?activeColor:'transparent',color:active?'#fff':'#64748b',transition:'all 0.15s'};
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
