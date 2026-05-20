@@ -606,6 +606,35 @@ function ModeTabs({ modes, currentId, onSwitch, onAdd, onDelete, onRename, onDup
 
 // ── Submit Modal ──────────────────────────────────────────────────────────────
 
+function validateTierSubmit(tiersConfig, tierMembers) {
+  const errors = [];
+  const allPlaced = Object.values(tierMembers).flat();
+
+  if (allPlaced.length < 18)
+    errors.push(`總放置角色數不足（目前 ${allPlaced.length} 個，需至少 18 個）`);
+
+  const sTier = tiersConfig.find(t => t.id === 'S');
+  const aTier = tiersConfig.find(t => t.id === 'A');
+  const sCount = sTier ? (tierMembers[sTier.id] || []).length : 0;
+  const aCount = aTier ? (tierMembers[aTier.id] || []).length : 0;
+  if (sCount + aCount < 5)
+    errors.push(`S + A Tier 合計角色不足（目前 ${sCount + aCount} 個，需至少 5 個）`);
+
+  const charMap = {};
+  (window.CHARS_DATA || []).forEach(c => { charMap[c.name] = c; });
+  const elemCount = {};
+  allPlaced.forEach(name => {
+    const el = (charMap[name] || {}).element;
+    if (el) elemCount[el] = (elemCount[el] || 0) + 1;
+  });
+  ELEMENT_ORDER.forEach(el => {
+    if ((elemCount[el] || 0) < 3)
+      errors.push(`${el}屬性角色不足（目前 ${elemCount[el] || 0} 個，需至少 3 個）`);
+  });
+
+  return errors;
+}
+
 function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClose, onSuccess }) {
   const deviceId = getOrCreateDeviceId();
   const week     = getISOWeek();
@@ -615,6 +644,11 @@ function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClo
 
   const [phase,    setPhase]    = useState(alreadyThisWeek ? 'already' : 'confirm');
   const [shareUrl, setShareUrl] = useState(alreadyThisWeek ? (prevRec.shareUrl||'') : '');
+
+  const validationErrors = useMemo(
+    () => alreadyThisWeek ? [] : validateTierSubmit(tiersConfig, tierMembers),
+    [tiersConfig, tierMembers, alreadyThisWeek]
+  );
 
   const sTier  = tiersConfig[0];
   const sChars = sTier ? (tierMembers[sTier.id] || []) : [];
@@ -679,20 +713,35 @@ function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClo
             暱稱：<span style={{color:'#e2e8f0'}}>{author||'（未填）'}</span>
             <span style={{marginLeft:8,color:'#475569'}}>· 週次：{week}</span>
           </div>
-          <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>S Tier 角色：</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:14,minHeight:26}}>
-            {sChars.length===0
-              ? <span style={{color:'#475569',fontSize:12}}>（S tier 尚未放入角色）</span>
-              : sChars.map(n=><span key={n} style={{background:'#991b1b',color:'#fca5a5',
-                  fontSize:11,padding:'2px 8px',borderRadius:4}}>{n}</span>)}
-          </div>
-          <div style={{fontSize:11,color:'#475569',marginBottom:16}}>
-            每週每個模式限提交一次，提交後本週不可修改。
-          </div>
-          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-            <button onClick={onClose} style={btnStyle()}>取消</button>
-            <button onClick={doSubmit} style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>確認提交</button>
-          </div>
+          {validationErrors.length > 0 ? <>
+            <div style={{background:'#450a0a',border:'1px solid #dc2626',borderRadius:6,
+              padding:'10px 12px',marginBottom:14}}>
+              <div style={{color:'#fca5a5',fontSize:12,fontWeight:700,marginBottom:6}}>
+                ⚠️ 排名未達提交條件，請補齊後再送出：
+              </div>
+              {validationErrors.map((e,i) =>
+                <div key={i} style={{color:'#f87171',fontSize:11,marginBottom:2}}>• {e}</div>
+              )}
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button onClick={onClose} style={btnStyle()}>關閉</button>
+            </div>
+          </> : <>
+            <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>S Tier 角色：</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:14,minHeight:26}}>
+              {sChars.length===0
+                ? <span style={{color:'#475569',fontSize:12}}>（S tier 尚未放入角色）</span>
+                : sChars.map(n=><span key={n} style={{background:'#991b1b',color:'#fca5a5',
+                    fontSize:11,padding:'2px 8px',borderRadius:4}}>{n}</span>)}
+            </div>
+            <div style={{fontSize:11,color:'#475569',marginBottom:16}}>
+              每週每個模式限提交一次，提交後本週不可修改。
+            </div>
+            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button onClick={onClose} style={btnStyle()}>取消</button>
+              <button onClick={doSubmit} style={{...btnStyle(),background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}}>確認提交</button>
+            </div>
+          </>}
         </>}
 
         {phase==='submitting'&&(
