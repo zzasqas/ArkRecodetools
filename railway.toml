@@ -1,8 +1,6 @@
 [build]
 builder = "nixpacks"
+rootDirectory = "server"
 
 [deploy]
 startCommand = "node server.js"
-
-[environments.production.build]
-rootDirectory = "server"
