@@ -184,12 +184,14 @@ sniffer 專案（位於 `C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\ark
 
 ```bash
 # 1. 在 ArkRecodetools 更新 char-name-data.js（依照正常新增角色 SOP）
-# 2. 執行同步腳本（只新增，不覆蓋現有條目）
-python scripts/sync_aliases_to_sniffer.py
+# 2. 在 sniffer repo 執行同步腳本（只新增，不覆蓋現有條目）
+python scripts/sync_aliases_from_arkrecode.py
 
 # 預覽模式（不寫入）
-python scripts/sync_aliases_to_sniffer.py --dry-run
+python scripts/sync_aliases_from_arkrecode.py --dry-run
 ```
+
+> 腳本位於 sniffer private repo（`scripts/sync_aliases_from_arkrecode.py`），不在此 repo。
 
 **注意：** sniffer 的 aliases.py 有幾個 canonical name 與 char-name-data.js 不同：
 
