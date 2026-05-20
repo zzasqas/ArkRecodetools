@@ -8,8 +8,22 @@ const PORT        = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'changeme';
 const DATA_FILE   = path.join(__dirname, 'submissions.jsonl');
 
-app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+if (ADMIN_TOKEN === 'changeme') {
+  console.warn('[WARN] ADMIN_TOKEN 使用預設值，請在 Railway 設定 ADMIN_TOKEN 環境變數！');
+}
+
+// 只允許 GitHub Pages 與本機開發
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://zzasqas.github.io,http://localhost,http://127.0.0.1')
+  .split(',').map(o => o.trim());
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const ok = ALLOWED_ORIGINS.some(o => origin === o || origin.startsWith(o));
+    cb(ok ? null : new Error('CORS blocked'), ok);
+  },
+}));
+app.use(express.json({ limit: '256kb' }));
 
 // 啟動時從檔案載入已有資料到記憶體
 let submissions = [];
@@ -38,6 +52,22 @@ app.post('/submit', (req, res) => {
 
   if (!deviceId || !mode || !payload) {
     return res.json({ ok: false, error: 'missing_fields' });
+  }
+  if (typeof deviceId !== 'string' || deviceId.length > 64) {
+    return res.json({ ok: false, error: 'invalid_deviceId' });
+  }
+  if (typeof mode !== 'string' || mode.length > 32 || !/^[a-z0-9_]+$/.test(mode)) {
+    return res.json({ ok: false, error: 'invalid_mode' });
+  }
+  if (typeof payload !== 'object' || Array.isArray(payload) || payload === null) {
+    return res.json({ ok: false, error: 'invalid_payload' });
+  }
+  if (!payload.tierMembers || typeof payload.tierMembers !== 'object' || Array.isArray(payload.tierMembers)) {
+    return res.json({ ok: false, error: 'invalid_payload' });
+  }
+  const tierVals = Object.values(payload.tierMembers);
+  if (!tierVals.every(v => Array.isArray(v) && v.every(n => typeof n === 'string' && n.length <= 64))) {
+    return res.json({ ok: false, error: 'invalid_payload' });
   }
 
   const week = getISOWeek();

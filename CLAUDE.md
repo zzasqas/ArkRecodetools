@@ -137,25 +137,106 @@ ArkRecodetools/
 
 > **快速做法**：在編輯器全域搜尋舊版號（例如 `2.9.0`），逐一替換為新版號，再新增 changelog 條目即可。
 
+---
+
+## 資料架構與維護地圖
+
+### 資料檔案全覽
+
+本專案的角色資料分散在多個檔案，各有不同職責與使用工具。
+
+| 檔案 | 資料內容 | 格式 | 使用工具 | 維護頻率 |
+|------|----------|------|----------|----------|
+| `assets/char-name-data.js` | 本名 + id(H###) + 別名 | JS global | battle-recorder, guild-battle, tier-list, **character-db（搜尋）** | 新角色 / 補暱稱 |
+| `chars.csv` | 完整數值（攻防生速、爆率爆傷、被動）| CSV 22 欄 | equip-optimizer（fetch）, tier-list/chars-data.js 生成來源 | 新角色 / 版本數值更新 |
+| `character-db.html` CHARACTER_DATA | nameCN + nameEN + attribute + job + rarity（別名已移至 char-name-data.js） | JS inline 陣列 | character-db（僅此） | 新角色（必須手動更新） |
+| `build_recom.csv` | 推薦套裝、屬性權重、速度門檻 | CSV | character-db（fetch） | 有推薦配裝資料時 |
+| `tier-list/chars-data.js` | 角色精簡數值（速度、攻防生、爆率爆傷） | JS global | tier-list（CHARS_DATA） | 從根目錄 chars.csv 手動生成後覆蓋 |
+| `assets/official-tierlist.json` | 開發者官方 Tier 分級（S/A/B/C/D × 模式） | JSON | character-db（fetch） | 排好 tier 後用「★ 官方匯出」更新 |
+
+### 已知重複點（每次維護需注意）
+
+**① ~~暱稱重複~~ → 已整合**
+
+character-db.html 現在直接讀 `char-name-data.js`（透過 aliasLookup）。暱稱只需維護 `char-name-data.js` 一份，character-db 自動取用。
+
+**② ~~`tier-list/chars.csv` 冗余~~ → 已刪除**
+
+`tier-list/chars.csv` 已刪除。`tier-list/chars-data.js` 的唯一上游是根目錄 `../chars.csv`，手動同步即可（更新流程見 `tier-list/CLAUDE.md`）。
+
+**③ `character-db.html` CHARACTER_DATA 必須手動更新**
+
+character-db.html **不會**自動讀 chars.csv，所有角色資料（nameCN/EN/attribute/job/rarity）都內嵌在 HTML 的 `CHARACTER_DATA` 陣列中。新角色必須手動加入。
+
+---
+
+### 跨專案同步（ArkRecodetools ↔ arkrecode_gvg_sniffer）
+
+sniffer 專案（位於 `C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer`）有自己的別名系統，來源是 char-name-data.js。
+
+| sniffer 檔案 | 對應 ArkRecodetools 檔案 | 關係 |
+|-------------|------------------------|------|
+| `discord_bot/data/aliases.py` | `assets/char-name-data.js` | char-name-data.js 是主源，同步腳本追加新角色 |
+| `utils/helper.py` | （無對應）| sniffer 獨有：H### → [EN, CN] 完整表，含未實裝角色 |
+| `discord_bot/data/build_recom.csv` | `build_recom.csv` | 格式相同，可直接複製 |
+
+**新角色同步到 sniffer 的步驟：**
+
+```bash
+# 1. 在 ArkRecodetools 更新 char-name-data.js（依照正常新增角色 SOP）
+# 2. 執行同步腳本（只新增，不覆蓋現有條目）
+python scripts/sync_aliases_to_sniffer.py
+
+# 預覽模式（不寫入）
+python scripts/sync_aliases_to_sniffer.py --dry-run
+```
+
+**注意：** sniffer 的 aliases.py 有幾個 canonical name 與 char-name-data.js 不同：
+
+| sniffer canonical | char-name-data.js | 說明 |
+|---|---|---|
+| `彩伽` | `河北彩伽` | **刻意差異**，GVG CSV 用短名，不改 |
+| `妮諾楷西` | `妮諾凱西` | 兩邊互相收為 alias，雙向皆可識別 |
+| `東雲ft.坊橋夜泊` | `東雲 ft.坊橋夜泊` | 兩邊互相收為 alias，雙向皆可識別 |
+
+腳本同步後，若有其他新 canonical 差異請手動確認。
+
+**helper.py 更新：** 新角色的 H### ID 需要手動加入 sniffer 的 `utils/helper.py`，格式為：
+```python
+"H###": ["EnglishName", "中文名"],
+```
+ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)
+
+### 各欄位的單一來源
+
+| 資料欄位 | 唯一權威來源 | 注意事項 |
+|----------|-------------|----------|
+| 角色本名（中文） | `chars.csv` 第一欄 | 其他地方的 name 必須與此一致 |
+| 角色英文名 | `character-db.html` CHARACTER_DATA.nameEN | 只有這裡有，其他地方沒有 |
+| 暱稱/別名 | `assets/char-name-data.js` | character-db 另有一份，需同步 |
+| 遊戲 ID（H###） | `assets/char-name-data.js` id 欄 | 僅供參考，工具實際未使用 |
+| 戰鬥數值 | `chars.csv`（根目錄） | equip-optimizer 直接讀；tier-list 透過 chars-data.js 讀 |
+| 屬性/職業（中文） | `chars.csv`（火/水/木/光/暗、狙擊/術師/…） | |
+| 屬性/職業（英文） | `character-db.html` CHARACTER_DATA | fire/water/nature/light/dark |
+| 推薦配裝 | `build_recom.csv` | |
+| 官方 Tier 評級 | `assets/official-tierlist.json` | 由「★ 官方匯出」按鈕生成 |
+
+---
+
 ### 新增角色更新說明
 
-新角色加入遊戲時，需要更新以下檔案（依重要度排序）：
+新角色加入遊戲時，依序更新以下檔案：
 
-| 檔案 | 必須更新 | 說明 |
-|------|----------|------|
-| `assets/char-name-data.js` | ✅ 必須 | 角色本名 + 所有暱稱別名；battle-recorder 與 guild-battle 共用。格式：`{ name: '角色本名', aliases: ['本名', '暱稱1', '暱稱2'] }` |
-| `chars.csv` | ✅ 必須（角色資料庫） | 角色基礎數值一行，欄位依序：本名、星級、屬性、職業、基礎攻/防/生/速、攻/防/生/速加成、總攻/防/生/速、爆率、爆傷、命中、抗性、被動類型、被動效果。記得更新第一行版本標頭 `version:YYYYMMDD` |
-| `build_recom.csv` | 🔶 建議更新 | 新角色推薦配裝，格式參照現有行 |
-| `character-db.html` | ❌ 通常不需改 | UI 自動讀取 chars.csv，無需手動改 HTML |
-| `battle-recorder.html` | ❌ 通常不需改 | 別名自動從 char-name-data.js 載入，無需手動改 |
-| `guild-battle.html` | ❌ 通常不需改 | 別名自動從 char-name-data.js 載入，無需手動改 |
+| 步驟 | 檔案 | 必要 | 說明 |
+|------|------|------|------|
+| 1 | `assets/char-name-data.js` | ✅ 必須 | 在「新角色備用區」上方加入 `{ name: '本名', id: 'H???', aliases: ['本名', '暱稱1', ...] }` |
+| 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD` |
+| 3 | `tier-list/chars-data.js` | ✅ 必須 | 執行 `python scripts/gen_chars_data.py` 重新生成（從根目錄 chars.csv 自動轉換） |
+| 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic） |
+| 5 | `build_recom.csv` | 🔶 建議 | 有推薦配裝時加入 |
+| 6 | `assets/official-tierlist.json` | 🔶 視情況 | 排好 tier 後用「★ 官方匯出」更新 |
 
-**流程摘要**：
-1. 在 `assets/char-name-data.js` 的「新角色備用區」上方加入新角色條目（本名 + 常用暱稱）
-2. 在 `chars.csv` 末行加入角色數值，並更新版本標頭日期
-3. 若有推薦配裝資料，一併更新 `build_recom.csv`
-
-> 對戰紀錄器與公會戰紀錄器的角色搜尋均自動更新，不需額外動作。
+> battle-recorder、guild-battle 只讀 char-name-data.js，步驟 1 完成後自動生效，不需額外動作。
 
 ---
 

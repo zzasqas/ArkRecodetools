@@ -67,6 +67,7 @@
 </head>
 <body>
     <script src="./assets/header.js"></script>
+    <script src="./assets/char-name-data.js"></script>
     <div id="root"></div>
     <div class="author-info">ArkRecode Character DB v1.5.0 | by zzas</div>
     <script type="text/babel">
@@ -173,6 +174,14 @@
         // ==================== TAG 顏色 ====================
         
         // ==================== 推薦配裝 Popup ====================
+        const TIER_BADGE = {
+            S: { bg:'#fef2f2', text:'#991b1b', border:'#fca5a5' },
+            A: { bg:'#fffbeb', text:'#92400e', border:'#fcd34d' },
+            B: { bg:'#f0fdf4', text:'#3f6212', border:'#bef264' },
+            C: { bg:'#eff6ff', text:'#1e3a5f', border:'#93c5fd' },
+            D: { bg:'#f5f3ff', text:'#3b0764', border:'#c4b5fd' },
+        };
+
         const TAG_COLORS = {
             '速度型':         '#3B82F6',
             '輸出型(高速)':   '#EF4444',
@@ -539,11 +548,12 @@
         };
 
         // ==================== 角色卡片 ====================
-        const CharacterCard = ({ character, showEnglish, onContextMenu, onViewBuilds, hasBuilds }) => {
+        const CharacterCard = ({ character, showEnglish, onContextMenu, onViewBuilds, hasBuilds, tier }) => {
             const attribute = ATTRIBUTES[character.attribute];
             const job = JOBS[character.job];
             const displayName = showEnglish ? character.nameEN : character.nameCN;
             const artUrl = `./assets/char-art/${encodeURIComponent(character.nameCN)}.webp`;
+            const tb = tier ? TIER_BADGE[tier] : null;
             return (
                 <div className={`character-card p-4 rounded-lg border-2 attribute-${character.attribute} relative`}
                     onClick={() => onViewBuilds(character)}
@@ -563,12 +573,20 @@
                                 <span>{showEnglish ? job.nameEN : job.name}</span>
                             </div>
                         </div>
-                        {hasBuilds && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'}}>
-                                配裝 ✓
-                            </span>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                            {tb && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+                                    style={{background:tb.bg, color:tb.text, border:`1px solid ${tb.border}`}}>
+                                    {tier}
+                                </span>
+                            )}
+                            {hasBuilds && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                    style={{background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'}}>
+                                    配裝 ✓
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="char-art-content">
                         <h3 className="text-lg font-bold text-gray-800 mb-1">{displayName}</h3>
@@ -704,6 +722,35 @@
             const [filters, setFilters] = useState({attributes:[],jobs:[],rarity:[]});
             const [sortBy, setSortBy] = useState('default');
 
+            // ── 別名 lookup（從 char-name-data.js，比 CHARACTER_DATA 內嵌的更新）──
+            const aliasLookup = useMemo(() => {
+                const map = {};
+                (window.CHARACTER_ALIASES || []).forEach(({ name, aliases }) => {
+                    if (name && aliases?.length) map[name] = aliases;
+                });
+                return map;
+            }, []);
+
+            // ── Official Tier List ──
+            const [tierData, setTierData] = useState(null);
+            const [tierMode, setTierMode] = useState('overall');
+            useEffect(() => {
+                fetch('./assets/official-tierlist.json')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d) setTierData(d); })
+                    .catch(() => {});
+            }, []);
+            const charTierMap = useMemo(() => {
+                if (!tierData?.modes) return {};
+                const map = {};
+                const modeData = tierData.modes[tierMode] || {};
+                Object.entries(modeData).forEach(([tierId, names]) => {
+                    names.forEach(n => { map[n] = tierId; });
+                });
+                return map;
+            }, [tierData, tierMode]);
+            const tierModes = tierData ? Object.keys(tierData.modes) : [];
+
             // ── builds.csv ──
             const [buildsData, setBuildsData] = useState({});
             const [buildsPopup, setBuildsPopup] = useState(null);
@@ -768,7 +815,8 @@
                 let f = characters.filter(c => {
                     if (searchTerm) {
                         const s = searchTerm.toLowerCase();
-                        if (!c.nameCN.toLowerCase().includes(s) && !c.nameEN.toLowerCase().includes(s) && !c.aliases.some(a=>a.toLowerCase().includes(s))) return false;
+                        const aliases = aliasLookup[c.nameCN] || c.aliases || [];
+                        if (!c.nameCN.toLowerCase().includes(s) && !c.nameEN.toLowerCase().includes(s) && !aliases.some(a=>a.toLowerCase().includes(s))) return false;
                     }
                     if (filters.attributes.length>0 && !filters.attributes.includes(c.attribute)) return false;
                     if (filters.jobs.length>0 && !filters.jobs.includes(c.job)) return false;
@@ -817,9 +865,23 @@
                                     </button>
                                 </div>
                             </div>
-                            <div className="mt-4 pt-4 border-t text-sm text-gray-600 flex items-center justify-between">
+                            <div className="mt-4 pt-4 border-t text-sm text-gray-600 flex items-center justify-between flex-wrap gap-2">
                                 <div>顯示 {filteredCharacters.length}/{characters.length} 個角色{filterDescription}{searchTerm&&<span className="ml-2 text-blue-600">搜尋: "{searchTerm}"</span>}</div>
-                                {(filters.attributes.length>0||filters.jobs.length>0) && <button onClick={()=>setFilters({attributes:[],jobs:[],rarity:[]})} className="text-red-500 hover:text-red-700 text-xs">清除篩選</button>}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {tierModes.length > 0 && <>
+                                        <span className="text-xs text-gray-400">Tier 模式：</span>
+                                        {tierModes.map(m => (
+                                            <button key={m} onClick={() => setTierMode(m)}
+                                                className="text-xs px-2 py-0.5 rounded-full border transition-all"
+                                                style={tierMode===m
+                                                    ?{background:'#1d4ed8',color:'#fff',borderColor:'#1d4ed8'}
+                                                    :{color:'#6b7280',borderColor:'#d1d5db'}}>
+                                                {m==='overall'?'綜合':m.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </>}
+                                    {(filters.attributes.length>0||filters.jobs.length>0) && <button onClick={()=>setFilters({attributes:[],jobs:[],rarity:[]})} className="text-red-500 hover:text-red-700 text-xs">清除篩選</button>}
+                                </div>
                             </div>
                         </div>
 
@@ -830,7 +892,8 @@
                                     <CharacterCard key={c.id} character={c} showEnglish={showEnglish}
                                         onContextMenu={handleContextMenu}
                                         onViewBuilds={handleViewBuilds}
-                                        hasBuilds={!!(buildsData[c.nameCN]?.length)}/>
+                                        hasBuilds={!!(buildsData[c.nameCN]?.length)}
+                                        tier={charTierMap[c.nameCN]}/>
                                 ))}
                             </div>
                         ) : (

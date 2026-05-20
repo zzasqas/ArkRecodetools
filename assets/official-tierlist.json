@@ -1,0 +1,16 @@
+{
+  "updated": "2026-05-20",
+  "tiersConfig": [
+    { "id": "S", "name": "S", "color": "#991b1b", "textColor": "#fca5a5" },
+    { "id": "A", "name": "A", "color": "#92400e", "textColor": "#fcd34d" },
+    { "id": "B", "name": "B", "color": "#3f6212", "textColor": "#bef264" },
+    { "id": "C", "name": "C", "color": "#1e3a5f", "textColor": "#93c5fd" },
+    { "id": "D", "name": "D", "color": "#3b0764", "textColor": "#c4b5fd" }
+  ],
+  "modes": {
+    "overall": { "S": [], "A": [], "B": [], "C": [], "D": [] },
+    "gvg":     { "S": [], "A": [], "B": [], "C": [], "D": [] },
+    "pvp":     { "S": [], "A": [], "B": [], "C": [], "D": [] },
+    "rta":     { "S": [], "A": [], "B": [], "C": [], "D": [] }
+  }
+}

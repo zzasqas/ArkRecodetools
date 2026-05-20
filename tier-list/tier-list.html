@@ -919,6 +919,32 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
+  function exportOfficial() {
+    const modeData = {};
+    modes.forEach(m => {
+      const d = m.id === currentModeId
+        ? { tiersConfig, tierMembers }
+        : loadModeData(m.id);
+      const tiers = {};
+      (d.tiersConfig || DEFAULT_TIERS_CFG).forEach(t => {
+        tiers[t.id] = d.tierMembers?.[t.id] || [];
+      });
+      modeData[m.id] = tiers;
+    });
+    const data = {
+      updated: new Date().toISOString().slice(0, 10),
+      tiersConfig: tiersConfig.map(({ id, name, color, textColor }) => ({ id, name, color, textColor })),
+      modes: modeData,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'official-tierlist.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function applyImportData(data) {
     if (!data?.modes?.length || !data?.modeData) throw new Error('格式不符');
     data.modes.forEach(m => {
@@ -1092,6 +1118,7 @@ function App() {
               <button onClick={exportJSON} style={btnStyle()}>↓ 匯出</button>
               <button onClick={()=>importFileRef.current?.click()} style={btnStyle()}>↑ 匯入</button>
               <button onClick={copyShareLink} style={btnStyle()}>🔗 分享</button>
+              <button onClick={exportOfficial} title="下載 official-tierlist.json 放到 assets/ 資料夾" style={{...btnStyle(),color:'#fbbf24',borderColor:'#78350f',background:'rgba(120,53,15,0.25)'}}>★ 官方匯出</button>
               <input ref={importFileRef} type="file" accept=".json" style={{display:'none'}}
                 onChange={e=>{ if(e.target.files[0]) { importJSON(e.target.files[0]); e.target.value=''; } }}/>
               <span style={{color:'#334155',margin:'0 2px'}}>|</span>
