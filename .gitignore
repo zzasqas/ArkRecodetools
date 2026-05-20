@@ -13,6 +13,10 @@ EQUIP_PLANNER_SPEC.md
 # 裝備計算器 Python 版（開發中，後續考慮合併至主分支）
 equip-planner-py/
 
+# Server
+server/node_modules/
+server/submissions.jsonl
+
 # 系統檔
 .DS_Store
 Thumbs.db
