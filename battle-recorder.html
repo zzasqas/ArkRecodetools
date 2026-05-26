@@ -2168,6 +2168,7 @@
             
             // 別稱採疊加式：正式中英文名與預設別稱永遠來自母檔 MASTER_ALIASES；使用者自訂只疊加，另存 arkrecode_userAliases
             const [userAliases, setUserAliases] = useState({ extras: {}, customs: [] });
+            const [aliasSearch, setAliasSearch] = useState(''); // 角色別稱設定的搜尋過濾
             const characterAliases = useMemo(() => {
                 const extras = userAliases.extras || {};
                 const merged = MASTER_ALIASES.map(c => {
@@ -3897,9 +3898,30 @@ Continue?`);
                                         </div>
                                     </div>
 
+                                    {/* 搜尋過濾：依中文名／英文名／暱稱 */}
+                                    <div className="mb-2">
+                                        <input
+                                            type="text"
+                                            value={aliasSearch}
+                                            onChange={(e) => setAliasSearch(e.target.value)}
+                                            placeholder={i18n.t('搜尋角色（中文名／英文名／暱稱）…', 'Search character (CN / EN / alias)…')}
+                                            className="w-full text-sm border rounded px-3 py-2 focus:ring-1 focus:ring-indigo-500"
+                                        />
+                                    </div>
+
                                     {/* 母檔角色：正式名與預設別稱唯讀，使用者只疊加自己的別稱 */}
                                     <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {MASTER_ALIASES.map((m, idx) => {
+                                        {(() => {
+                                            const q = aliasSearch.trim().toLowerCase();
+                                            const filtered = q ? MASTER_ALIASES.filter(m =>
+                                                m.name.toLowerCase().includes(q) ||
+                                                (m.nameEN && m.nameEN.toLowerCase().includes(q)) ||
+                                                (m.aliases || []).some(a => a.toLowerCase().includes(q))
+                                            ) : MASTER_ALIASES;
+                                            if (filtered.length === 0) {
+                                                return <div className="text-center text-sm text-gray-400 py-6">{i18n.t('查無符合的角色', 'No matching character')}</div>;
+                                            }
+                                            return filtered.map((m, idx) => {
                                             const defAliases = (m.aliases || []).filter(a => a && a !== m.name);
                                             const extras = (userAliases.extras && userAliases.extras[m.name]) || [];
                                             return (
@@ -3949,7 +3971,8 @@ Continue?`);
                                                 </div>
                                             </div>
                                             );
-                                        })}
+                                        });
+                                        })()}
                                     </div>
 
                                     {/* 使用者自訂角色（母檔沒有的） */}
