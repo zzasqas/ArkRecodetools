@@ -4,6 +4,23 @@
 
 ---
 
+## ⚠️ 近期變更（委託協作者更新，2026-05）
+
+對戰紀錄器（`battle-recorder.html`）已英文化並調整角色資料架構，重點如下：
+
+1. **battle-recorder 全面支援中／英切換**（i18n 透過 React Context；沿用右上角既有 EN 鈕／`arkrecode-lang` 事件）。
+2. **角色英文名改由 `assets/char-name-data.js` 提供**：該檔每筆已新增 `nameEN` 欄位（由角色別稱試算表同步，共 102 角色）；battle-recorder 啟動時從這裡動態建立「中文正式名 → 英文名」對照。
+   - ⚠️ **新增角色時，`char-name-data.js` 也必須填 `nameEN`**，否則該角色在 battle-recorder 英文模式會顯示中文（已同步修正下方「新增角色更新說明」步驟 1）。
+   - 註：`character-db.html` CHARACTER_DATA 仍各自保有 `nameEN`（兩處尚未統一），請保持兩邊英文名一致。
+3. **別稱儲存改為「疊加式」**：使用者自訂別稱／自訂角色改存新 key `arkrecode_userAliases`（結構 `{ extras: { 正式名: [別稱...] }, customs: [{ name, aliases }] }`），疊加於母檔之上、**不再整份取代**。舊 key `arkrecode_characterAliases` 會在載入時自動遷移一次；載入時並會自動濾除「名稱其實是母檔角色正式名／別稱」的雜訊自訂條目。
+4. **英文輸入辨識**：`Utils.convertAlias` 也比對 `nameEN`，輸入英文名會收斂回中文正式名再儲存（儲存值一律維持中文 canonical，確保跨語言一致、不破壞既有紀錄）。角色輸入框自動完成清單已加入英文名。
+5. CSV 匯出在英文模式輸出英文（角色名／勝負／排位）；`battle-recorder.html` 載入 `char-name-data.js` 已加 `?v=` 破除快取——**日後更新 `char-name-data.js` 請同步調高該版號**。
+6. 版本號未升（沿用 v2.9.1），待原作者依既有慣例統一升版（見下方「版本號同步」）。
+
+> `character-db.html` 未改動（仍 64 角色、UI 半英文化）；如需一併英文化或擴充角色另議。
+
+---
+
 ## 專案概覽
 
 **ArkRecodetools** 是《星隕計劃》（Ark Re:Code）的玩家輔助工具集，純前端架構，部署於 GitHub Pages。所有資料存於使用者瀏覽器的 `localStorage`，不依賴任何後端服務。
@@ -147,7 +164,7 @@ ArkRecodetools/
 
 | 檔案 | 資料內容 | 格式 | 使用工具 | 維護頻率 |
 |------|----------|------|----------|----------|
-| `assets/char-name-data.js` | 本名 + id(H###) + 別名 | JS global | battle-recorder, guild-battle, tier-list, **character-db（搜尋）** | 新角色 / 補暱稱 |
+| `assets/char-name-data.js` | 本名 + **nameEN** + id(H###) + 別名 | JS global | battle-recorder, guild-battle, tier-list, **character-db（搜尋）** | 新角色 / 補暱稱（新角色 nameEN 必填）|
 | `chars.csv` | 完整數值（攻防生速、爆率爆傷、被動）| CSV 22 欄 | equip-optimizer（fetch）, tier-list/chars-data.js 生成來源 | 新角色 / 版本數值更新 |
 | `character-db.html` CHARACTER_DATA | nameCN + nameEN + attribute + job + rarity（別名已移至 char-name-data.js） | JS inline 陣列 | character-db（僅此） | 新角色（必須手動更新） |
 | `build_recom.csv` | 推薦套裝、屬性權重、速度門檻 | CSV | character-db（fetch） | 有推薦配裝資料時 |
@@ -214,7 +231,7 @@ ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Membe
 | 資料欄位 | 唯一權威來源 | 注意事項 |
 |----------|-------------|----------|
 | 角色本名（中文） | `chars.csv` 第一欄 | 其他地方的 name 必須與此一致 |
-| 角色英文名 | `character-db.html` CHARACTER_DATA.nameEN | 只有這裡有，其他地方沒有 |
+| 角色英文名 | `character-db.html` CHARACTER_DATA.nameEN **＋ `assets/char-name-data.js` nameEN** | 兩處都有、需保持一致；battle-recorder/guild-battle 讀 char-name-data.js，character-db 用自己的 |
 | 暱稱/別名 | `assets/char-name-data.js` | character-db 另有一份，需同步 |
 | 遊戲 ID（H###） | `assets/char-name-data.js` id 欄 | 僅供參考，工具實際未使用 |
 | 戰鬥數值 | `chars.csv`（根目錄） | equip-optimizer 直接讀；tier-list 透過 chars-data.js 讀 |
@@ -231,7 +248,7 @@ ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Membe
 
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
-| 1 | `assets/char-name-data.js` | ✅ 必須 | 在「新角色備用區」上方加入 `{ name: '本名', id: 'H???', aliases: ['本名', '暱稱1', ...] }` |
+| 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 必填**，否則 battle-recorder 英文模式會顯示中文。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
 | 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD` |
 | 3 | `tier-list/chars-data.js` | ✅ 必須 | 執行 `python scripts/gen_chars_data.py` 重新生成（從根目錄 chars.csv 自動轉換） |
 | 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic） |
