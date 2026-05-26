@@ -192,7 +192,19 @@
 
         // 母檔（單一資料來源）：正式中英文名 + 預設別稱。使用者自訂只疊加於此之上，不取代。
         const MASTER_ALIASES = window.CHARACTER_ALIASES || [];
-        // 把舊版「整份取代」的別稱資料，轉成疊加式（只保留使用者多加的別稱與自訂角色）
+        // 母檔所有「正式名」與「別稱」集合：用來判斷某名稱是否其實已屬於母檔角色
+        const MASTER_NAME_SET = new Set();
+        const MASTER_ALIAS_SET = new Set();
+        MASTER_ALIASES.forEach(c => { MASTER_NAME_SET.add(c.name); (c.aliases || []).forEach(a => { if (a) MASTER_ALIAS_SET.add(a); }); });
+        // 清理使用者別稱：濾掉「其實是母檔角色（正式名或別稱）」的自訂角色，避免重複/雜訊
+        const sanitizeUserAliases = (ua) => {
+            const extras = (ua && ua.extras) ? ua.extras : {};
+            const customs = ((ua && ua.customs) ? ua.customs : []).filter(c =>
+                c && c.name && !MASTER_NAME_SET.has(c.name) && !MASTER_ALIAS_SET.has(c.name)
+            );
+            return { extras, customs };
+        };
+        // 把舊版「整份取代」的別稱資料，轉成疊加式（只保留使用者真正多加的別稱與全新角色）
         const deriveUserAliasesFromLegacy = (legacy) => {
             const byName = {};
             MASTER_ALIASES.forEach(c => { byName[c.name] = c; });
@@ -203,9 +215,11 @@
                 if (m) {
                     const add = (c.aliases || []).filter(a => a && !m.aliases.includes(a));
                     if (add.length) extras[c.name] = add;
-                } else {
+                } else if (!MASTER_ALIAS_SET.has(c.name)) {
+                    // 名稱不是母檔正式名、也不是母檔別稱 → 才視為真正的自訂角色
                     customs.push({ name: c.name, aliases: (c.aliases || []).filter(Boolean) });
                 }
+                // 否則：名稱其實是某母檔角色的別稱 → 略過（別稱已在母檔內）
             });
             return { extras, customs };
         };
@@ -2918,7 +2932,7 @@ Continue?`);
                                 name: SecurityUtils.cleanInput(c.name || ''),
                                 aliases: (c.aliases || []).map(SecurityUtils.cleanInput).filter(Boolean)
                             })).filter(c => c.name);
-                            setUserAliases({ extras: ext, customs: cus });
+                            setUserAliases(sanitizeUserAliases({ extras: ext, customs: cus }));
                         } else if (data.characterAliases && Array.isArray(data.characterAliases)) {
                             // 舊版備份：整份別稱 → 轉成疊加式
                             const legacy = data.characterAliases.map(alias => ({
@@ -3053,7 +3067,7 @@ Continue?`);
                         try {
                             const u = SecurityUtils.deobfuscateData(savedUserAliases);
                             if (u && typeof u === 'object') {
-                                setUserAliases({ extras: u.extras || {}, customs: u.customs || [] });
+                                setUserAliases(sanitizeUserAliases({ extras: u.extras || {}, customs: u.customs || [] }));
                             }
                         } catch (error) {
                             console.warn('使用者別稱載入失敗，使用母檔預設值');
@@ -3063,7 +3077,7 @@ Continue?`);
                         try {
                             const legacy = SecurityUtils.deobfuscateData(savedLegacyAliases);
                             if (Array.isArray(legacy)) {
-                                setUserAliases(deriveUserAliasesFromLegacy(legacy));
+                                setUserAliases(sanitizeUserAliases(deriveUserAliasesFromLegacy(legacy)));
                             }
                         } catch (error) {
                             console.warn('舊別稱資料遷移失敗，使用母檔預設值');
