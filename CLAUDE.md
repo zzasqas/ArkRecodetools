@@ -250,13 +250,27 @@ ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Membe
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
 | 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 必填**，否則 battle-recorder 英文模式會顯示中文。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
-| 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD` |
+| 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD`（詳見下方欄位說明） |
 | 3 | `tier-list/chars-data.js` | ✅ 必須 | 執行 `python scripts/gen_chars_data.py` 重新生成（從根目錄 chars.csv 自動轉換） |
-| 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic） |
-| 5 | `build_recom.csv` | 🔶 建議 | 有推薦配裝時加入 |
-| 6 | `assets/official-tierlist.json` | 🔶 視情況 | 排好 tier 後用「★ 官方匯出」更新 |
+| 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic）。**注意：遊戲內「刺客」= vanguard** |
+| 5 | `battle-recorder.html` 版本升版 | ✅ 必須 | 全域搜尋舊版號並替換（同時更新版本白名單陣列、dataVersion 比對字串、char-name-data.js `?v=` 版號），詳見上方「版本號同步」表格 |
+| 6 | `index.html` / `README.md` | ✅ 必須 | 工具卡片版本標籤與更新紀錄同步升版 |
+| 7 | `build_recom.csv` | 🔶 建議 | 有推薦配裝時加入 |
+| 8 | `assets/official-tierlist.json` | 🔶 視情況 | 排好 tier 後用「★ 官方匯出」更新 |
 
 > battle-recorder、guild-battle 只讀 char-name-data.js，步驟 1 完成後自動生效，不需額外動作。
+
+#### `chars.csv` 欄位填寫說明
+
+欄位順序：`角色本名, 星級, 屬性, 職業, 基礎攻擊, 基礎防禦, 基礎生命, 基礎速度, 攻擊加成, 防禦加成, 生命加成, 速度加成, 總攻擊, 總防禦, 總生命, 總速度, 爆擊率(%), 爆擊傷害(%), 狀態命中(%), 狀態抗性(%), 被動加成類型, 被動額外效果`
+
+- **加成欄**：裝備加成（攻/防/血）填實際數值；速度加成一般為 0 或小正整數。
+- **總值欄**：= 基礎 + 加成。
+- **爆擊率(%)**：填角色**完整解鎖後的固有總爆率**（含基礎 15% + 固有加成 + 潛能加成），例如 `15+12+15=42` 就填 `42.0`。
+- **爆擊傷害(%)**：無特殊加成填 `150.0`。
+- **被動加成類型**：填潛能解鎖的屬性類型，如 `暴擊率`、`攻擊力%`、`狀態命中` 等；無潛能加成填空。
+- **被動額外效果**：填被動技能的附帶效果說明（非潛能），如 `暴擊率 +15%`；無則留空。
+- **其他沒提的欄位**：與常態角色相同（加成為 0，抗性為 0）。
 
 ---
 
