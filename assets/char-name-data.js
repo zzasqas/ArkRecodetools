@@ -105,4 +105,5 @@ window.CHARACTER_ALIASES = [
     { name: '複製體卡麗希', nameEN: 'Clone Kalici', id: 'H056', aliases: ['複製體卡麗希', '卡麗希', '暗熊'] },
     { name: '蝶子', nameEN: 'Chouko', id: '', aliases: ['蝶子'] },
     { name: '璐茜瑪', nameEN: 'Lucima', id: '', aliases: ['璐茜瑪'] },
+    { name: '芽路', nameEN: '芽路', id: 'H602', aliases: ['芽路', '火正太'] },
 ];

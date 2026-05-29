@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 對戰紀錄器 v2.9.1</title>
+    <title>ArkRecode 對戰紀錄器 v2.9.2</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
@@ -173,7 +173,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.9.1</div>
+    <div class="author-info">by zzas | v2.9.2</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -404,7 +404,7 @@
                                 <p>{t('如有問題或建議，歡迎回饋：', 'Questions or suggestions are welcome:')}</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• {t('開發者：zzas', 'Developer: zzas')}</li>
-                                    <li>• {t('版本：v2.9.1', 'Version: v2.9.1')}</li>
+                                    <li>• {t('版本：v2.9.2', 'Version: v2.9.2')}</li>
                                     <li>• {t('更新日期：', 'Updated: ')}{new Date().toLocaleDateString(t('zh-TW', 'en-US'))}</li>
                                 </ul>
                             </div>
@@ -851,7 +851,7 @@
                         version: '2.9.1',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.9.1'
+                            exported_by: 'ArkRecode_v2.9.2'
                         }
                     };
                     
@@ -2987,7 +2987,7 @@ Continue?`);
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert(tg('✅ 歡迎使用 ArkRecode v2.9.1！您的資料將存儲在本機瀏覽器中。', '✅ Welcome to ArkRecode v2.9.1! Your data is stored locally in your browser.'));
+                alert(tg('✅ 歡迎使用 ArkRecode v2.9.2！您的資料將存儲在本機瀏覽器中。', '✅ Welcome to ArkRecode v2.9.2! Your data is stored locally in your browser.'));
             }, []);
 
             // 拒絕免責聲明
@@ -3025,14 +3025,14 @@ Continue?`);
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.9.1'].includes(dataVersion)) {
+                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.9.1', '2.9.2'].includes(dataVersion)) {
                                 // 舊版升級：清除別名快取
                                 localStorage.removeItem('arkrecode_characterAliases');
-                                console.log('已清除舊版別名快取，套用 v2.9.1 預設別名');
+                                console.log('已清除舊版別名快取，套用 v2.9.2 預設別名');
                             }
-                            if (dataVersion !== '2.9.1') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.1`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.9.1');
+                            if (dataVersion !== '2.9.2') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.2`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.9.2');
                             }
                             
                         } catch (parseError) {
@@ -3057,7 +3057,7 @@ Continue?`);
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.9.1！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.9.2！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
@@ -3222,7 +3222,7 @@ Continue?`);
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    {i18n.t('ArkRecode 對戰紀錄器 v2.9.1', 'ArkRecode Battle Recorder v2.9.1')}
+                                    {i18n.t('ArkRecode 對戰紀錄器 v2.9.2', 'ArkRecode Battle Recorder v2.9.2')}
                                 </h1>
                                 <div className="flex gap-1">
                                     <button
@@ -3564,7 +3564,7 @@ Continue?`);
                                                                     result: '勝',
                                                                     rank: tg('測試排位', 'Test rank'),
                                                                     opponentName: tg('測試對手', 'Test opponent'),
-                                                                    notes: `v2.7.0 test - ${new Date().toLocaleString('zh-TW')}`
+                                                                    notes: `v2.9.2 test - ${new Date().toLocaleString('zh-TW')}`
                                                                 };
                                                                 uploadToCommunity(testRecord);
                                                                 alert(tg('測試上傳完成！請到您的私人Google Sheets確認', 'Test upload complete! Check your private Google Sheets to confirm'));
@@ -4086,12 +4086,12 @@ Continue?`);
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        {i18n.t('v2.9.1 更新說明', 'v2.9.1 Release Notes')}
+                                        {i18n.t('v2.9.2 更新說明', 'v2.9.2 Release Notes')}
                                     </h2>
 
                                     <div className="space-y-3">
                                         <div className="p-3 bg-blue-50 rounded-lg">
-                                            <h4 className="font-medium text-blue-800 mb-2">{i18n.t('✨ v2.9.1 改善', '✨ v2.9.1 Improvements')}</h4>
+                                            <h4 className="font-medium text-blue-800 mb-2">{i18n.t('✨ v2.9.2 改善', '✨ v2.9.2 Improvements')}</h4>
                                             <ul className="text-sm text-blue-700 space-y-1">
                                                 <li>• {i18n.t(<><strong>備註 hover 優化</strong>：tooltip 即時顯示，字體加大 4px，長備註顯示 [...]  提示</>, <><strong>Notes hover</strong>: instant tooltip, font enlarged 4px, long notes show a [...] hint</>)}</li>
                                                 <li>• {i18n.t(<><strong>備註點擊展開</strong>：點擊備註欄可展開完整文字</>, <><strong>Click to expand notes</strong>: tap the notes cell to show the full text</>)}</li>
@@ -4140,7 +4140,7 @@ Continue?`);
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">{i18n.t('📞 技術資訊', '📞 Technical Info')}</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>{i18n.t('版本', 'Version')}</strong>{i18n.t('：', ': ')}v2.9.1</div>
+                                                <div>• <strong>{i18n.t('版本', 'Version')}</strong>{i18n.t('：', ': ')}v2.9.2</div>
                                                 <div>• <strong>{i18n.t('發布日期', 'Release date')}</strong>{i18n.t('：', ': ')}{new Date().toLocaleDateString(i18n.t('zh-TW', 'en-US'))}</div>
                                                 <div>• <strong>{i18n.t('安全等級', 'Security level')}</strong>{i18n.t('：高度 🛡️', ': High 🛡️')}</div>
                                                 <div>• <strong>{i18n.t('適用環境', 'Environment')}</strong>{i18n.t('：離線使用，私人部署', ': Offline use, private deployment')}</div>
@@ -4154,7 +4154,7 @@ Continue?`);
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            {i18n.t('ArkRecode 對戰紀錄器 v2.9.1 | 離線使用 | 歷史搜索功能 + 策略推薦', 'ArkRecode Battle Recorder v2.9.1 | Offline | History Search + Strategy Recommendations')}
+                            {i18n.t('ArkRecode 對戰紀錄器 v2.9.2 | 離線使用 | 歷史搜索功能 + 策略推薦', 'ArkRecode Battle Recorder v2.9.2 | Offline | History Search + Strategy Recommendations')}
                         </div>
                     </div>
                 </div>
