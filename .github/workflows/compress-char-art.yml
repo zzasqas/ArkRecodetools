@@ -2,6 +2,7 @@ name: Compress Character Art to WebP
 
 on:
   push:
+    branches: [main]    # 限定分支：tag push 不套用 paths 過濾會誤觸發，且 detached HEAD 會讓 git push 失敗
     paths:
       - 'assets/char-art/**'
 
