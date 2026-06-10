@@ -190,42 +190,39 @@ character-db.html **不會**自動讀 chars.csv，所有角色資料（nameCN/EN
 
 ### 跨專案同步（ArkRecodetools ↔ arkrecode_gvg_sniffer）
 
-sniffer 專案（位於 `C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer`）有自己的別名系統，來源是 char-name-data.js。
+**2026-06-10 起，`assets/char-name-data.js` 是兩個專案共用的角色識別母檔**
+（中文名 / nameEN / StaticID / 暱稱，103 條目皆已補齊 id）。
+sniffer（`C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer`）
+的 ROLE 對照表與 Discord bot 暱稱解析，都從本檔經同步腳本產生的
+`data/characters.json` 自動載入，**sniffer 端不再手改任何角色檔案**。
 
 | sniffer 檔案 | 對應 ArkRecodetools 檔案 | 關係 |
 |-------------|------------------------|------|
-| `discord_bot/data/aliases.py` | `assets/char-name-data.js` | char-name-data.js 是主源，同步腳本追加新角色 |
-| `utils/helper.py` | （無對應）| sniffer 獨有：H### → [EN, CN] 完整表，含未實裝角色 |
+| `data/characters.json` | `assets/char-name-data.js` | 由 sync 腳本產生（只增不刪），sniffer 唯一角色來源 |
+| `utils/helper.py` ROLE / `discord_bot/data/aliases.py` | （自動）| 從 characters.json 載入，無需手改 |
 | `discord_bot/data/build_recom.csv` | `build_recom.csv` | 格式相同，可直接複製 |
 
-**新角色同步到 sniffer 的步驟：**
+**新角色同步到 sniffer 的步驟（每兩週活動更新時）：**
 
 ```bash
-# 1. 在 ArkRecodetools 更新 char-name-data.js（依照正常新增角色 SOP）
-# 2. 在 sniffer repo 執行同步腳本（只新增，不覆蓋現有條目）
-python scripts/sync_aliases_from_arkrecode.py
+# 1. 在本 repo 更新 char-name-data.js（依照正常新增角色 SOP）
+#    ⚠️ 必填 id（StaticID，如 'H614'），sniffer 靠它識別角色
+#    ID 查詢：https://arkrecodewiki.miraheze.org/wiki/Members/Infotable
+#    H1xx~H2xx = 主線；H6xx = vtuber/聯動；H8xx = 熊熊系列
 
-# 預覽模式（不寫入）
-python scripts/sync_aliases_from_arkrecode.py --dry-run
+# 2. 在 sniffer repo 執行同步腳本（可先 --dry-run 預覽）
+cd "C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer"
+python scripts/sync_from_arkrecode.py
+
+# 3. 兩個 repo 各自 commit & push（sniffer push 會觸發 Railway redeploy）
 ```
 
-> 腳本位於 sniffer private repo（`scripts/sync_aliases_from_arkrecode.py`），不在此 repo。
+> 腳本位於 sniffer private repo（`scripts/sync_from_arkrecode.py`）。
+> 完整的兩週更新 Checklist（含 PICKUP、/upload_chars）見 sniffer 的 CLAUDE.md。
 
-**注意：** sniffer 的 aliases.py 有幾個 canonical name 與 char-name-data.js 不同：
-
-| sniffer canonical | char-name-data.js | 說明 |
-|---|---|---|
-| `彩伽` | `河北彩伽` | **刻意差異**，GVG CSV 用短名，不改 |
-| `妮諾楷西` | `妮諾凱西` | 兩邊互相收為 alias，雙向皆可識別 |
-| `東雲ft.坊橋夜泊` | `東雲 ft.坊橋夜泊` | 兩邊互相收為 alias，雙向皆可識別 |
-
-腳本同步後，若有其他新 canonical 差異請手動確認。
-
-**helper.py 更新：** 新角色的 H### ID 需要手動加入 sniffer 的 `utils/helper.py`，格式為：
-```python
-"H###": ["EnglishName", "中文名"],
-```
-ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)
+**canonical 差異規則：** sniffer 的 `aliases.py` 手工條目永遠優先於 json，
+既有的刻意差異（`彩伽` vs `河北彩伽`、`妮諾楷西` vs `妮諾凱西` 等）不受同步影響，
+不需要人工處理。新增條目若 name 與 sniffer 慣用名不同，會自動收進 aliases。
 
 ### 各欄位的單一來源
 
@@ -249,7 +246,7 @@ ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Membe
 
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
-| 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 必填**，否則 battle-recorder 英文模式會顯示中文。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
+| 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 與 `id`（StaticID）皆必填**：nameEN 缺漏 battle-recorder 英文模式會顯示中文；id 缺漏 sniffer 同步腳本無法識別角色（ID 查 [wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)）。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
 | 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD`（詳見下方欄位說明） |
 | 3 | `tier-list/chars-data.js` | ✅ 必須 | 執行 `python scripts/gen_chars_data.py` 重新生成（從根目錄 chars.csv 自動轉換） |
 | 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic）。**注意：遊戲內「刺客」= vanguard** |
@@ -257,6 +254,7 @@ ID 查詢來源：[ArkRecode Wiki](https://arkrecodewiki.miraheze.org/wiki/Membe
 | 6 | `index.html` / `README.md` | ✅ 必須 | 工具卡片版本標籤與更新紀錄同步升版 |
 | 7 | `build_recom.csv` | 🔶 建議 | 有推薦配裝時加入 |
 | 8 | `assets/official-tierlist.json` | 🔶 視情況 | 排好 tier 後用「★ 官方匯出」更新 |
+| 9 | **sniffer 同步** | ✅ 必須 | 在 sniffer repo 跑 `python scripts/sync_from_arkrecode.py`，再兩個 repo commit & push（詳見上方「跨專案同步」） |
 
 > battle-recorder、guild-battle 只讀 char-name-data.js，步驟 1 完成後自動生效，不需額外動作。
 
