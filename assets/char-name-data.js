@@ -105,5 +105,7 @@ window.CHARACTER_ALIASES = [
     { name: '複製體卡麗希', nameEN: 'Clone Kalici', id: 'H056', aliases: ['複製體卡麗希', '卡麗希', '暗熊'] },
     { name: '蝶子', nameEN: 'Chouko', id: 'H140', aliases: ['蝶子'] },
     { name: '璐茜瑪', nameEN: 'Lucima', id: 'H025', aliases: ['璐茜瑪'] },
-    { name: '芽路', nameEN: '芽路', id: 'H602', aliases: ['芽路', '火正太'] },
+    { name: '芽路', nameEN: 'Mero', id: 'H602', aliases: ['芽路', '火正太'] },
+    { name: '愛戀泡影的玳蓮', nameEN: 'Ephemeral Love Darlene', id: 'H192', aliases: ['愛戀泡影的玳蓮', '水奶奶', '愛戀玳蓮', '婚紗玳蓮', '人魚公主'] },
+    { name: '自信拉娜', nameEN: 'Resolute Lana', id: 'H181', aliases: ['自信拉娜', '光鎚', '光拉娜'] },
 ];
