@@ -1,4 +1,4 @@
-// 自動從 chars.csv 轉換，版本：20260529
+// 自動從 chars.csv 轉換，版本：20260613
 // 欄位：name, star, element, role, totalSpd, totalAtk, totalDef, totalHp, critRate, critDmg
 window.CHARS_DATA = [
   {name:"奈蘭希爾",star:5,element:"火",role:"狙擊",totalSpd:124,totalAtk:1284,totalDef:536,totalHp:4976,critRate:15.0,critDmg:150.0},
@@ -182,4 +182,6 @@ window.CHARS_DATA = [
   {name:"重裝助手翠絲特",star:5,element:"木",role:"重裝",totalSpd:100,totalAtk:1112,totalDef:645,totalHp:7147,critRate:15.0,critDmg:150.0},
   {name:"時界巡者Aoi",star:5,element:"水",role:"戰士",totalSpd:112,totalAtk:966,totalDef:657,totalHp:7323,critRate:35.0,critDmg:150.0},
   {name:"芽路",star:5,element:"火",role:"先鋒",totalSpd:120,totalAtk:1090,totalDef:511,totalHp:5380,critRate:42.0,critDmg:150.0},
+  {name:"自信拉娜",star:5,element:"光",role:"輔助",totalSpd:111,totalAtk:649,totalDef:715,totalHp:5254,critRate:15.0,critDmg:150.0},
+  {name:"愛戀泡影的玳蓮",star:5,element:"水",role:"術士",totalSpd:111,totalAtk:1039,totalDef:673,totalHp:5299,critRate:45.0,critDmg:150.0},
 ];
