@@ -13,7 +13,7 @@
                script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval';
                connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
                style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';">
-<title>配裝計算器 v1.6.1 - ArkRecode Tools</title>
+<title>配裝計算器 v1.6.2 - ArkRecode Tools</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -52,7 +52,7 @@ const { useState, useMemo, useEffect, useCallback, useRef } = React;
 // ============================================================
 // CONSTANTS
 // ============================================================
-const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊"};
+const SET_MAP={Speed:"速度",Health:"生命",Attack:"攻擊",Defense:"防禦",Hit:"命中",Resist:"抗性",Critical:"暴擊",Destruction:"爆傷",Lifesteal:"吸血",Immunity:"免疫",Counter:"反擊",Revenge:"復仇",Penetration:"貫穿",Rage:"暴怒",Injury:"創傷",Pinch:"夾擊",Torrent:"飛流"};
 const PROP_MAP={AttackValue:"攻擊",AttackRate:"攻擊%",HPValue:"生命",HPRate:"生命%",DefenceValue:"防禦",DefenceRate:"防禦%",SpeedValue:"速度",CriticalRate:"爆率",CriticalDamageRate:"爆傷",EffectHitRate:"命中",HitRate:"命中",ResistanceRate:"抗性"};
 // 末位數字 1-6 普遍對應六部位（規則全面適用，無需白名單）。
 // 特殊前綴：末位數字不符合標準慣例（如使用 0-9 或整組僅有武/頭/甲），
@@ -71,7 +71,7 @@ const SPECIAL_PFX_SLOT={
 const LS_SLOT_MAP="arkrecode_slot_map";
 const getSlotMap=()=>{try{return JSON.parse(localStorage.getItem(LS_SLOT_MAP)||"{}");}catch(e){ console.warn('[arkrecode]', e); return{};}};
 const saveSlotMap=m=>{try{localStorage.setItem(LS_SLOT_MAP,JSON.stringify(m));}catch(e){ console.warn('[arkrecode]', e); }};
-const SET_EFFECTS={"速度":{type:"four",effect:{"速度%_base":0.16}},"攻擊":{type:"four",effect:{"攻擊%":0.45}},"爆傷":{type:"four",effect:{"爆傷":0.50}},"生命":{type:"two",effect:{"生命%":0.20}},"防禦":{type:"two",effect:{"防禦%":0.20}},"命中":{type:"two",effect:{"命中":0.20}},"抗性":{type:"two",effect:{"抗性":0.20}},"暴擊":{type:"two",effect:{"爆率":0.12}},"吸血":{type:"four_trait",effect:{}},"免疫":{type:"two_trait",effect:{}},"反擊":{type:"four_trait",effect:{}},"復仇":{type:"four_trait",effect:{"速度%_base":0.12}},"貫穿":{type:"two_trait",effect:{}},"夾擊":{type:"two_trait",effect:{}},"暴怒":{type:"four_trait",effect:{}},"創傷":{type:"four_trait",effect:{}}};
+const SET_EFFECTS={"速度":{type:"four",effect:{"速度%_base":0.16}},"攻擊":{type:"four",effect:{"攻擊%":0.45}},"爆傷":{type:"four",effect:{"爆傷":0.50}},"生命":{type:"two",effect:{"生命%":0.20}},"防禦":{type:"two",effect:{"防禦%":0.20}},"命中":{type:"two",effect:{"命中":0.20}},"抗性":{type:"two",effect:{"抗性":0.20}},"暴擊":{type:"two",effect:{"爆率":0.12}},"吸血":{type:"four_trait",effect:{}},"免疫":{type:"two_trait",effect:{}},"反擊":{type:"four_trait",effect:{}},"復仇":{type:"four_trait",effect:{"速度%_base":0.12}},"貫穿":{type:"two_trait",effect:{}},"夾擊":{type:"two_trait",effect:{}},"暴怒":{type:"four_trait",effect:{}},"創傷":{type:"four_trait",effect:{}},"飛流":{type:"two_trait",effect:{}}};
 const getSetPcs=n=>{const e=SET_EFFECTS[n];return(!e)?4:(e.type==="two"||e.type==="two_trait")?2:4;};
 const getSetColor=n=>{const p=getSetPcs(n);return p===4?"#F87171":"#4ADE80";};
 const ALL_SETS=Object.keys(SET_EFFECTS);
@@ -1381,7 +1381,7 @@ function App(){
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center text-sm" style={{background:"linear-gradient(135deg,#3B82F6,#8B5CF6)"}}>⚔</div>
-            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.6.1</span></h1>
+            <h1 className="text-base font-bold tracking-wide" style={{color:"#93C5FD"}}>Ark Re:Code <span className="text-slate-500 font-normal">配裝計算器</span><span className="text-[15px] font-normal ml-2" style={{color:"#475569"}}>v1.6.2</span></h1>
           </div>
           <button onClick={()=>setShowHelp(!showHelp)} className="text-[14px] text-slate-500 hover:text-blue-400 transition-colors border border-slate-800 hover:border-blue-900 px-2 py-1 rounded-full">
             {showHelp?"✕ 關閉":"? 說明"}
@@ -2711,7 +2711,7 @@ const MP_MT_BY_SLOT={武器:["攻擊"],頭盔:["生命"],鎧甲:["防禦"],
   項鍊:["爆率","爆傷","攻擊%","生命%","防禦%","攻擊","生命","防禦"],
   戒指:["命中","抗性","防禦%","生命%","攻擊%","防禦","生命","攻擊"],
   鞋子:["速度","攻擊%","生命%","防禦%","攻擊","生命","防禦"]};
-const MP_ALL_SETS=["速度","爆傷","攻擊","生命","防禦","命中","抗性","暴擊","吸血","反擊","復仇","暴怒","創傷","夾擊","免疫","貫穿"];
+const MP_ALL_SETS=["速度","爆傷","攻擊","生命","防禦","命中","抗性","暴擊","吸血","反擊","復仇","暴怒","創傷","夾擊","免疫","貫穿","飛流"];
 const MP_ALL_SUBS=["速度","爆率","爆傷","攻擊","攻擊%","防禦","防禦%","生命","生命%","命中","抗性"];
 
 function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDeselect}){
