@@ -66,6 +66,7 @@ window.CHARS_DATA = [
   {name:"咲",star:5,element:"木",role:"醫療",totalSpd:115,totalAtk:649,totalDef:694,totalHp:5254,critRate:15.0,critDmg:150.0},
   {name:"空",star:5,element:"木",role:"術師",totalSpd:120,totalAtk:1039,totalDef:673,totalHp:5299,critRate:15.0,critDmg:155.0},
   {name:"蜜茶多恩",star:5,element:"木",role:"先鋒",totalSpd:118,totalAtk:1057,totalDef:532,totalHp:5542,critRate:15.0,critDmg:150.0},
+  {name:"絢爛夏花卡洛琳",star:5,element:"木",role:"先鋒",totalSpd:121,totalAtk:1208,totalDef:508,totalHp:5178,critRate:15.0,critDmg:165.0},
   {name:"喬瑟琳",star:5,element:"光",role:"術師",totalSpd:106,totalAtk:1197,totalDef:683,totalHp:4572,critRate:15.0,critDmg:150.0},
   {name:"複製體吉妮茲",star:5,element:"光",role:"先鋒",totalSpd:113,totalAtk:1228,totalDef:473,totalHp:7436,critRate:23.0,critDmg:150.0},
   {name:"柏妮絲",star:5,element:"光",role:"醫療",totalSpd:102,totalAtk:621,totalDef:802,totalHp:5474,critRate:15.0,critDmg:150.0},
