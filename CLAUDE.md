@@ -247,8 +247,8 @@ python scripts/sync_from_arkrecode.py
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
 | 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 與 `id`（StaticID）皆必填**：nameEN 缺漏 battle-recorder 英文模式會顯示中文；id 缺漏 sniffer 同步腳本無法識別角色（ID 查 [wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)）。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
-| 2 | `chars.csv`（根目錄） | ✅ 必須 | 末行加入數值，更新第一行版本標頭 `version:YYYYMMDD`（詳見下方欄位說明） |
-| 3 | `tier-list/chars-data.js` | ✅ 必須 | 執行 `python scripts/gen_chars_data.py` 重新生成（從根目錄 chars.csv 自動轉換） |
+| 2 | `chars.csv`（根目錄） | ✅ 必須 | 在同屬性區塊末行加入數值，**⚠️ 同步更新第一行版本標頭 `version:YYYYMMDD`**（忘記改版本號 → equip-optimizer 瀏覽器快取不更新 → 新角色完全不出現） |
+| 3 | `tier-list/chars-data.js` | ✅ 必須 | 手動在同屬性末行後面新增對應行（**無自動腳本**，`scripts/gen_chars_data.py` 不存在） |
 | 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic）。**注意：遊戲內「刺客」= vanguard** |
 | 5 | `battle-recorder.html` 版本升版 | ✅ 必須 | 全域搜尋舊版號並替換（同時更新版本白名單陣列、dataVersion 比對字串、char-name-data.js `?v=` 版號），詳見上方「版本號同步」表格 |
 | 6 | `index.html` / `README.md` | ✅ 必須 | 工具卡片版本標籤與更新紀錄同步升版 |
@@ -282,7 +282,9 @@ python scripts/sync_from_arkrecode.py
 
 ### CSV 更新
 
-`chars.csv` 更新後需同時更新版本標頭（`version:YYYYMMDD`），以便客戶端判斷是否需要重新載入。
+`chars.csv` 更新後**必須**同時更新版本標頭（`version:YYYYMMDD`），以便客戶端判斷是否需要重新載入。
+
+> ⚠️ **版本號是 equip-optimizer 瀏覽器快取的唯一 key**。`equip-optimizer.html` 用 localStorage 快取解析後的角色資料，只有版本號與快取不同時才重新讀取 CSV。改了資料但沒改版本號 → 使用者永遠看到舊資料、新角色不出現。強制清快取：DevTools → Application → Local Storage → 刪除 `arkrecode_chars_version`。
 
 ### README.md 同時作為面板內容
 
