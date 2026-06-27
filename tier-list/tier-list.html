@@ -50,6 +50,41 @@
 </style>
 </head>
 <body>
+<!-- daikan promo banner -->
+<style>
+#dk-banner{position:fixed;top:0;left:0;right:0;z-index:9999;height:38px;
+  background:rgba(10,16,30,0.96);border-bottom:1px solid rgba(251,191,36,.28);
+  display:none;align-items:center;justify-content:center;gap:10px;
+  font-size:13px;color:#94A3B8;padding:0 44px;backdrop-filter:blur(8px);}
+#dk-banner a{color:#FCD34D;text-decoration:none;font-weight:700;white-space:nowrap;}
+#dk-banner a:hover{text-decoration:underline;}
+#dk-banner .dk-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:#475569;font-size:17px;cursor:pointer;
+  line-height:1;padding:3px 6px;border-radius:4px;transition:color .15s;}
+#dk-banner .dk-x:hover{color:#F87171;}
+</style>
+<div id="dk-banner">
+  <span>每日任務簡化交出去，專職對戰</span>
+  <a href="../daikan.html" target="_blank" rel="noopener">了解每日代管服務 →</a>
+  <button class="dk-x" onclick="closeDkBanner()">×</button>
+</div>
+<script>
+(function(){
+  var KEY='arkrecode_daikan_banner_closed';
+  var ts=localStorage.getItem(KEY);
+  if(!ts||Date.now()-Number(ts)>6*24*60*60*1000){
+    var b=document.getElementById('dk-banner');
+    if(b){b.style.display='flex';document.body.style.paddingTop='38px';}
+  }
+})();
+function closeDkBanner(){
+  var b=document.getElementById('dk-banner');
+  if(b)b.style.display='none';
+  document.body.style.paddingTop='';
+  localStorage.setItem('arkrecode_daikan_banner_closed',String(Date.now()));
+}
+</script>
+
 <div id="root"></div>
 <script src="chars-data.js"></script>
 <script src="../assets/char-name-data.js"></script>
