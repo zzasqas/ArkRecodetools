@@ -85,7 +85,7 @@
     injectCSS();
     injectHTML();
     // 3.5 ~ 5 秒隨機淡入，避免多頁同時看起來「卡死的時鐘」
-    var delay = 3500 + Math.floor(Math.random() * 1500);
+    var delay = 1200;
     setTimeout(function(){
       var p = document.getElementById('daikan-popup');
       if (p) p.classList.add('show');
