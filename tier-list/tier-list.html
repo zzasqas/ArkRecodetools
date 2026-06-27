@@ -670,7 +670,7 @@ function validateTierSubmit(tiersConfig, tierMembers) {
   return errors;
 }
 
-function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClose, onSuccess }) {
+function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, charPlusMinus, author, onClose, onSuccess }) {
   const deviceId = getOrCreateDeviceId();
   const week     = getISOWeek();
   const submitted = getSubmitted();
@@ -708,7 +708,7 @@ function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClo
       const resp = await fetch(`${RAILWAY_URL}/submit`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ deviceId, nickname: author||'匿名', mode: modeId, payload: { tierMembers } }),
+        body: JSON.stringify({ deviceId, nickname: author||'匿名', mode: modeId, payload: { tierMembers, charPlusMinus: charPlusMinus||{} } }),
       });
       const data = await resp.json();
 
@@ -1127,6 +1127,7 @@ function App() {
         return <SubmitModal modeId={submitModal} modeName={m?.name||submitModal}
           tiersConfig={submitModal===currentModeId?tiersConfig:loadModeData(submitModal).tiersConfig}
           tierMembers={submitModal===currentModeId?tierMembers:loadModeData(submitModal).tierMembers}
+          charPlusMinus={submitModal===currentModeId?charPlusMinus:loadModeData(submitModal).charPlusMinus}
           author={author} onClose={()=>setSubmitModal(null)}
           onSuccess={()=>setSubmitModal(null)}/>;
       })()}
