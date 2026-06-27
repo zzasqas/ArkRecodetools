@@ -708,7 +708,7 @@ function SubmitModal({ modeId, modeName, tiersConfig, tierMembers, author, onClo
       const resp = await fetch(`${RAILWAY_URL}/submit`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ deviceId, nickname: author||'匿名', mode: modeId, payload }),
+        body: JSON.stringify({ deviceId, nickname: author||'匿名', mode: modeId, payload: { tierMembers } }),
       });
       const data = await resp.json();
 
