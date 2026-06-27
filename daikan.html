@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' https://fonts.googleapis.com https://www.googletagmanager.com 'unsafe-inline';
+               connect-src 'self' https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;
+               style-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com 'unsafe-inline';
+               font-src 'self' https://fonts.gstatic.com;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./assets/brand.css">
+<title>每日代管服務 — ArkRecode Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="./assets/analytics.js"></script>
+<style>
+:root {
+  --bg:#080D18; --bg2:#0D1424; --bg3:#111B2E;
+  --border:#1E293B; --border2:#2A3A52;
+  --text:#CBD5E1; --muted:#64748B; --dim:#334155;
+  --blue:#3B82F6; --blue-l:#93C5FD;
+  --purple:#8B5CF6; --teal:#2DD4BF;
+  --amber:#FBBF24; --red:#F87171; --green:#4ADE80;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+.glow-orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0;}
+.glow-1{width:600px;height:600px;top:-200px;left:-200px;background:rgba(251,191,36,.04);}
+.glow-2{width:400px;height:400px;bottom:-100px;right:-100px;background:rgba(139,92,246,.04);}
+
+.container{max-width:860px;margin:0 auto;padding:0 24px 60px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:44px 0 28px;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);font-size:12px;color:var(--amber);font-weight:700;letter-spacing:.06em;margin-bottom:16px;}
+.hero-title{font-size:clamp(22px,4vw,38px);font-weight:900;color:#E2E8F0;line-height:1.18;margin-bottom:10px;}
+.hero-title .accent{background:linear-gradient(135deg,var(--amber),#FCD34D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:15px;color:var(--muted);line-height:1.75;max-width:520px;margin:0 auto 24px;}
+.hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;text-decoration:none;transition:all .2s;font-family:'Noto Sans TC',sans-serif;}
+.btn-primary{background:linear-gradient(135deg,#D97706,var(--amber));color:#1a1000;}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text);}
+.btn-ghost:hover{border-color:rgba(99,102,241,.5);color:#A5B4FC;background:rgba(99,102,241,.06);}
+
+/* SECTION */
+.section{border:1px solid var(--border);border-radius:16px;background:var(--bg2);padding:26px 30px;margin-bottom:18px;}
+.section-title{font-size:17px;font-weight:700;color:#F1F5F9;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* CHECKLIST */
+.checklist{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.checklist li{font-size:15px;color:var(--text);line-height:1.65;padding-left:28px;position:relative;}
+.checklist li::before{content:"✅";position:absolute;left:0;font-size:14px;top:1px;}
+.checklist li strong{color:#E2E8F0;}
+.checklist li .sub{font-size:13px;color:var(--muted);margin-top:2px;display:block;}
+
+/* PLAN CARDS */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.plan-card{border:1px solid var(--border2);border-radius:12px;padding:16px 20px;background:rgba(0,0,0,.2);}
+.plan-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.plan-name{font-size:15px;font-weight:700;color:#E2E8F0;margin-bottom:5px;}
+.plan-desc{font-size:13px;color:var(--muted);line-height:1.65;}
+.plan-desc strong{color:#CBD5E1;}
+
+/* STEPS */
+.steps{display:flex;flex-direction:column;gap:14px;}
+.step{display:flex;gap:14px;align-items:flex-start;}
+.step-num{width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#1D4ED8,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;}
+.step-body{font-size:15px;color:var(--text);line-height:1.65;}
+.step-body strong{color:#E2E8F0;}
+
+/* PRICING */
+.price-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.price-table th{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);}
+.price-table td{padding:12px 14px;font-size:15px;color:var(--text);border-bottom:1px solid var(--border);}
+.price-table tr:last-child td{border-bottom:none;}
+.price-highlight{color:var(--amber);font-weight:700;}
+.price-note{font-size:13px;color:var(--muted);line-height:1.75;padding-left:2px;}
+
+/* RISK */
+.risk-box{border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:20px 24px;background:rgba(248,113,113,.04);}
+.risk-title{font-size:16px;font-weight:700;color:var(--red);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.risk-list{list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:risk;}
+.risk-list li{font-size:14px;color:var(--text);line-height:1.65;padding-left:26px;position:relative;counter-increment:risk;}
+.risk-list li::before{content:counter(risk)".";position:absolute;left:0;color:var(--red);font-weight:700;}
+.risk-list li strong{color:#E2E8F0;}
+
+/* CTA */
+.cta-section{border:1px solid rgba(251,191,36,.25);border-radius:16px;background:rgba(251,191,36,.04);padding:32px;text-align:center;}
+.cta-title{font-size:21px;font-weight:900;color:#E2E8F0;margin-bottom:6px;}
+.cta-sub{font-size:14px;color:var(--muted);margin-bottom:18px;}
+.cta-discord code{font-family:'Space Mono',monospace;font-size:13px;background:rgba(59,130,246,.1);color:var(--blue-l);padding:3px 8px;border-radius:5px;}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:18px;}
+.cta-deadline{font-size:13px;color:var(--muted);margin-top:14px;}
+.cta-deadline strong{color:var(--amber);}
+.placeholder-btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:10px;font-size:15px;font-weight:700;border:1px dashed var(--border2);color:var(--dim);background:transparent;cursor:default;}
+
+/* INLINE NOTE */
+.note{display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding:10px 14px;border-radius:8px;background:rgba(45,212,191,.05);border:1px solid rgba(45,212,191,.2);font-size:13px;color:var(--muted);line-height:1.65;}
+.note .ni{color:var(--teal);flex-shrink:0;}
+
+/* MISC */
+.plain-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.plain-list li{font-size:14px;color:var(--muted);padding-left:18px;position:relative;line-height:1.65;}
+.plain-list li::before{content:"—";position:absolute;left:0;color:var(--dim);}
+.plain-list li strong{color:#CBD5E1;}
+.disclaimer{font-size:12px;color:var(--muted);text-align:center;margin-top:22px;line-height:1.7;padding:0 16px;}
+
+@media(max-width:620px){
+  .plan-grid{grid-template-columns:1fr;}
+  .section{padding:18px 16px;}
+  .hero{padding:28px 0 20px;}
+  .cta-section{padding:24px 16px;}
+}
+</style>
+</head>
+<body>
+<div class="glow-orb glow-1"></div>
+<div class="glow-orb glow-2"></div>
+
+<script src="./assets/header.js"></script>
+
+<main>
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">🤖 每日代管服務</div>
+    <h1 class="hero-title">把每日雜事交出去<br><span class="accent">只管打對戰就好</span></h1>
+    <p class="hero-sub">每天那些要刷的體力、要買的商店、要派遣的任務——你上線之前我們已經跑完了，你只需要登入打你想打的。</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://discord.com/users/11464856zzas" target="_blank" rel="noopener">💬 Discord 私訊詢問</a>
+      <a class="btn btn-ghost" href="./index.html">← 回工具集</a>
+    </div>
+  </section>
+
+  <!-- 我們幫你做的事 -->
+  <div class="section">
+    <div class="section-title">⚙️ 你上線前，我們已經幫你跑完這些</div>
+    <ul class="checklist">
+      <li>
+        <strong>每日任務</strong>
+        <span class="sub">方舟爐、星源實驗室、佣兵簽到捐獻、月簽、各商店購買（商店體力、神秘商店）</span>
+      </li>
+      <li>
+        <strong>神秘商店自動刷新</strong>
+        <span class="sub">消耗帳號金幣刷新，購買綠票、神秘票（黃票），以及符合強度的 85 級裝備（很少買到）</span>
+      </li>
+      <li><strong>NPC 競技場</strong>：當次跑到時有冷卻好的場次就打，沒有就跳過</li>
+      <li><strong>方舟司令部派遣</strong>：跑到時有空槽就補派，不是持續監控</li>
+      <li><strong>體力</strong>：方案可自選（見下方）</li>
+    </ul>
+    <div class="note">
+      <span class="ni">🔁</span>
+      <span>每天只跑一次，約佔用你的帳號 5～10 分鐘，也降低你上線時被頂下去的機率。</span>
+    </div>
+  </div>
+
+  <!-- 體力方案 -->
+  <div class="section">
+    <div class="section-title">⚡ 體力要怎麼花，你來決定</div>
+    <div class="plan-grid">
+      <div class="plan-card">
+        <div class="plan-label">方案 A</div>
+        <div class="plan-name">固定刷討伐</div>
+        <div class="plan-desc">可選 <strong>火討伐</strong> 或 <strong>水討伐</strong>，每天把體力刷滿清完。</div>
+      </div>
+      <div class="plan-card">
+        <div class="plan-label">方案 B</div>
+        <div class="plan-name">活動 EX ＋ 討伐輪替</div>
+        <div class="plan-desc"><strong>週一、週二、週四</strong>刷活動 EX 關卡，其餘日子刷討伐（水或火），跟著活動節奏走。</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);">有其他想法也可以討論，更多客製方案陸續開放中。</p>
+    <div class="note">
+      <span class="ni">🕒</span>
+      <span><strong style="color:#E2E8F0;">代管時段你說了算：</strong>選你平常不玩的時段，把被頂下線的機率降到最低。</span>
+    </div>
+  </div>
+
+  <!-- 我們不碰的 -->
+  <div class="section">
+    <div class="section-title">🙋 這些還是你自己的樂趣</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:12px;">涉及個人選擇或遊戲核心體驗的事，我們不插手：</p>
+    <ul class="plain-list">
+      <li>每日招募（抽角）</li>
+      <li>領取成就獎勵</li>
+      <li>團戰、PVP 對戰 — 把時間省下來，就是要留給這些的</li>
+    </ul>
+  </div>
+
+  <!-- 開始前要知道 -->
+  <div class="section">
+    <div class="section-title">📋 加入前確認一件事</div>
+    <p style="font-size:15px;color:var(--text);line-height:1.75;">要刷的討伐關卡或活動 EX 關卡，<strong style="color:#E2E8F0;">你自己要先通關</strong>。我們只負責幫你重複刷，沒辦法代你首次過關。</p>
+  </div>
+
+  <!-- 怎麼加入 -->
+  <div class="section">
+    <div class="section-title">🚀 加入流程</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">Discord 私訊，說你想要哪個方案、希望排在哪個時段。</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><strong>帳號授權設定</strong>：這步比較花時間，需要實際登入你的帳號做確認，不是即時開通，請預留時間等候。</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">設定完成、付款後正式啟動，隔天起每天自動執行。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 你的帳號怎麼保管 -->
+  <div class="section">
+    <div class="section-title">🔐 你的帳號安不安全</div>
+    <ul class="plain-list" style="gap:10px;">
+      <li style="color:var(--text);">我們用一次性授權憑證執行，<strong style="color:#E2E8F0;">不需要、也不會長期保存你的密碼</strong>。</li>
+      <li style="color:var(--text);">你的帳號資料只用於執行代管，嚴格保管，不會外流給任何人。</li>
+      <li style="color:var(--text);">想停就停，隨時聯絡我們刪除你的授權資料，沒有任何綁定。</li>
+    </ul>
+  </div>
+
+  <!-- 定價 -->
+  <div class="section">
+    <div class="section-title">💰 費用一覽</div>
+    <table class="price-table">
+      <thead><tr><th>方案</th><th>價格</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>正式定價</td>
+          <td><strong style="color:#E2E8F0;">$169 / 月</strong></td>
+        </tr>
+        <tr>
+          <td>🔖 試用優惠</td>
+          <td class="price-highlight">$99 / 月（<strong>9 月底前</strong>此價，之後恢復 $169）</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="price-note">• <strong style="color:#E2E8F0;">試用期第一個月的前兩週，不滿意可以免費退費</strong>（僅退月費；客製一次性費用不退）。</p>
+    <p class="price-note" style="margin-top:5px;">• <strong style="color:#E2E8F0;">有客製需求</strong>（特定關卡組合、特殊時段等）屬一次性報價，完成後每月月費不另外加收。</p>
+    <p class="price-note" style="margin-top:10px;">💳 付款方式：<strong style="color:#E2E8F0;">LINE Pay／銀行轉帳／Payoneer</strong></p>
+  </div>
+
+  <!-- 風險聲明 -->
+  <div class="section" style="border-color:rgba(248,113,113,.25);">
+    <div class="risk-box">
+      <div class="risk-title">⚠️ 先把這幾件事想清楚再報名</div>
+      <ol class="risk-list">
+        <li><strong>不保證不封號。</strong>已穩定跑了半年，但自動化本來就有帳號風險，這點無法消除，請自己評估。</li>
+        <li><strong>首次設定會花一段時間</strong>，需要實際登入你的帳號一步步確認，不是報名完馬上開始。</li>
+        <li><strong>設定期間如果你同時在線，可能被頂下去</strong>，這是重複登入造成的，請預期；正式跑起來後可以用時段設定避開。</li>
+        <li><strong>碰到官方大改版或程式調整，可能暫停 1～2 天</strong>；我們會盡快修好，受影響的天數補償等量服務天數（<strong>補償只折服務天數，不折現、不退費；試用優惠期間不適用補償</strong>）。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <div class="cta-title">有興趣的話</div>
+    <div class="cta-sub">直接 Discord 私訊，我會說明細節、確認方案。</div>
+    <div class="cta-discord">Discord ID：<code>11464856zzas</code></div>
+    <div class="cta-btns">
+      <a class="btn btn-primary" href="https://discord.com/users/11464856zzas" target="_blank" rel="noopener">💬 私訊報名</a>
+      <!-- ponytail: 表單連結佔位，Google 表單完成後換成 <a href> -->
+      <span class="placeholder-btn">📝 填寫報名表單（即將上線）</span>
+    </div>
+    <p class="cta-deadline">試用優惠 <strong>9 月底截止</strong>，額度有限</p>
+  </div>
+
+  <p class="disclaimer">代管服務，非保證不封號。</p>
+
+</div>
+</main>
+
+</body>
+</html>
