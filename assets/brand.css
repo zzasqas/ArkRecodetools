@@ -46,6 +46,19 @@
   align-items: center;
   gap: 8px;
 }
+.arkrecode-header .nav-link {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  text-decoration: none;
+  border: 1px solid var(--brand-accent);
+  color: var(--brand-accent);
+  transition: all 0.15s;
+}
+.arkrecode-header .nav-link:hover {
+  background: var(--brand-accent);
+  color: #fff;
+}
 .arkrecode-header .lang-btn {
   padding: 4px 12px;
   border-radius: 20px;
