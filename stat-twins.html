@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="UTF-8">
+<title>角色數值模板對照表</title>
+<style>
+:root { color-scheme: light dark; }
+body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+h1 { font-size: 20px; font-weight: 600; }
+p.sub { color: #888; font-size: 13px; margin-top: -8px; }
+.toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+select { font-size: 13px; padding: 4px 8px; }
+.seg { display: inline-flex; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; }
+.seg button { font-size: 13px; padding: 5px 12px; border: none; background: #fff; cursor: pointer; }
+.seg button.active { background: #333; color: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #ddd; }
+tr.sec td { font-weight: 600; background: #f0f0f0; color: #555; }
+.nb { display: inline-block; min-width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 600; text-align: center; line-height: 20px; padding: 0 2px; }
+.n5 { background: #f09595; color: #501313; } .n4 { background: #f7c1c1; color: #a32d2d; }
+.n3 { background: #fac775; color: #854f0b; } .n2 { background: #c0dd97; color: #3b6d11; }
+.stat { font-family: monospace; color: #666; white-space: nowrap; }
+.c { display: inline-block; margin-right: 10px; white-space: nowrap; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; }
+.fire { background: #d85a30; } .water { background: #378add; } .wood { background: #1d9e75; }
+.light { background: #ba7517; } .dark { background: #7f77dd; }
+.empty { color: #999; padding: 16px 8px; text-align: center; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1a1a1a; color: #eee; }
+  th, td { border-color: #333; } tr.sec td { background: #2a2a2a; color: #aaa; }
+  .stat { color: #999; } .seg { border-color: #444; } .seg button { background: #222; color: #eee; }
+  .seg button.active { background: #eee; color: #222; }
+}
+</style></head>
+<body>
+<h1>角色數值模板對照表</h1>
+<p class="sub">數值完全相同的角色群組（不含三星）。由 scripts/find_stat_twins.py 從 chars.csv 產生，重跑腳本可更新。切換「強化前／強化後」可看出調教點數如何拉開原本共用同一套骨架的角色。</p>
+<div class="toolbar">
+  <div class="seg" id="seg-mode">
+    <button data-mode="base" class="active">強化前（基礎值）</button>
+    <button data-mode="total">強化後（總值）</button>
+  </div>
+  <select id="f-star"></select>
+  <select id="f-role"></select>
+</div>
+<table>
+<thead><tr><th style="width:40px">人數</th><th style="width:70px">職業</th><th style="width:190px">數值</th><th>角色</th></tr></thead>
+<tbody id="tbody"></tbody>
+</table>
+<script>
+const DATA = {"base": [{"star": 5, "role": "戰士", "size": 5, "statLabel": "攻889/防592/血5364/速109", "chars": [{"name": "HongKongDoll", "element": "木", "role": "戰士"}, {"name": "亞畢絲", "element": "木", "role": "戰士"}, {"name": "天宮咲夜", "element": "光", "role": "戰士"}, {"name": "新春的莎莉絲特", "element": "火", "role": "戰士"}, {"name": "聖誕的蜜拉貝兒", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "混合", "size": 5, "statLabel": "攻889/防673/血4879/速111", "chars": [{"name": "Projekt Melody", "element": "水", "role": "術師"}, {"name": "可伊", "element": "光", "role": "術師"}, {"name": "愛戀泡影的玳蓮", "element": "水", "role": "術士"}, {"name": "挪亞", "element": "光", "role": "術師"}, {"name": "泰里莎", "element": "水", "role": "術師"}]}, {"star": 5, "role": "先鋒", "size": 5, "statLabel": "攻989/防473/血5364/速113", "chars": [{"name": "吉妮茲", "element": "水", "role": "先鋒"}, {"name": "妮諾凱西", "element": "木", "role": "先鋒"}, {"name": "崔西里亞", "element": "木", "role": "先鋒"}, {"name": "蓋兒", "element": "暗", "role": "先鋒"}, {"name": "貝兒", "element": "光", "role": "先鋒"}]}, {"star": 5, "role": "術師", "size": 4, "statLabel": "攻961/防683/血4152/速106", "chars": [{"name": "厄德萊雅", "element": "火", "role": "術師"}, {"name": "喬瑟琳", "element": "光", "role": "術師"}, {"name": "璐茜瑪", "element": "暗", "role": "術師"}, {"name": "盧妮艾塔", "element": "火", "role": "術師"}]}, {"star": 5, "role": "混合", "size": 4, "statLabel": "攻961/防522/血4718/速116", "chars": [{"name": "南瓜鬼怪萊拉", "element": "火", "role": "戰士"}, {"name": "彼岸花茱莉亞", "element": "暗", "role": "先鋒"}, {"name": "異變的埃帕蒂", "element": "暗", "role": "先鋒"}, {"name": "赫賽迪雅", "element": "水", "role": "先鋒"}]}, {"star": 5, "role": "狙擊", "size": 3, "statLabel": "攻961/防536/血4556/速120", "chars": [{"name": "奈蘭希爾", "element": "火", "role": "狙擊"}, {"name": "巴爾托絲", "element": "木", "role": "狙擊"}, {"name": "赤鬼伯伯", "element": "火", "role": "狙擊"}]}, {"star": 5, "role": "戰士", "size": 3, "statLabel": "攻816/防620/血5850/速102", "chars": [{"name": "異變的奧普懷妮", "element": "暗", "role": "戰士"}, {"name": "菲莉斯", "element": "火", "role": "戰士"}, {"name": "蛛美", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "重裝", "size": 3, "statLabel": "攻671/防648/血5809/速106", "chars": [{"name": "夏妮", "element": "火", "role": "重裝"}, {"name": "玳蓮", "element": "水", "role": "重裝"}, {"name": "璀璨誓約的露比", "element": "水", "role": "重裝"}]}, {"star": 5, "role": "狙擊", "size": 3, "statLabel": "攻925/防553/血5122/速112", "chars": [{"name": "愛莉卡", "element": "水", "role": "狙擊"}, {"name": "普利蔓", "element": "木", "role": "狙擊"}, {"name": "東雲 ft.坊橋夜泊", "element": "木", "role": "狙擊"}]}, {"star": 5, "role": "術師", "size": 3, "statLabel": "攻1070/防715/血4111/速108", "chars": [{"name": "奧德雅", "element": "木", "role": "術師"}, {"name": "異變的使徒", "element": "暗", "role": "術師"}, {"name": "蓓蕾卡", "element": "水", "role": "術師"}]}, {"star": 5, "role": "混合", "size": 3, "statLabel": "攻499/防694/血4435/速105", "chars": [{"name": "河北彩伽", "element": "水", "role": "醫療"}, {"name": "烏爾德", "element": "水", "role": "醫療"}, {"name": "自信拉娜", "element": "光", "role": "輔助"}]}, {"star": 5, "role": "戰士", "size": 3, "statLabel": "攻989/防553/血5364/速109", "chars": [{"name": "伊娃", "element": "暗", "role": "戰士"}, {"name": "潔莉摩爾", "element": "水", "role": "戰士"}, {"name": "莎莉絲特", "element": "木", "role": "戰士"}]}, {"star": 5, "role": "混合", "size": 3, "statLabel": "攻898/防571/血4879/速114", "chars": [{"name": "尤莉", "element": "暗", "role": "狙擊"}, {"name": "歐貝恩絲", "element": "暗", "role": "狙擊"}, {"name": "萊莎曼德", "element": "光", "role": "戰士"}]}, {"star": 4, "role": "戰士", "size": 3, "statLabel": "攻753/防578/血5405/速103", "chars": [{"name": "卡麗希", "element": "木", "role": "戰士"}, {"name": "奧普懷妮", "element": "火", "role": "戰士"}, {"name": "複製體芭索蘿", "element": "光", "role": "戰士"}]}, {"star": 4, "role": "重裝", "size": 3, "statLabel": "攻671/防645/血5364/速97", "chars": [{"name": "格蘿妮婭", "element": "水", "role": "重裝"}, {"name": "艾樂萊思", "element": "光", "role": "重裝"}, {"name": "複製體卡洛琳", "element": "光", "role": "重裝"}]}, {"star": 5, "role": "術師", "size": 2, "statLabel": "攻1025/防652/血4475/速110", "chars": [{"name": "安泰西亞", "element": "火", "role": "術師"}, {"name": "璐茜婭", "element": "火", "role": "術師"}]}, {"star": 5, "role": "混合", "size": 2, "statLabel": "攻807/防652/血3950/速105", "chars": [{"name": "奧麗芙", "element": "光", "role": "重裝"}, {"name": "諾可琳", "element": "火", "role": "醫療"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻834/防585/血5364/速113", "chars": [{"name": "Aoi Hinamori", "element": "火", "role": "戰士"}, {"name": "烈酒赤兔芭索蘿", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻1025/防585/血5122/速105", "chars": [{"name": "哈蒂", "element": "火", "role": "戰士"}, {"name": "菲莉西婭", "element": "暗", "role": "戰士"}]}, {"star": 5, "role": "先鋒", "size": 2, "statLabel": "攻907/防532/血5122/速112", "chars": [{"name": "朱音", "element": "火", "role": "先鋒"}, {"name": "蜜茶多恩", "element": "木", "role": "先鋒"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻943/防553/血5122/速115", "chars": [{"name": "啦啦隊蓓蕾卡", "element": "木", "role": "戰士"}, {"name": "貓祭", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "醫療", "size": 2, "statLabel": "攻499/防694/血4435/速115", "chars": [{"name": "咲", "element": "木", "role": "醫療"}, {"name": "菈法瑞", "element": "水", "role": "醫療"}]}, {"star": 5, "role": "混合", "size": 2, "statLabel": "攻689/防690/血5647/速100", "chars": [{"name": "守護者艾瑞兒", "element": "光", "role": "狙擊"}, {"name": "艾瑞兒", "element": "水", "role": "重裝"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻971/防582/血5567/速102", "chars": [{"name": "加加琳", "element": "暗", "role": "戰士"}, {"name": "泳池魅影吉妮茲", "element": "水", "role": "戰士"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻735/防613/血5405/速115", "chars": [{"name": "璀璨誓約的伊娥絲", "element": "光", "role": "戰士"}, {"name": "繼任者彌卡伊勒", "element": "水", "role": "戰士"}]}, {"star": 5, "role": "重裝", "size": 2, "statLabel": "攻762/防634/血5728/速103", "chars": [{"name": "小女將希蓓爾", "element": "水", "role": "重裝"}, {"name": "蓋妲", "element": "木", "role": "重裝"}]}, {"star": 5, "role": "醫療", "size": 2, "statLabel": "攻471/防736/血4637/速102", "chars": [{"name": "夏日的珮忒菈", "element": "木", "role": "醫療"}, {"name": "柏妮絲", "element": "光", "role": "醫療"}]}, {"star": 5, "role": "先鋒", "size": 2, "statLabel": "攻862/防511/血4960/速120", "chars": [{"name": "納克莎", "element": "光", "role": "先鋒"}, {"name": "芽路", "element": "火", "role": "先鋒"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻825/防599/血5769/速106", "chars": [{"name": "奧柏絲蒂恩", "element": "暗", "role": "戰士"}, {"name": "紫煙", "element": "暗", "role": "戰士"}]}, {"star": 4, "role": "醫療", "size": 2, "statLabel": "攻453/防662/血4152/速103", "chars": [{"name": "喬依絲", "element": "火", "role": "醫療"}, {"name": "莉娜", "element": "木", "role": "醫療"}]}, {"star": 4, "role": "先鋒", "size": 2, "statLabel": "攻907/防462/血5001/速111", "chars": [{"name": "寇希爾", "element": "水", "role": "先鋒"}, {"name": "複製體迪爾德麗", "element": "暗", "role": "先鋒"}]}, {"star": 4, "role": "狙擊", "size": 2, "statLabel": "攻780/防564/血4960/速106", "chars": [{"name": "翠絲特", "element": "木", "role": "狙擊"}, {"name": "複製體克拉菈", "element": "光", "role": "狙擊"}]}, {"star": 4, "role": "戰士", "size": 2, "statLabel": "攻889/防561/血5203/速100", "chars": [{"name": "芭索蘿", "element": "木", "role": "戰士"}, {"name": "複製體卡麗希", "element": "暗", "role": "戰士"}]}], "total": [{"star": 5, "role": "術師", "size": 4, "statLabel": "攻1197/防683/血4572/速106", "chars": [{"name": "厄德萊雅", "element": "火", "role": "術師"}, {"name": "喬瑟琳", "element": "光", "role": "術師"}, {"name": "璐茜瑪", "element": "暗", "role": "術師"}, {"name": "盧妮艾塔", "element": "火", "role": "術師"}]}, {"star": 5, "role": "先鋒", "size": 4, "statLabel": "攻1228/防473/血6267/速113", "chars": [{"name": "吉妮茲", "element": "水", "role": "先鋒"}, {"name": "妮諾凱西", "element": "木", "role": "先鋒"}, {"name": "崔西里亞", "element": "木", "role": "先鋒"}, {"name": "貝兒", "element": "光", "role": "先鋒"}]}, {"star": 5, "role": "狙擊", "size": 3, "statLabel": "攻1284/防536/血4976/速124", "chars": [{"name": "奈蘭希爾", "element": "火", "role": "狙擊"}, {"name": "巴爾托絲", "element": "木", "role": "狙擊"}, {"name": "赤鬼伯伯", "element": "火", "role": "狙擊"}]}, {"star": 5, "role": "戰士", "size": 3, "statLabel": "攻966/防657/血7323/速102", "chars": [{"name": "異變的奧普懷妮", "element": "暗", "role": "戰士"}, {"name": "菲莉斯", "element": "火", "role": "戰士"}, {"name": "蛛美", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "戰士", "size": 3, "statLabel": "攻1119/防628/血6267/速109", "chars": [{"name": "HongKongDoll", "element": "木", "role": "戰士"}, {"name": "亞畢絲", "element": "木", "role": "戰士"}, {"name": "新春的莎莉絲特", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "術師", "size": 3, "statLabel": "攻1039/防673/血5299/速115", "chars": [{"name": "可伊", "element": "光", "role": "術師"}, {"name": "挪亞", "element": "光", "role": "術師"}, {"name": "泰里莎", "element": "水", "role": "術師"}]}, {"star": 5, "role": "先鋒", "size": 3, "statLabel": "攻1284/防522/血5138/速116", "chars": [{"name": "彼岸花茱莉亞", "element": "暗", "role": "先鋒"}, {"name": "異變的埃帕蒂", "element": "暗", "role": "先鋒"}, {"name": "赫賽迪雅", "element": "水", "role": "先鋒"}]}, {"star": 5, "role": "戰士", "size": 3, "statLabel": "攻1228/防553/血5784/速109", "chars": [{"name": "伊娃", "element": "暗", "role": "戰士"}, {"name": "潔莉摩爾", "element": "水", "role": "戰士"}, {"name": "莎莉絲特", "element": "木", "role": "戰士"}]}, {"star": 4, "role": "重裝", "size": 3, "statLabel": "攻821/防703/血6267/速97", "chars": [{"name": "格蘿妮婭", "element": "水", "role": "重裝"}, {"name": "艾樂萊思", "element": "光", "role": "重裝"}, {"name": "複製體卡洛琳", "element": "光", "role": "重裝"}]}, {"star": 5, "role": "術師", "size": 2, "statLabel": "攻1360/防652/血4895/速110", "chars": [{"name": "安泰西亞", "element": "火", "role": "術師"}, {"name": "璐茜婭", "element": "火", "role": "術師"}]}, {"star": 5, "role": "重裝", "size": 2, "statLabel": "攻821/防648/血6752/速110", "chars": [{"name": "夏妮", "element": "火", "role": "重裝"}, {"name": "玳蓮", "element": "水", "role": "重裝"}]}, {"star": 5, "role": "混合", "size": 2, "statLabel": "攻957/防652/血4370/速111", "chars": [{"name": "奧麗芙", "element": "光", "role": "重裝"}, {"name": "諾可琳", "element": "火", "role": "醫療"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻984/防638/血6267/速117", "chars": [{"name": "Aoi Hinamori", "element": "火", "role": "戰士"}, {"name": "烈酒赤兔芭索蘿", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "先鋒", "size": 2, "statLabel": "攻1057/防532/血5542/速118", "chars": [{"name": "朱音", "element": "火", "role": "先鋒"}, {"name": "蜜茶多恩", "element": "木", "role": "先鋒"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻1119/防628/血5784/速109", "chars": [{"name": "天宮咲夜", "element": "光", "role": "戰士"}, {"name": "聖誕的蜜拉貝兒", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻1178/防553/血5542/速119", "chars": [{"name": "啦啦隊蓓蕾卡", "element": "木", "role": "戰士"}, {"name": "貓祭", "element": "火", "role": "戰士"}]}, {"star": 5, "role": "醫療", "size": 2, "statLabel": "攻649/防694/血5254/速115", "chars": [{"name": "咲", "element": "木", "role": "醫療"}, {"name": "菈法瑞", "element": "水", "role": "醫療"}]}, {"star": 5, "role": "混合", "size": 2, "statLabel": "攻839/防752/血6406/速100", "chars": [{"name": "守護者艾瑞兒", "element": "光", "role": "狙擊"}, {"name": "艾瑞兒", "element": "水", "role": "重裝"}]}, {"star": 5, "role": "術師", "size": 2, "statLabel": "攻1316/防715/血4777/速108", "chars": [{"name": "奧德雅", "element": "木", "role": "術師"}, {"name": "蓓蕾卡", "element": "水", "role": "術師"}]}, {"star": 5, "role": "醫療", "size": 2, "statLabel": "攻649/防694/血5254/速105", "chars": [{"name": "河北彩伽", "element": "水", "role": "醫療"}, {"name": "烏爾德", "element": "水", "role": "醫療"}]}, {"star": 5, "role": "狙擊", "size": 2, "statLabel": "攻1158/防553/血6002/速112", "chars": [{"name": "普利蔓", "element": "木", "role": "狙擊"}, {"name": "東雲 ft.坊橋夜泊", "element": "木", "role": "狙擊"}]}, {"star": 5, "role": "醫療", "size": 2, "statLabel": "攻621/防802/血5474/速102", "chars": [{"name": "夏日的珮忒菈", "element": "木", "role": "醫療"}, {"name": "柏妮絲", "element": "光", "role": "醫療"}]}, {"star": 5, "role": "混合", "size": 2, "statLabel": "攻1182/防571/血5299/速114", "chars": [{"name": "歐貝恩絲", "element": "暗", "role": "狙擊"}, {"name": "萊莎曼德", "element": "光", "role": "戰士"}]}, {"star": 5, "role": "先鋒", "size": 2, "statLabel": "攻1090/防511/血5380/速120", "chars": [{"name": "納克莎", "element": "光", "role": "先鋒"}, {"name": "芽路", "element": "火", "role": "先鋒"}]}, {"star": 5, "role": "戰士", "size": 2, "statLabel": "攻975/防652/血7054/速106", "chars": [{"name": "奧柏絲蒂恩", "element": "暗", "role": "戰士"}, {"name": "紫煙", "element": "暗", "role": "戰士"}]}, {"star": 4, "role": "醫療", "size": 2, "statLabel": "攻603/防662/血4945/速103", "chars": [{"name": "喬依絲", "element": "火", "role": "醫療"}, {"name": "莉娜", "element": "木", "role": "醫療"}]}, {"star": 4, "role": "戰士", "size": 2, "statLabel": "攻903/防630/血6635/速103", "chars": [{"name": "卡麗希", "element": "木", "role": "戰士"}, {"name": "奧普懷妮", "element": "火", "role": "戰士"}]}, {"star": 4, "role": "先鋒", "size": 2, "statLabel": "攻1138/防462/血5871/速111", "chars": [{"name": "寇希爾", "element": "水", "role": "先鋒"}, {"name": "複製體迪爾德麗", "element": "暗", "role": "先鋒"}]}, {"star": 4, "role": "狙擊", "size": 2, "statLabel": "攻930/防564/血5380/速112", "chars": [{"name": "翠絲特", "element": "木", "role": "狙擊"}, {"name": "複製體克拉菈", "element": "光", "role": "狙擊"}]}, {"star": 4, "role": "戰士", "size": 2, "statLabel": "攻1119/防594/血6091/速100", "chars": [{"name": "芭索蘿", "element": "木", "role": "戰士"}, {"name": "複製體卡麗希", "element": "暗", "role": "戰士"}]}]};
+const ELEM_CLASS = {"火": "fire", "水": "water", "木": "wood", "光": "light", "暗": "dark"};
+let mode = 'base';
+
+function populateFilters() {
+  const groups = DATA[mode];
+  const stars = [...new Set(groups.map(g => g.star))].sort((a, b) => b - a);
+  const roles = [...new Set(groups.map(g => g.role).filter(r => r !== '混合'))].sort();
+  const fStar = document.getElementById('f-star');
+  const fRole = document.getElementById('f-role');
+  const curStar = fStar.value, curRole = fRole.value;
+  fStar.innerHTML = '<option value="">全部星級</option>' + stars.map(s => `<option value="${s}">★${s}</option>`).join('');
+  fRole.innerHTML = '<option value="">全部職業</option>' + roles.map(r => `<option value="${r}">${r}</option>`).join('') + '<option value="混合">混合職業</option>';
+  fStar.value = curStar; fRole.value = curRole;
+}
+
+function render() {
+  const sf = document.getElementById('f-star').value;
+  const rf = document.getElementById('f-role').value;
+  const groups = DATA[mode].filter(g =>
+    (!sf || String(g.star) === sf) && (!rf || g.role === rf)
+  );
+  let html = '';
+  let lastStar = null;
+  for (const g of groups) {
+    if (g.star !== lastStar) {
+      html += `<tr class="sec"><td colspan="4">★${g.star}</td></tr>`;
+      lastStar = g.star;
+    }
+    const badgeCls = g.size >= 5 ? 'n5' : g.size >= 4 ? 'n4' : g.size >= 3 ? 'n3' : 'n2';
+    const charsHtml = g.chars.map(c =>
+      `<span class="c"><span class="dot ${ELEM_CLASS[c.element] || ''}"></span>${c.name}${g.role === '混合' ? ' (' + c.role + ')' : ''}</span>`
+    ).join('');
+    html += `<tr><td><span class="nb ${badgeCls}">${g.size}</span></td><td>${g.role}</td><td class="stat">${g.statLabel}</td><td>${charsHtml}</td></tr>`;
+  }
+  document.getElementById('tbody').innerHTML = html || '<tr><td colspan="4" class="empty">無符合結果</td></tr>';
+}
+
+document.getElementById('seg-mode').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn) return;
+  mode = btn.dataset.mode;
+  document.querySelectorAll('#seg-mode button').forEach(b => b.classList.toggle('active', b === btn));
+  populateFilters();
+  render();
+});
+document.getElementById('f-star').addEventListener('change', render);
+document.getElementById('f-role').addEventListener('change', render);
+
+populateFilters();
+render();
+</script>
+</body></html>

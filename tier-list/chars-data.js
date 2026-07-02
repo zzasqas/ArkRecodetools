@@ -1,4 +1,4 @@
-// 自動從 chars.csv 轉換，版本：20260613
+// 自動從 chars.csv 轉換，版本：20260701
 // 欄位：name, star, element, role, totalSpd, totalAtk, totalDef, totalHp, critRate, critDmg
 window.CHARS_DATA = [
   {name:"奈蘭希爾",star:5,element:"火",role:"狙擊",totalSpd:124,totalAtk:1284,totalDef:536,totalHp:4976,critRate:15.0,critDmg:150.0},
