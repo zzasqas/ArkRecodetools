@@ -247,7 +247,7 @@ python scripts/sync_from_arkrecode.py
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
 | 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 與 `id`（StaticID）皆必填**：nameEN 缺漏 battle-recorder 英文模式會顯示中文；id 缺漏 sniffer 同步腳本無法識別角色（ID 查 [wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)）。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
-| 2 | `chars.csv`（根目錄） | ✅ 必須 | 在同屬性區塊末行加入數值，**⚠️ 同步更新第一行版本標頭 `version:YYYYMMDD`**（忘記改版本號 → equip-optimizer 瀏覽器快取不更新 → 新角色完全不出現） |
+| 2 | `chars.csv`（根目錄） | ✅ 必須 | 在同屬性區塊末行加入數值，**⚠️ 同步更新第一行版本標頭 `version:YYYYMMDD`**（忘記改版本號 → equip-optimizer 瀏覽器快取不更新 → 新角色完全不出現）。**插入務必用 Edit 工具**（Grep 找到同屬性最後一行→Edit 追加），不要用 PowerShell 陣列操作（trailing newline 會產生重複行）。 |
 | 3 | `tier-list/chars-data.js` | ✅ 必須 | 跑 `python scripts/gen_chars_data.py`，從 `chars.csv` 自動重新生成（**腳本存在，不要手動編輯**） |
 | 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic）。**注意：遊戲內「刺客」= vanguard** |
 | 5 | `battle-recorder.html` 版本升版 | ✅ 必須 | 全域搜尋舊版號並替換（同時更新版本白名單陣列、dataVersion 比對字串、char-name-data.js `?v=` 版號），詳見上方「版本號同步」表格 |
