@@ -107,7 +107,7 @@ window.CHARACTER_ALIASES = [
     { name: '璐茜瑪', nameEN: 'Lucima', id: 'H025', aliases: ['璐茜瑪'] },
     { name: '芽路', nameEN: 'Mero', id: 'H602', aliases: ['芽路', '火正太'] },
     { name: '愛戀泡影的玳蓮', nameEN: 'Ephemeral Love Darlene', id: 'H192', aliases: ['愛戀泡影的玳蓮', '水奶奶', '愛戀玳蓮', '婚紗玳蓮', '人魚公主'] },
-    { name: '水紀', nameEN: 'Mizuki', id: 'H604', aliases: ['水紀', 'Mizuki'] },
+    { name: '水紀', nameEN: 'Mizuki', id: 'H604', aliases: ['水紀', 'Mizuki'], releaseDate: '2026-07-08' },
     { name: '自信拉娜', nameEN: 'Resolute Lana', id: 'H181', aliases: ['自信拉娜', '光鎚', '光拉娜'] },
     { name: '尤莉', nameEN: 'Yuri', id: 'H184', aliases: ['尤莉', '暗芙蘭'] },
     { name: '絢爛夏花卡洛琳', nameEN: 'Midsummer Blossom Carolyn', id: 'H187', aliases: ['絢爛夏花卡洛琳', '婚紗卡', '婚卡', '木LLS'] },

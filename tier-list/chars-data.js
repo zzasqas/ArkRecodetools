@@ -186,5 +186,5 @@ window.CHARS_DATA = [
   {name:"芽路",star:5,element:"火",role:"先鋒",totalSpd:120,totalAtk:1090,totalDef:511,totalHp:5380,critRate:42.0,critDmg:150.0},
   {name:"自信拉娜",star:5,element:"光",role:"輔助",totalSpd:111,totalAtk:649,totalDef:715,totalHp:5254,critRate:15.0,critDmg:150.0},
   {name:"愛戀泡影的玳蓮",star:5,element:"水",role:"術士",totalSpd:111,totalAtk:1039,totalDef:673,totalHp:5299,critRate:45.0,critDmg:150.0},
-  {name:"水紀",star:5,element:"水",role:"狙擊",totalSpd:115,totalAtk:1003,totalDef:585,totalHp:5704,critRate:5.0,critDmg:150.0},
+  {name:"水紀",star:5,element:"水",role:"狙擊",totalSpd:115,totalAtk:1003,totalDef:585,totalHp:5704,critRate:15.0,critDmg:150.0},
 ];
