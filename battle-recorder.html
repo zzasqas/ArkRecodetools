@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 對戰紀錄器 v2.9.2</title>
+    <title>ArkRecode 對戰紀錄器 v2.9.3</title>
     
     <!-- 內容安全政策 -->
     <meta http-equiv="Content-Security-Policy" 
@@ -173,7 +173,7 @@
     <div id="root"></div>
     
     <!-- 作者資訊 -->
-    <div class="author-info">by zzas | v2.9.2</div>
+    <div class="author-info">by zzas | v2.9.3</div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useCallback } = React;
@@ -404,7 +404,7 @@
                                 <p>{t('如有問題或建議，歡迎回饋：', 'Questions or suggestions are welcome:')}</p>
                                 <ul className="mt-2 space-y-1">
                                     <li>• {t('開發者：zzas', 'Developer: zzas')}</li>
-                                    <li>• {t('版本：v2.9.2', 'Version: v2.9.2')}</li>
+                                    <li>• {t('版本：v2.9.3', 'Version: v2.9.3')}</li>
                                     <li>• {t('更新日期：', 'Updated: ')}{new Date().toLocaleDateString(t('zh-TW', 'en-US'))}</li>
                                 </ul>
                             </div>
@@ -848,10 +848,10 @@
                     const exportData = {
                         ...data,
                         exportDate: new Date().toISOString(),
-                        version: '2.9.1',
+                        version: '2.9.3',
                         security: {
                             sanitized: true,
-                            exported_by: 'ArkRecode_v2.9.2'
+                            exported_by: 'ArkRecode_v2.9.3'
                         }
                     };
                     
@@ -1379,6 +1379,20 @@
             const [showSearchResults, setShowSearchResults] = useState(false);
             const [isSearching, setIsSearching] = useState(false);
             const [lastSearchTerms, setLastSearchTerms] = useState(['', '', '', '']);
+            const [searchName, setSearchName] = useState('');
+            const [lastSearchName, setLastSearchName] = useState('');
+
+            // 歷史紀錄中出現過的對手名稱（去重）。對手名稱是選填欄位，
+            // 一筆都沒填過的使用者不會看到名稱搜尋框（清單為空 = 整個功能不渲染）。
+            const opponentNameOptions = useMemo(() => {
+                const names = new Set();
+                records.forEach(r => {
+                    const n = (r.opponentName || '').trim();
+                    if (n) names.add(n);
+                });
+                return [...names].sort((a, b) => a.localeCompare(b));
+            }, [records]);
+            const nameSearchAvailable = opponentNameOptions.length > 0;
 
             // 優化的角色別名轉換 - 使用緩存
             const aliasCache = useMemo(() => {
@@ -1401,54 +1415,72 @@
             // 執行搜索的函數
             const performSearch = useCallback(() => {
                 setIsSearching(true);
-                
+
                 // 使用 setTimeout 讓 UI 有時間更新搜索狀態
                 setTimeout(() => {
                     setLastSearchTerms([...searchOpponents]);
+                    setLastSearchName(searchName);
                     setIsSearching(false);
-                    
+
                     // 自動顯示搜索結果（如果有結果的話）
                     const searchTeam = searchOpponents
                         .map(char => char ? fastConvertAlias(char) : '')
                         .filter(char => char);
-                    
-                    if (searchTeam.length >= 3) {
-                        setShowSearchResults(true);
-                    } else {
-                        setShowSearchResults(false);
-                    }
+
+                    setShowSearchResults(searchTeam.length >= 3 || !!searchName.trim());
                 }, 50);
-            }, [searchOpponents, fastConvertAlias]);
+            }, [searchOpponents, searchName, fastConvertAlias]);
+
+            // 點擊紀錄中的對手名稱 → 直接套用名稱條件，保留目前的陣容條件
+            // （即「先查陣容、再收斂到某個 ID」的流程）
+            const searchByOpponentName = useCallback((name) => {
+                const clean = (name || '').trim();
+                if (!clean) return;
+                setSearchName(clean);
+                setLastSearchName(clean);
+                setShowSearchResults(true);
+            }, []);
 
             // 處理輸入欄失焦事件
-            const handleInputBlur = useCallback((index) => {
-                // 檢查當前輸入是否與上次搜索不同，且至少有3個角色
+            const handleInputBlur = useCallback(() => {
+                // 檢查當前輸入是否與上次搜索不同，且條件足夠（3個角色 或 有名稱）
                 const currentSearchTeam = searchOpponents.filter(char => char.trim()).length;
-                const lastSearchTeam = lastSearchTerms.filter(char => char.trim()).length;
-                
-                if (currentSearchTeam >= 3 && 
-                    (currentSearchTeam !== lastSearchTeam || 
-                     searchOpponents.some((char, idx) => char !== lastSearchTerms[idx]))) {
+                const teamChanged = searchOpponents.some((char, idx) => char !== lastSearchTerms[idx]);
+                const nameChanged = searchName !== lastSearchName;
+
+                if ((currentSearchTeam >= 3 || searchName.trim()) && (teamChanged || nameChanged)) {
                     performSearch();
                 }
-            }, [searchOpponents, lastSearchTerms, performSearch]);
+            }, [searchOpponents, searchName, lastSearchTerms, lastSearchName, performSearch]);
 
             // 搜索結果 - 使用最後搜索的詞條
             const searchResults = useMemo(() => {
                 const searchTeam = lastSearchTerms
                     .map(char => char ? fastConvertAlias(char) : '')
                     .filter(char => char);
-                
-                // 至少需要3個角色才開始搜索
-                if (searchTeam.length < 3) {
+                const nameQuery = lastSearchName.trim().toLowerCase();
+                const hasTeamQuery = searchTeam.length >= 3;
+
+                // 兩個維度都沒有條件 → 不算搜尋
+                if (!hasTeamQuery && !nameQuery) {
                     return [];
+                }
+
+                // 名稱與陣容為交集；名稱為空則略過此維度
+                const nameFiltered = nameQuery
+                    ? records.filter(record => (record.opponentName || '').toLowerCase().includes(nameQuery))
+                    : records;
+
+                // 只有名稱、陣容不足 3 個 → 純名稱查詢，沒有匹配度可言
+                if (!hasTeamQuery) {
+                    return [...nameFiltered].sort((a, b) => b.id - a.id);
                 }
 
                 // 根據輸入的角色數量決定最低匹配要求
                 const requiredMatchCount = searchTeam.length === 4 ? 4 : 3;
 
                 // 預處理所有記錄的對手陣容 - 避免重複計算
-                const processedRecords = records.map(record => {
+                const processedRecords = nameFiltered.map(record => {
                     const recordOpponents = record.opponentTeam
                         .filter(char => char)
                         .map(fastConvertAlias);
@@ -1483,16 +1515,17 @@
                 });
 
                 return matchingRecords;
-            }, [lastSearchTerms, records, fastConvertAlias]);
+            }, [lastSearchTerms, lastSearchName, records, fastConvertAlias]);
 
             // 自動顯示搜索結果
             useEffect(() => {
-                if (lastSearchTerms.filter(c => c).length >= 3 && searchResults.length > 0) {
+                const hasQuery = lastSearchTerms.filter(c => c).length >= 3 || !!lastSearchName.trim();
+                if (hasQuery && searchResults.length > 0) {
                     setShowSearchResults(true);
-                } else if (lastSearchTerms.filter(c => c).length < 3) {
+                } else if (!hasQuery) {
                     setShowSearchResults(false);
                 }
-            }, [lastSearchTerms, searchResults.length]);
+            }, [lastSearchTerms, lastSearchName, searchResults.length]);
 
             // 根據排序方式處理記錄
             const sortedRecords = useMemo(() => {
@@ -1544,6 +1577,14 @@
                 
                 return mostCommonRecorder;
             }, [records]);
+
+            // 搜索條件的文字描述（陣容 / 名稱，有哪個就顯示哪個）
+            const searchCondText = [
+                lastSearchTerms.filter(c => c).map(cn).join(' + '),
+                lastSearchName.trim()
+                    ? t(`名稱含「${lastSearchName.trim()}」`, `name contains "${lastSearchName.trim()}"`)
+                    : ''
+            ].filter(Boolean).join(t('｜', ' | '));
 
             return (
                 <div className="bg-white rounded-lg shadow-lg p-4">
@@ -1603,6 +1644,8 @@
                                     onClick={() => {
                                         setSearchOpponents(['', '', '', '']);
                                         setLastSearchTerms(['', '', '', '']);
+                                        setSearchName('');
+                                        setLastSearchName('');
                                         setShowSearchResults(false);
                                         setIsSearching(false);
                                     }}
@@ -1612,9 +1655,9 @@
                                 </button>
                                 <button
                                     onClick={performSearch}
-                                    disabled={searchOpponents.filter(c => c.trim()).length < 3 || isSearching}
+                                    disabled={(searchOpponents.filter(c => c.trim()).length < 3 && !searchName.trim()) || isSearching}
                                     className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                                        searchOpponents.filter(c => c.trim()).length >= 3 && !isSearching
+                                        (searchOpponents.filter(c => c.trim()).length >= 3 || searchName.trim()) && !isSearching
                                             ? 'bg-blue-500 text-white hover:bg-blue-600'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
@@ -1638,7 +1681,7 @@
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2 mb-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                             {searchOpponents.map((char, idx) => (
                                 <div key={idx} className="relative">
                                     <input
@@ -1651,7 +1694,7 @@
                                             newSearchOpponents[idx] = cleanValue;
                                             setSearchOpponents(newSearchOpponents);
                                         }}
-                                        onBlur={() => handleInputBlur(idx)}
+                                        onBlur={handleInputBlur}
                                         onKeyPress={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.target.blur(); // 觸發失焦事件
@@ -1672,12 +1715,61 @@
                                 </div>
                             ))}
                         </div>
-                        
+
+                        {/* 對手名稱搜索：與上方陣容條件為交集。
+                            對手名稱是選填欄位，整份紀錄都沒填過名稱時不渲染此區（避免無用的介面）。 */}
+                        {nameSearchAvailable && (
+                            <div className="mb-3">
+                                <label className="block text-xs text-gray-600 mb-1">
+                                    {t('對手名稱 / ID（可與上方陣容條件並用）', 'Opponent name / ID (combines with the team filter above)')}
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder={t('輸入或選擇對手名稱...', 'Type or pick an opponent name...')}
+                                        value={searchName}
+                                        onChange={(e) => setSearchName(SecurityUtils.cleanInput(e.target.value, true))}
+                                        onBlur={handleInputBlur}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.target.blur(); // 觸發失焦事件
+                                            }
+                                        }}
+                                        className={`flex-1 min-w-0 text-sm border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 transition-colors ${
+                                            isSearching ? 'bg-blue-50' : ''
+                                        }`}
+                                        list="search-opponent-name-options"
+                                        maxLength="16"
+                                        disabled={isSearching}
+                                    />
+                                    {searchName && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSearchName('');
+                                                setLastSearchName('');
+                                            }}
+                                            className="px-2 py-1 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 shrink-0"
+                                        >
+                                            {t('清除名稱', 'Clear name')}
+                                        </button>
+                                    )}
+                                </div>
+                                <datalist id="search-opponent-name-options">
+                                    {opponentNameOptions.map(name => (
+                                        <option key={name} value={name} />
+                                    ))}
+                                </datalist>
+                            </div>
+                        )}
+
                         {/* 搜索提示 */}
                         <div className="flex items-center justify-between mb-2">
                             <div className="text-xs text-gray-600">
                                 💡 <strong>{t('使用方式：', 'How to use: ')}</strong>
-                                {searchOpponents.filter(c => c.trim()).length < 3 ? (
+                                {searchOpponents.filter(c => c.trim()).length < 3 && searchName.trim() ? (
+                                    <span>{t('目前只以對手名稱搜尋；再輸入 3 個角色可同時限定陣容', 'Searching by opponent name only — add 3 characters to also filter by team')}</span>
+                                ) : searchOpponents.filter(c => c.trim()).length < 3 ? (
                                     <span>{t('至少輸入 3 個角色，然後點擊「立即搜索」或切換到其他欄位自動搜索', 'Enter at least 3 characters, then click "Search Now" or switch to another field to search automatically')}</span>
                                 ) : searchOpponents.filter(c => c.trim()).length === 4 ? (
                                     <span>{t('已輸入 4 個角色，將只顯示完全匹配(4/4)的記錄', '4 characters entered — only exact (4/4) matches will be shown')}</span>
@@ -1735,7 +1827,7 @@
                         </div>
                         
                         {/* 搜索結果概要 */}
-                        {lastSearchTerms.filter(c => c).length >= 3 && !isSearching && (
+                        {(lastSearchTerms.filter(c => c).length >= 3 || lastSearchName.trim()) && !isSearching && (
                             <div className="text-sm">
                                 {searchResults.length > 0 ? (
                                     <div className="flex flex-wrap gap-2 items-center">
@@ -1748,7 +1840,7 @@
                                                 result.matchLevel === '高度匹配' ? 'bg-blue-200 text-blue-800' :
                                                 'bg-gray-200 text-gray-800'
                                             }`}>
-                                                {result.matchCount}/4 {t('匹配', 'match')} - {result.result === '勝' ? '🏆' : '💔'}
+                                                {result.matchCount !== undefined && `${result.matchCount}/4 ${t('匹配', 'match')} - `}{result.result === '勝' ? '🏆' : '💔'}
                                                 {result.opponentName && <span className="ml-1">vs {SecurityUtils.sanitizeHtml(result.opponentName)}</span>}
                                             </div>
                                         ))}
@@ -1756,7 +1848,7 @@
                                             <span className="text-gray-500 text-xs">{t(`...等${searchResults.length}筆`, `...and ${searchResults.length} total`)}</span>
                                         )}
                                         <div className="text-xs text-gray-500 mt-1">
-                                            {t('搜索條件: ', 'Search: ')}{lastSearchTerms.filter(c => c).map(cn).join(' + ')}
+                                            {t('搜索條件: ', 'Search: ')}{searchCondText}
                                             {lastSearchTerms.filter(c => c).length === 4 &&
                                                 <span className="text-blue-600 ml-2">{t('(僅完全匹配)', '(exact only)')}</span>
                                             }
@@ -1765,12 +1857,14 @@
                                 ) : (
                                     <div className="text-gray-600">
                                         {lastSearchTerms.filter(c => c).length === 4 ? (
-                                            <span>{t('無完全匹配記錄（搜索條件: ', 'No exact-match records (search: ')}{lastSearchTerms.filter(c => c).map(cn).join(' + ')}{t('）', ')')}</span>
+                                            <span>{t('無完全匹配記錄（搜索條件: ', 'No exact-match records (search: ')}{searchCondText}{t('）', ')')}</span>
                                         ) : (
-                                            <span>{t('無匹配記錄（搜索條件: ', 'No matching records (search: ')}{lastSearchTerms.filter(c => c).map(cn).join(' + ')}{t('）', ')')}</span>
+                                            <span>{t('無匹配記錄（搜索條件: ', 'No matching records (search: ')}{searchCondText}{t('）', ')')}</span>
                                         )}
                                         <div className="text-xs text-gray-500 mt-1">
-                                            {t('💡 嘗試減少角色數量或檢查角色名稱是否正確', '💡 Try fewer characters or check the character names')}
+                                            {lastSearchName.trim()
+                                                ? t('💡 嘗試放寬條件：清除對手名稱，或減少角色數量', '💡 Try loosening the filters: clear the opponent name, or use fewer characters')
+                                                : t('💡 嘗試減少角色數量或檢查角色名稱是否正確', '💡 Try fewer characters or check the character names')}
                                         </div>
                                     </div>
                                 )}
@@ -1804,7 +1898,7 @@
                                                             ))}
                                                         </div>
                                                         <div className="text-xs text-green-700">
-                                                            ({record.matchCount}/4 {t('匹配', 'match')} - {record.date})
+                                                            ({record.matchCount !== undefined && `${record.matchCount}/4 ${t('匹配', 'match')} - `}{record.date})
                                                             {record.opponentName && (
                                                                 <span className="ml-1">vs {SecurityUtils.sanitizeHtml(record.opponentName)}</span>
                                                             )}
@@ -1869,9 +1963,18 @@
                                                 <span className="text-xs text-gray-400 shrink-0">
                                                     {record.date ? new Date(record.date+'T00:00:00').toLocaleDateString(t('zh-TW','en-US'),{month:'numeric',day:'numeric'}) : ''}
                                                 </span>
-                                                <span className={`text-sm font-bold truncate ${record.result==='勝'?'text-gray-900':'text-purple-600'}`}>
-                                                    {SecurityUtils.sanitizeHtml(record.opponentName||'-')}
-                                                </span>
+                                                {record.opponentName ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => searchByOpponentName(record.opponentName)}
+                                                        title={t('只看這個對手的紀錄', 'Show only this opponent')}
+                                                        className={`text-sm font-bold truncate underline decoration-dotted underline-offset-2 ${record.result==='勝'?'text-gray-900':'text-purple-600'}`}
+                                                    >
+                                                        {SecurityUtils.sanitizeHtml(record.opponentName)}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-sm font-bold text-gray-400">-</span>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
                                                 <span className="text-base">{record.result==='勝'?'🏆':'💔'}</span>
@@ -1977,11 +2080,16 @@
                                             {/* 對手名稱欄位 - 根據勝負結果調整顏色 */}
                                             <td className="py-2 px-2 text-sm">
                                                 {record.opponentName ? (
-                                                    <div className={`font-bold ${
-                                                        record.result === '勝' ? 'text-black' : 'text-purple-600'
-                                                    }`}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => searchByOpponentName(record.opponentName)}
+                                                        title={t('只看這個對手的紀錄', 'Show only this opponent')}
+                                                        className={`font-bold underline decoration-dotted underline-offset-2 hover:text-blue-600 ${
+                                                            record.result === '勝' ? 'text-black' : 'text-purple-600'
+                                                        }`}
+                                                    >
                                                         {SecurityUtils.sanitizeHtml(record.opponentName)}
-                                                    </div>
+                                                    </button>
                                                 ) : (
                                                     <span className="text-gray-400">-</span>
                                                 )}
@@ -2987,7 +3095,7 @@ Continue?`);
             const handleAcceptDisclaimer = useCallback(() => {
                 localStorage.setItem('arkrecode_disclaimer_accepted', 'true');
                 setDisclaimerAccepted(true);
-                alert(tg('✅ 歡迎使用 ArkRecode v2.9.2！您的資料將存儲在本機瀏覽器中。', '✅ Welcome to ArkRecode v2.9.2! Your data is stored locally in your browser.'));
+                alert(tg('✅ 歡迎使用 ArkRecode v2.9.3！您的資料將存儲在本機瀏覽器中。', '✅ Welcome to ArkRecode v2.9.3! Your data is stored locally in your browser.'));
             }, []);
 
             // 拒絕免責聲明
@@ -3025,14 +3133,14 @@ Continue?`);
                                 console.log(`載入 ${updatedRecords.length} 筆對戰紀錄`);
                             }
                             
-                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.9.1', '2.9.2'].includes(dataVersion)) {
+                            if (!['2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.9.1', '2.9.2', '2.9.3'].includes(dataVersion)) {
                                 // 舊版升級：清除別名快取
                                 localStorage.removeItem('arkrecode_characterAliases');
-                                console.log('已清除舊版別名快取，套用 v2.9.2 預設別名');
+                                console.log('已清除舊版別名快取，套用 v2.9.3 預設別名');
                             }
-                            if (dataVersion !== '2.9.2') {
-                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.2`);
-                                localStorage.setItem('arkrecode_dataVersion', '2.9.2');
+                            if (dataVersion !== '2.9.3') {
+                                console.log(`版本從 ${dataVersion || '舊版'} 升級到 2.9.3`);
+                                localStorage.setItem('arkrecode_dataVersion', '2.9.3');
                             }
                             
                         } catch (parseError) {
@@ -3057,7 +3165,7 @@ Continue?`);
                         }
                     } else {
                         if (!hasVisitedBefore) {
-                            console.log('👋 歡迎首次使用 ArkRecode v2.9.2！');
+                            console.log('👋 歡迎首次使用 ArkRecode v2.9.3！');
                             setBattleRecords([]);
                             localStorage.setItem('arkrecode_hasVisited', 'true');
                         }
@@ -3222,9 +3330,9 @@ Continue?`);
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <IconComponents.Trophy className="text-yellow-500" size={24} />
-                                    {i18n.t('ArkRecode 對戰紀錄器 v2.9.2', 'ArkRecode Battle Recorder v2.9.2')}
+                                    {i18n.t('ArkRecode 對戰紀錄器 v2.9.3', 'ArkRecode Battle Recorder v2.9.3')}
                                 </h1>
-                                <div className="flex gap-1">
+                                <div className="flex flex-wrap gap-1">
                                     <button
                                         onClick={() => setCurrentView('record')}
                                         className={`px-3 py-1 rounded text-sm flex items-center gap-1 ${
@@ -3261,24 +3369,27 @@ Continue?`);
                                         <IconComponents.Settings size={14} />
                                         {i18n.t('設定', 'Settings')}
                                     </button>
-                                    <span style={{width:'1px',background:'#E5E7EB',margin:'0 4px',alignSelf:'stretch',display:'inline-block'}}/>
+                                    {/* 跨工具連結：手機版隱藏，只留上方 4 個分頁。
+                                        其他工具仍可從站頂 header 的 logo 進 index.html；
+                                        每日代管本來就固定在站頂 header，這裡是重複的。 */}
+                                    <span className="hidden sm:inline-block w-px self-stretch mx-1 bg-gray-200"/>
                                     <a href="./guild-battle.html"
-                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                                        className="hidden sm:flex px-3 py-1 rounded text-sm items-center gap-1 bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('🏰 公會戰', '🏰 Guild Battle')}
                                     </a>
                                     <a href="./character-db.html"
-                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                                        className="hidden sm:flex px-3 py-1 rounded text-sm items-center gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('👤 角色資料庫', '👤 Character DB')}
                                     </a>
                                     <a href="./equip-optimizer.html"
-                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+                                        className="hidden sm:flex px-3 py-1 rounded text-sm items-center gap-1 bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('⚙️ 配裝工具', '⚙️ Gear Optimizer')}
                                     </a>
                                     <a href="./daikan.html"
-                                        className="px-3 py-1 rounded text-sm flex items-center gap-1 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
+                                        className="hidden sm:flex px-3 py-1 rounded text-sm items-center gap-1 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('🤖 每日代管', '🤖 Daily Boost')}
                                     </a>
@@ -3569,7 +3680,7 @@ Continue?`);
                                                                     result: '勝',
                                                                     rank: tg('測試排位', 'Test rank'),
                                                                     opponentName: tg('測試對手', 'Test opponent'),
-                                                                    notes: `v2.9.2 test - ${new Date().toLocaleString('zh-TW')}`
+                                                                    notes: `v2.9.3 test - ${new Date().toLocaleString('zh-TW')}`
                                                                 };
                                                                 uploadToCommunity(testRecord);
                                                                 alert(tg('測試上傳完成！請到您的私人Google Sheets確認', 'Test upload complete! Check your private Google Sheets to confirm'));
@@ -4091,10 +4202,19 @@ Continue?`);
                                 <div className="bg-white rounded-lg shadow-lg p-4">
                                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                         <IconComponents.Shield className="text-green-500" size={20} />
-                                        {i18n.t('v2.9.2 更新說明', 'v2.9.2 Release Notes')}
+                                        {i18n.t('v2.9.3 更新說明', 'v2.9.3 Release Notes')}
                                     </h2>
 
                                     <div className="space-y-3">
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                            <h4 className="font-medium text-blue-800 mb-2">{i18n.t('✨ v2.9.3 改善', '✨ v2.9.3 Improvements')}</h4>
+                                            <ul className="text-sm text-blue-700 space-y-1">
+                                                <li>• {i18n.t(<><strong>對手名稱搜尋</strong>：可依對手名稱／ID 搜尋紀錄，並與陣容條件並用（先查陣容、再收斂到某個對手）</>, <><strong>Opponent name search</strong>: filter records by opponent name / ID, combinable with the team filter (search the team first, then narrow to one opponent)</>)}</li>
+                                                <li>• {i18n.t(<><strong>點名稱即篩選</strong>：點擊紀錄中的對手名稱，直接只看該對手的交手紀錄</>, <><strong>Click a name to filter</strong>: tap an opponent's name in any record to see only that opponent's history</>)}</li>
+                                                <li>• {i18n.t(<><strong>手機版搜尋欄改善</strong>：角色輸入框改為 2×2 排列，不再擠成一團</>, <><strong>Mobile search fix</strong>: character inputs now lay out 2×2 instead of being squeezed into one row</>)}</li>
+                                                <li>• {i18n.t(<><strong>手機版導覽簡化</strong>：只留紀錄／查找／歷史／設定四個分頁，頁面不再左右滑動；其他工具請從左上角 logo 進入</>, <><strong>Simpler mobile nav</strong>: only the Record / Lookup / History / Settings tabs remain, so the page no longer scrolls sideways; reach the other tools via the logo at the top left</>)}</li>
+                                            </ul>
+                                        </div>
                                         <div className="p-3 bg-blue-50 rounded-lg">
                                             <h4 className="font-medium text-blue-800 mb-2">{i18n.t('✨ v2.9.2 改善', '✨ v2.9.2 Improvements')}</h4>
                                             <ul className="text-sm text-blue-700 space-y-1">
@@ -4145,7 +4265,7 @@ Continue?`);
                                         <div className="p-3 bg-yellow-50 rounded-lg">
                                             <h4 className="font-medium text-yellow-800 mb-2">{i18n.t('📞 技術資訊', '📞 Technical Info')}</h4>
                                             <div className="text-sm text-yellow-700 space-y-1">
-                                                <div>• <strong>{i18n.t('版本', 'Version')}</strong>{i18n.t('：', ': ')}v2.9.2</div>
+                                                <div>• <strong>{i18n.t('版本', 'Version')}</strong>{i18n.t('：', ': ')}v2.9.3</div>
                                                 <div>• <strong>{i18n.t('發布日期', 'Release date')}</strong>{i18n.t('：', ': ')}{new Date().toLocaleDateString(i18n.t('zh-TW', 'en-US'))}</div>
                                                 <div>• <strong>{i18n.t('安全等級', 'Security level')}</strong>{i18n.t('：高度 🛡️', ': High 🛡️')}</div>
                                                 <div>• <strong>{i18n.t('適用環境', 'Environment')}</strong>{i18n.t('：離線使用，私人部署', ': Offline use, private deployment')}</div>
@@ -4159,7 +4279,7 @@ Continue?`);
                         )}
 
                         <div className="mt-4 text-center text-xs text-gray-500">
-                            {i18n.t('ArkRecode 對戰紀錄器 v2.9.2 | 離線使用 | 歷史搜索功能 + 策略推薦', 'ArkRecode Battle Recorder v2.9.2 | Offline | History Search + Strategy Recommendations')}
+                            {i18n.t('ArkRecode 對戰紀錄器 v2.9.3 | 離線使用 | 歷史搜索功能 + 策略推薦', 'ArkRecode Battle Recorder v2.9.3 | Offline | History Search + Strategy Recommendations')}
                         </div>
                     </div>
                 </div>
