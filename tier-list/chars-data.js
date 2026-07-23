@@ -174,7 +174,7 @@ window.CHARS_DATA = [
   {name:"萊拉",star:3,element:"暗",role:"戰士",totalSpd:101,totalAtk:1144,totalDef:543,totalHp:4895,critRate:23.0,critDmg:150.0},
   {name:"涅瓦",star:3,element:"暗",role:"戰士",totalSpd:101,totalAtk:1144,totalDef:543,totalHp:4895,critRate:23.0,critDmg:150.0},
   {name:"維爾莉特",star:3,element:"暗",role:"重裝",totalSpd:91,totalAtk:685,totalDef:703,totalHp:6403,critRate:15.0,critDmg:150.0},
-  {name:"喧鬧之星哈蒂",star:5,element:"水",role:"先鋒",totalSpd:128,totalAtk:1075,totalDef:487,totalHp:5562,critRate:15.0,critDmg:150.0},
+  {name:"喧鬧之星哈蒂",star:5,element:"水",role:"先鋒",totalSpd:128,totalAtk:1075,totalDef:487,totalHp:5138,critRate:15.0,critDmg:150.0},
   {name:"紫煙",star:5,element:"暗",role:"戰士",totalSpd:106,totalAtk:975,totalDef:652,totalHp:7054,critRate:65.0,critDmg:150.0},
   {name:"烈酒赤兔芭索蘿",star:5,element:"火",role:"戰士",totalSpd:117,totalAtk:984,totalDef:638,totalHp:6267,critRate:15.0,critDmg:150.0},
   {name:"甜蜜美夢安熙恩",star:5,element:"光",role:"狙擊",totalSpd:109,totalAtk:1328,totalDef:582,totalHp:5138,critRate:23.0,critDmg:150.0},
