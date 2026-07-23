@@ -171,6 +171,7 @@ ArkRecodetools/
 | `build_recom.csv` | 推薦套裝、屬性權重、速度門檻 | CSV | character-db（fetch） | 有推薦配裝資料時 |
 | `tier-list/chars-data.js` | 角色精簡數值（速度、攻防生、爆率爆傷） | JS global | tier-list（CHARS_DATA） | 從根目錄 chars.csv 手動生成後覆蓋 |
 | `assets/official-tierlist.json` | 開發者官方 Tier 分級（S/A/B/C/D × 模式） | JSON | character-db（fetch） | 排好 tier 後用「★ 官方匯出」更新 |
+| `assets/char-wiki-data.json` | Wiki 爬回的上市日期 + 原作 E7 對應角色（187 筆） | JSON | **目前無人讀取**（冷資料存檔） | 不維護；要用再一次性重爬 |
 
 ### 已知重複點（每次維護需注意）
 

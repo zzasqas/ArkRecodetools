@@ -2,6 +2,8 @@
 // 已含英文正式名 nameEN（由角色別稱試算表同步）。使用者自訂別稱另存 localStorage（arkrecode_userAliases），疊加於此母檔之上
 // guild-battle.html、battle-recorder.html、character-db.html 可共用此檔
 // 新角色請加在最後；正式名稱 name 為比對基準，請勿隨意更動既有角色的 name
+// ⚠️ 每筆只放 name / nameEN / id / aliases 四個欄位。多塞欄位（例如 releaseDate）會讓
+//    sniffer 的 scripts/sync_from_arkrecode.py 整筆比對不到而漏掉角色。上市日期查 assets/char-wiki-data.json
 window.CHARACTER_ALIASES = [
     { name: '安泰西亞', nameEN: 'Anastasia', id: 'H118', aliases: ['安泰西亞', '火貓', '安泰', '眼罩'] },
     { name: '朱音', nameEN: 'Akane', id: 'H145', aliases: ['朱音', '朱茵'] },
@@ -107,8 +109,10 @@ window.CHARACTER_ALIASES = [
     { name: '璐茜瑪', nameEN: 'Lucima', id: 'H025', aliases: ['璐茜瑪'] },
     { name: '芽路', nameEN: 'Mero', id: 'H602', aliases: ['芽路', '火正太'] },
     { name: '愛戀泡影的玳蓮', nameEN: 'Ephemeral Love Darlene', id: 'H192', aliases: ['愛戀泡影的玳蓮', '水奶奶', '愛戀玳蓮', '婚紗玳蓮', '人魚公主'] },
-    { name: '水紀', nameEN: 'Mizuki', id: 'H604', aliases: ['水紀', 'Mizuki'], releaseDate: '2026-07-08' },
+    { name: '水紀', nameEN: 'Mizuki', id: 'H604', aliases: ['水紀', 'Mizuki'] },
     { name: '自信拉娜', nameEN: 'Resolute Lana', id: 'H181', aliases: ['自信拉娜', '光鎚', '光拉娜'] },
     { name: '尤莉', nameEN: 'Yuri', id: 'H184', aliases: ['尤莉', '暗芙蘭'] },
     { name: '絢爛夏花卡洛琳', nameEN: 'Midsummer Blossom Carolyn', id: 'H187', aliases: ['絢爛夏花卡洛琳', '婚紗卡', '婚卡', '木LLS'] },
+    { name: '米德', nameEN: 'Mead', id: 'H183', aliases: ['米德', '星法'] },
+    { name: '雪江', nameEN: 'Yukie', id: 'H188', aliases: ['雪江', '新血卡'] },
 ];
