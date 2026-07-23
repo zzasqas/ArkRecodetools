@@ -370,7 +370,7 @@ body.lang-en span[data-lang="en"]{display:inline;}
       </a>
     </div>
 
-    <!-- 每日代管 連結 -->
+    <!-- DAIKAN_HIDDEN_START
     <div style="margin-top:12px;padding:12px 16px;border:1px dashed #3a3320;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:18px;">🤖</span>
@@ -387,6 +387,7 @@ body.lang-en span[data-lang="en"]{display:inline;}
         <span data-lang="en">Learn More →</span>
       </a>
     </div>
+    DAIKAN_HIDDEN_END -->
 
   </section>
 
@@ -584,6 +585,6 @@ function slug(s){return s.toLowerCase().replace(/[^\w\s\u4e00-\u9fff-]/g,'').rep
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&readmeOpen)toggleReadme();});
 </script>
 
-<script src="./assets/daikan-promo.js"></script>
+<!-- DAIKAN_HIDDEN: <script src="./assets/daikan-promo.js"></script> -->
 </body>
 </html>

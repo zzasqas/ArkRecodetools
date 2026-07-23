@@ -133,8 +133,10 @@
 - 手機版導覽列簡化為紀錄／查找／歷史／設定四個分頁，解決頁面左右滑動的問題；公會戰、角色資料庫、配裝工具改從左上角 logo 進入（每日代管仍固定在頁面頂端）
 - 註：對手名稱為選填欄位，紀錄中從未填過名稱時不會顯示此搜尋框
 
+<!-- DAIKAN_HIDDEN_START
 ### 每日代管服務說明頁 (2026-06-27)
 - 新增每日代管服務說明頁（daikan.html）：介紹服務內容、體力方案、定價與風險聲明
+DAIKAN_HIDDEN_END -->
 
 ### v1.6.2 — 配裝計算器（2026-06-17）
 - 新增飛流套裝（Torrent，兩件效果套）支援，匯入裝備時可正確識別套裝名稱
@@ -246,6 +248,29 @@
 ### 挪亞、加加琳、時界巡者Aoi 數值 (2026-05-13)
 - 新增挪亞、加加琳、時界巡者Aoi 角色數值
 - 修正加加琳被動加成類型
+
+---
+
+## 維護注意事項
+
+### 代管服務內容暫時隱藏（如需恢復）
+
+代管服務（`daikan.html`）相關的導覽連結、彈窗、橫幅已暫時屏蔽。頁面本身（`daikan.html`）仍存在於 repo，只是所有入口都關閉了。
+
+**恢復方式**：全域搜尋關鍵字 `DAIKAN_HIDDEN`，照下表逐一還原：
+
+| 檔案 | 標記位置 | 還原動作 |
+|------|---------|---------|
+| `assets/daikan-promo.js` | 第 3 行 `return; // DAIKAN_HIDDEN_RETURN` | 刪除這整行 |
+| `assets/header.js` | nav-link 那行被 `//` 註解 | 把那行前面的 `//` 拿掉，並移除上下兩行 `// DAIKAN_HIDDEN_*` 標記 |
+| `index.html` | 代管選單卡片被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 把外層 HTML 註解刪掉，還原 `<div>…</div>` 本體 |
+| `index.html` | `<script>` 標籤被改成 HTML 註解 | 把 `<!-- DAIKAN_HIDDEN: … -->` 還原成 `<script src="…"></script>` |
+| `battle-recorder.html` | JSX 代管連結被 `{/* DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END */}` 包住 | 刪除 JSX 註解包夾，還原 `<a>…</a>` 本體 |
+| `battle-recorder.html` | `<script>` 標籤被改成 HTML 註解 | 同上，還原 script 標籤 |
+| `equip-optimizer.html` | nav 陣列項目前有 `// DAIKAN_HIDDEN:` | 刪除行首的 `// DAIKAN_HIDDEN: ` 前綴 |
+| `equip-optimizer.html` | `<script>` 標籤被改成 HTML 註解 | 還原 script 標籤 |
+| `tier-list/tier-list.html` | 整個 banner block 被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 刪除外層 HTML 註解，還原 style + div + script 三段 |
+| `README.md` | 代管更新紀錄被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 刪除外層 HTML 註解，還原那兩行更新紀錄 |
 
 ---
 

@@ -25,7 +25,9 @@
       '    </div>',
       '  </a>',
       '  <div class="header-right">',
-      '    <a class="nav-link" href="./daikan.html"><span data-lang="zh">🤖 每日代管</span><span data-lang="en">🤖 Daily Boost</span></a>',
+      // DAIKAN_HIDDEN_START
+      // '    <a class="nav-link" href="./daikan.html"><span data-lang="zh">🤖 每日代管</span><span data-lang="en">🤖 Daily Boost</span></a>',
+      // DAIKAN_HIDDEN_END
       '    <button class="lang-btn' + (lang==='zh'?' active':'') + '" data-l="zh" onclick="window._arkLang(\'zh\')">中文</button>',
       '    <button class="lang-btn' + (lang==='en'?' active':'') + '" data-l="en" onclick="window._arkLang(\'en\')">EN</button>',
       '  </div>',

@@ -1359,7 +1359,7 @@ function App(){
                     {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./battle-recorder.html"},
                     {icon:"👤",zh:"角色資料庫",en:"Character DB",href:"./character-db.html"},
                     {icon:"⚙️",zh:"配裝計算器",en:"Equip Optimizer",href:"./equip-optimizer.html",active:true},
-                    {icon:"🤖",zh:"每日代管",en:"Daily Boost",href:"./daikan.html"},
+                    // DAIKAN_HIDDEN: {icon:"🤖",zh:"每日代管",en:"Daily Boost",href:"./daikan.html"},
                   ].map(item=>(
                     <a key={item.href} href={item.href}
                       onClick={e=>{if(item.active){e.preventDefault();setNavOpen(false);}}}
@@ -2835,6 +2835,6 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
-<script src="./assets/daikan-promo.js"></script>
+<!-- DAIKAN_HIDDEN: <script src="./assets/daikan-promo.js"></script> -->
 </body>
 </html>

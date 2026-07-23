@@ -1,5 +1,7 @@
 // 每日代管服務推廣彈窗 — 共用於 index / battle-recorder / equip-optimizer
+// DAIKAN_HIDDEN: 暫時停用 — 刪除下一行即可恢復
 (function(){
+  return; // DAIKAN_HIDDEN_RETURN
   var COUNT_KEY = 'arkrecode_daikan_close_count';
   var TS_KEY    = 'arkrecode_daikan_popup_closed';
   var SIX_DAYS  = 6 * 24 * 60 * 60 * 1000;
