@@ -4,6 +4,27 @@
 
 ---
 
+## 代管服務暫時隱藏 — 恢復方式（2026-07-24 起）
+
+`daikan.html` 頁面本身仍在 repo，只是所有對外入口都用 `DAIKAN_HIDDEN` 標記關掉了。
+
+**恢復步驟**：全域搜尋 `DAIKAN_HIDDEN`，逐一還原下列位置：
+
+| 檔案 | 標記形式 | 還原動作 |
+|------|---------|---------|
+| `assets/daikan-promo.js` | 第 3 行 `return; // DAIKAN_HIDDEN_RETURN` | 刪除這整行 |
+| `assets/header.js` | nav-link 行被 `// DAIKAN_HIDDEN_START/END` 包住並改為 `//` 行內註解 | 反註解那一行，刪除上下兩行標記 |
+| `index.html` | 代管選單卡片被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 刪除外層 HTML 註解，還原 `<div>…</div>` 本體 |
+| `index.html` | `<script>` 標籤被改成 `<!-- DAIKAN_HIDDEN: … -->` | 還原成 `<script src="./assets/daikan-promo.js"></script>` |
+| `battle-recorder.html` | JSX 連結被 `{/* DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END */}` 包住 | 刪除 JSX 註解包夾，還原 `<a>…</a>` 本體 |
+| `battle-recorder.html` | `<script>` 標籤被改成 HTML 註解 | 同上，還原 script 標籤 |
+| `equip-optimizer.html` | nav 陣列項目行首加了 `// DAIKAN_HIDDEN:` | 刪除行首前綴 `// DAIKAN_HIDDEN: ` |
+| `equip-optimizer.html` | `<script>` 標籤被改成 HTML 註解 | 還原 script 標籤 |
+| `tier-list/tier-list.html` | 整個 banner block 被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 刪除外層 HTML 註解，還原 style + div + script 三段 |
+| `README.md` | 代管更新紀錄被 `<!-- DAIKAN_HIDDEN_START … DAIKAN_HIDDEN_END -->` 包住 | 刪除外層 HTML 註解，還原兩行更新紀錄 |
+
+---
+
 ## ⚠️ 近期變更（委託協作者更新，2026-05）
 
 對戰紀錄器（`battle-recorder.html`）已英文化並調整角色資料架構，重點如下：

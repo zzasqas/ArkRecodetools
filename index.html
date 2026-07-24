@@ -548,6 +548,7 @@ async function loadReadme(){
   }
 }
 function renderMarkdown(text){
+  text=text.replace(/<!--[\s\S]*?-->/g,'');
   const headings=[];
   const lines=text.split('\n');
   let html='',inPre=false,preBuffer='';
