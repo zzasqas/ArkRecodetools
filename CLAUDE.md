@@ -192,7 +192,7 @@ ArkRecodetools/
 | `build_recom.csv` | 推薦套裝、屬性權重、速度門檻 | CSV | character-db（fetch） | 有推薦配裝資料時 |
 | `tier-list/chars-data.js` | 角色精簡數值（速度、攻防生、爆率爆傷） | JS global | tier-list（CHARS_DATA） | 從根目錄 chars.csv 手動生成後覆蓋 |
 | `assets/official-tierlist.json` | 開發者官方 Tier 分級（S/A/B/C/D × 模式） | JSON | character-db（fetch） | 排好 tier 後用「★ 官方匯出」更新 |
-| `assets/char-wiki-data.json` | Wiki 爬回的上市日期 + 原作 E7 對應角色（187 筆） | JSON | **目前無人讀取**（冷資料存檔） | 不維護；要用再一次性重爬 |
+| `assets/char-wiki-data.json` | Wiki 爬回的上市日期 + E7 對應角色（236 筆，221 筆有 e7Name） | JSON | **目前無人讀取**（冷資料，RTA 研究用） | 需重爬時跑 `python scripts/sync_wiki_e7.py`；注意欄位是小寫 `e7Name`，不是 `E7` |
 
 ### 已知重複點（每次維護需注意）
 
@@ -363,3 +363,35 @@ key：`arkrecode_slot_map`，格式 `{StaticID: "部位"}`（例：`{"E0501":"�
 2. 若新前綴只有飾品/鞋子件（無法自動偵測）→ 請玩家對照遊戲確認部位後：
    - 符合 1-6 慣例 → 加入 `RELIABLE_PFX`
    - 不符合慣例 → 加入 `SPECIAL_PFX_SLOT`
+
+---
+
+## research/ — 攻略研究與筆記（不進版控）
+
+`research/` 整個資料夾在 `.gitignore`，內容是攻略分析、強度表、選角筆記，純文字、改動頻繁，Railway 不讀、網頁工具不讀，不需要每次 commit。
+
+**要把某份分享出去時才單獨加：**
+```bash
+git add -f research/RTA_選角速查.md
+```
+
+### 目前放了什麼
+
+| 檔案 | 內容 |
+|---|---|
+| `research/RTA_攻略_2026-07.md` | RTA 完整研究筆記：機制對照、E7 角色對應、十二職能分類、角色評級、選角模板、對策矩陣、缺口分析 |
+| `research/RTA_選角速查.md` | 可分享版：選角順序模板 + 對策矩陣 + 通用指引，無個人角色池資訊 |
+| `research/data/rta_2026-07-25.json` | 7 月版強度表（119 列，含 H-ID／繁中名／持有／E7 對應） |
+| `research/data/rta_raw.json` | 5 月版強度表（欄位較完整：裝備／面板／常見反制手段／RTA順序） |
+
+### 常見研究主題
+
+- **RTA（真人 4v4 選角/Ban）**：強度表（`rta_*.json`）＋選角邏輯（`RTA_攻略`）＋可分享速查（`RTA_選角速查`）
+- **角色 × E7 對照**：`assets/char-wiki-data.json`（版控內）；重爬用 `scripts/sync_wiki_e7.py`
+- **GVG 防守配隊**：見 sniffer repo，有 Wilson 下界 + 佔比篩選邏輯
+
+### RTA 選角十二職能分類（研究筆記用的統一術語）
+
+這是 E7 RTA 社群的功能分類，**不是遊戲內建六職業**（遊戲職業決定數值模板；職能決定「這張卡在隊伍裡負責哪件事」）。攻略筆記和選角速查中的①②③…編號即指此：
+
+①開場拉條 ②群體收割 ③單點斬首 ④破防 ⑤淨化 ⑥群免/護盾 ⑦退條/延遲 ⑧控制 ⑨肉隊核心 ⑩反擊陣地 ⑪閃避/隱身 ⑫技術牌
