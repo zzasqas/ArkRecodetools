@@ -292,8 +292,7 @@ function CharCard({ char, dimmed, showNoImage=false, isHidden, showHidden,
         filter:isHidden?'grayscale(80%) brightness(0.5)':'none'}}>
         {!imgFailed
           ? <img src={src} alt={char.name} onError={handleError}
-              style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block',
-                ...(src===artPath(char.name)?{transform:'scale(2.1) translateY(-10%)',transformOrigin:'top center'}:{})}}/>
+              style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block'}}/>
           : <div style={{width:'100%',height:'100%',background:es.bg,display:'flex',alignItems:'center',
               justifyContent:'center',padding:4,textAlign:'center',fontSize:compact?10:11,
               lineHeight:1.3,color:es.label,fontWeight:600}}>{char.name}</div>}
