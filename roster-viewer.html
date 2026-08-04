@@ -218,7 +218,8 @@ function load(json){
     (d.owned||d.characters||[]).forEach(x=>{
       const id=(x&&x.id)||x; if(!id) return;
       const a=agg[id]||(agg[id]={count:0,star:0,awaken:0,lv:0});
-      a.count++; a.star=Math.max(a.star,x.star||0); a.awaken=Math.max(a.awaken,x.awaken||0); a.lv=Math.max(a.lv,x.lv||0);
+      // 擷取檔=一筆一個實例(count++)；分享連結=已聚合(帶 n 副本數)
+      a.count += (x.n||1); a.star=Math.max(a.star,x.star||0); a.awaken=Math.max(a.awaken,x.awaken||0); a.lv=Math.max(a.lv,x.lv||0);
     });
     CHARS=Object.values(CATALOG).map(c=>({...c, owned:!!agg[c.id], o:agg[c.id]}));
     // 擷取到但目錄沒有的 id（新角色未 sync）：仍列出
@@ -243,7 +244,8 @@ function shareLink(){
   const list=visibleOwned();
   if(!list.length){ alert('目前沒有可分享的角色（先載入並確認篩選）'); return; }
   const payload={source:INFO.source||'shared',account:INFO.account,
-    exportedAt:INFO.exportedAt,ownedCount:list.length,owned:list.map(c=>({id:c.id}))};
+    exportedAt:INFO.exportedAt,ownedCount:list.length,
+    owned:list.map(c=>{const e={id:c.id,star:(c.o?c.o.star:c.rarity)}; if(c.o&&c.o.count>1)e.n=c.o.count; return e;})};
   const url=location.origin+location.pathname+'#data='+encodeURIComponent(JSON.stringify(payload));
   navigator.clipboard.writeText(url).then(
     ()=>toast(`已複製分享連結（${list.length} 隻）—貼給對方即可，他免安裝直接看`),
