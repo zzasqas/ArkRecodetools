@@ -53,16 +53,25 @@
 
 ```
 ArkRecodetools/
-├── index.html            # 主入口頁，工具導覽、使用說明、README 面板
-├── battle-recorder.html  # 對戰紀錄器（v2.7.0）
-├── character-db.html     # 角色資料庫（v1.4）
-├── equip-optimizer.html  # 配裝計算器（v1.4.0）
-├── chars.csv             # 角色基礎數值資料（含版本標頭 version:YYYYMMDD）
-├── build_recom.csv       # 推薦配裝資料
+├── index.html                          # 主入口頁，工具導覽、使用說明、README 面板
+├── battle-recorder.html                # 對戰紀錄器（v2.9.3）
+├── character-db.html                   # 角色資料庫（v1.5.0）
+├── equip-optimizer.html                # 配裝計算器（v1.6.2）
+├── roster-viewer.html                  # 角色列表檢視器（v1.0.3）：元素色卡、篩選、分享連結、匯出圖片
+├── roster-catalog.js                   # 完整角色目錄（id→名/英名/元素/職業/星），由 gen_roster_catalog.py 產生
+├── arkrecode-roster-capture.user.js    # Tampermonkey 腳本：攔截登入 API 擷取角色清單（v1.0.3）
+├── chrome-extension/                   # Chrome 外掛版擷取工具（同功能，manifest v3）
+│   ├── manifest.json
+│   ├── capture.js
+│   └── README.md
+├── chars.csv                           # 角色基礎數值資料（含版本標頭 version:YYYYMMDD）
+├── build_recom.csv                     # 推薦配裝資料
 ├── data/
-│   └── community_gvg.json  # 社群 GvG 資料
-├── README.md             # 使用者說明文件（同時作為 index.html 的 README 面板內容）
-└── CLAUDE.md             # 本檔案
+│   └── community_gvg.json             # 社群 GvG 資料
+├── scripts/
+│   └── gen_roster_catalog.py          # 從 chars.csv 產生 roster-catalog.js
+├── README.md                           # 使用者說明文件（同時作為 index.html 的 README 面板內容）
+└── CLAUDE.md                           # 本檔案
 ```
 
 ---
@@ -131,6 +140,16 @@ ArkRecodetools/
 - 計算符合條件的最佳 8 組裝備
 - 手動配套（ManualPicker）、多角色裝備鎖定（SuperLock）
 - 已配裝備可下載匯出，配置快取於 `localStorage`
+
+### `roster-viewer.html` — 角色列表檢視器（v1.0.3）
+
+- 使用 **Tampermonkey 腳本**（`arkrecode-roster-capture.user.js`）或 **Chrome 外掛**（`chrome-extension/`）從遊戲登入 API 擷取角色清單 JSON，不碰帳密
+- 匯入 JSON 後，以元素色卡（暗光火水木排序）顯示擁有角色，支援元素／職業／星級篩選
+- 顯示每個角色的實際星級（含突破第 6 顆）與副本數
+- **🔗 複製分享連結**：把篩選後的角色清單壓進網址，對方點開即看到，免安裝工具
+- **🖼️ 匯出成圖片**：產生 PNG 一鍵下載，適合貼 Discord 或賣帳號貼文
+- 角色頭像優先顯示 `assets/char-art/` 本機 WebP，次選 wiki 來源，最後降級為元素色底＋名字
+- 角色目錄由 `roster-catalog.js` 提供（`scripts/gen_roster_catalog.py` 從 `chars.csv` 產生），不依賴 fetch，`file://` 本機也能跑
 
 ---
 

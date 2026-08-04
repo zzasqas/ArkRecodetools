@@ -24,6 +24,7 @@ local/*.txt
 local/rta_*.json
 local/row_name_map.json
 local/tier-list-plan.md
+local/星隕角色圖標/
 
 # research/ 攻略研究與筆記（純文字，改動頻繁，不需要每次 commit）
 # 要把某份分享出去時：git add -f research/<檔名>
