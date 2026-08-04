@@ -103,10 +103,13 @@ display:flex;align-items:center;justify-content:center;font-size:11px;line-heigh
     抓一次自己的角色，就能丟連結或圖片給別人——<b style="color:var(--txt)">求配對建議</b>或<b style="color:var(--txt)">賣帳號</b>時很方便。
     收到的人<b style="color:var(--txt)">什麼都不用裝</b>。</p>
   <ol>
-    <li><b>裝一次擷取工具</b>（只需一次）：裝瀏覽器擴充
-      <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">Tampermonkey</a>（免費），
-      再點 → <a href="arkrecode-roster-capture.user.js">安裝「角色列表擷取」腳本</a>（按「安裝」即可）。
-      <span style="color:var(--muted)">（之後會改成一鍵安裝的 Chrome 外掛，更簡單。）</span></li>
+    <li><b>裝一次擷取工具</b>（只需一次，二選一）：
+      <ul style="margin-top:6px;padding-left:18px;">
+        <li><b>Chrome 外掛</b>（推薦，最簡單）：<span style="color:var(--muted)">Chrome 線上應用程式商店審核中，上架後這裡會放一鍵安裝連結。</span></li>
+        <li><b>Tampermonkey 腳本</b>（目前可用）：先裝
+          <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">Tampermonkey</a>（免費），
+          再點 → <a href="arkrecode-roster-capture.user.js">安裝「角色列表擷取」腳本</a>（按「安裝」即可）。</li>
+      </ul></li>
     <li><b>用瀏覽器開<u>網頁版</u>遊戲登入</b>（網址 <code>game-arkre-labs.ecchi.xxx</code>；
       PC 客戶端不行，因為要攔瀏覽器封包）。登入成功後右上角自動跳出小面板 → 點
       <b>「🔗 直接在檢視器開啟」</b>，就會開這一頁並帶入你的角色。</li>
@@ -137,10 +140,13 @@ const CATALOG = (() => {
 
 let CHARS=[], INFO={}, F={el:new Set(),cls:new Set(),rar:new Set([5])}; // 預設只看五星
 
-// 星星：實星 1~5，第 6 顆用虛星（只有外框）☆
-function starsHTML(st){
+// 星星：實星=現有星數，總格數 6（5★角色可到6★），不足補虛星☆
+function starsHTML(st, rarity){
   st=st||0; if(!st) return '';
-  return `<span class="stars">${'★'.repeat(Math.min(st,5))}${st>=6?'<span class="star6">☆</span>':''}</span>`;
+  const total = rarity>=5 ? 6 : st;          // 5★底可到6格；其餘就顯示現有星數
+  const solid = Math.min(st, total);
+  const hollow = Math.max(0, total - solid);
+  return `<span class="stars">${'★'.repeat(solid)}${hollow?`<span class="star6">${'☆'.repeat(hollow)}</span>`:''}</span>`;
 }
 function sval(c){ return c.o?c.o.star:(c.rarity||0); }
 // 元素序（暗光火水木）→ 實際星級 → id
@@ -186,7 +192,7 @@ function thumbHTML(c){
 function cardHTML(c){
   const st = c.owned && c.o ? c.o.star : c.rarity;   // 擁有→實際星級；未擁有→基礎星
   const parts=[];
-  if(st) parts.push(starsHTML(st));
+  if(st) parts.push(starsHTML(st, c.rarity));
   if(c.cls) parts.push(c.cls);
   const spare = c.owned && c.o && c.o.count>1 ? `<span class="spare" title="多 ${c.o.count-1} 個副本">+${c.o.count-1}</span>` : '';
   return `<div class="card el-${c.element||''} ${c.owned?'':'missing'}">${spare}
@@ -306,9 +312,10 @@ async function exportImage(){
     // 名字
     x.fillStyle='#e8eaf0'; x.font='600 13px "Noto Sans TC",sans-serif'; x.textAlign='center';
     x.fillText(clip(x,c.name||c.id,cw-6), px+cw/2, ty0+tsz+15);
-    // 星星：實星 1~5 + 第 6 顆虛星
+    // 星星：實星=現有星數，5★角色補到6格（不足補虛星☆）
+    const total6 = (c.rarity>=5?6:st), solidN=Math.min(st,total6), hollowN=Math.max(0,total6-solidN);
     x.font='12px sans-serif'; x.fillStyle='#fbbf24';
-    x.fillText(clip(x,'★'.repeat(Math.min(st,5))+(st>=6?'☆':''),cw-4), px+cw/2, ty0+tsz+31);
+    x.fillText(clip(x,'★'.repeat(solidN)+'☆'.repeat(hollowN),cw-4), px+cw/2, ty0+tsz+31);
     // 職業
     if(c.cls){ x.fillStyle='#8b93a5'; x.font='11px sans-serif'; x.fillText(c.cls, px+cw/2, ty0+tsz+45); }
     x.textAlign='left';
