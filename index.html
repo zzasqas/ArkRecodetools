@@ -370,7 +370,7 @@ body.lang-en span[data-lang="en"]{display:inline;}
       </a>
     </div>
 
-    <!-- 每日代管 連結 -->
+    <!-- DAIKAN_HIDDEN_START
     <div style="margin-top:12px;padding:12px 16px;border:1px dashed #3a3320;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:18px;">🤖</span>
@@ -385,6 +385,25 @@ body.lang-en span[data-lang="en"]{display:inline;}
         onmouseover="this.style.background='rgba(180,130,20,0.3)'" onmouseout="this.style.background='rgba(180,130,20,0.15)'">
         <span data-lang="zh">了解服務 →</span>
         <span data-lang="en">Learn More →</span>
+      </a>
+    </div>
+    DAIKAN_HIDDEN_END -->
+
+    <!-- 角色列表檢視器 連結 -->
+    <div style="margin-top:12px;padding:12px 16px;border:1px dashed #33234a;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">🎴</span>
+        <div>
+          <span data-lang="zh" style="font-size:14px;font-weight:600;color:#e2e8f0;">角色列表檢視器</span>
+          <span data-lang="en" style="font-size:14px;font-weight:600;color:#e2e8f0;">Roster Viewer</span>
+          <div data-lang="zh" style="font-size:12px;color:#64748b;margin-top:2px;">用擷取腳本匯出你的角色清單，元素色卡＋篩選一目了然</div>
+          <div data-lang="en" style="font-size:12px;color:#64748b;margin-top:2px;">Export your roster with the capture script, view by element with filters</div>
+        </div>
+      </div>
+      <a href="./roster-viewer.html" style="flex-shrink:0;font-size:13px;color:#c4b5fd;text-decoration:none;padding:6px 14px;border:1px solid #3b0764;border-radius:6px;background:rgba(139,92,246,0.15);white-space:nowrap;transition:background 0.15s;"
+        onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
+        <span data-lang="zh">開啟檢視器 →</span>
+        <span data-lang="en">Open Viewer →</span>
       </a>
     </div>
 
@@ -585,6 +604,6 @@ function slug(s){return s.toLowerCase().replace(/[^\w\s\u4e00-\u9fff-]/g,'').rep
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&readmeOpen)toggleReadme();});
 </script>
 
-<script src="./assets/daikan-promo.js"></script>
+<!-- DAIKAN_HIDDEN: <script src="./assets/daikan-promo.js"></script> -->
 </body>
 </html>

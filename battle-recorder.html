@@ -3388,11 +3388,13 @@ Continue?`);
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('⚙️ 配裝工具', '⚙️ Gear Optimizer')}
                                     </a>
+                                    {/* DAIKAN_HIDDEN_START
                                     <a href="./daikan.html"
                                         className="hidden sm:flex px-3 py-1 rounded text-sm items-center gap-1 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
                                         style={{textDecoration:'none'}}>
                                         {i18n.t('🤖 每日代管', '🤖 Daily Boost')}
                                     </a>
+                                    DAIKAN_HIDDEN_END */}
                                 </div>
                             </div>
                         </div>
@@ -4290,6 +4292,6 @@ Continue?`);
         // 初始化應用
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-<script src="./assets/daikan-promo.js"></script>
+<!-- DAIKAN_HIDDEN: <script src="./assets/daikan-promo.js"></script> -->
 </body>
 </html>
