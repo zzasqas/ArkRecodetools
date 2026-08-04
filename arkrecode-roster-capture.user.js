@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ArkRecode 角色列表擷取
 // @namespace    https://github.com/zzasqas/ArkRecodetools
-// @version      1.0.2
+// @version      1.0.3
 // @description  攔截遊戲登入 API，擷取你擁有的角色清單，下載 JSON 給角色列表檢視器用
 // @author       zzasqas
 // @match        https://game-arkre-labs.ecchi.xxx/*
@@ -15,7 +15,7 @@
 
   const TARGET_ROUTE = 'AccountHandler.Login';
   // 檢視器網址（線上版）：擷取後可一鍵把資料帶過去，免下載免選檔
-  const VIEWER_URL = 'https://arkrecodetools-production.up.railway.app/roster-viewer.html';
+  const VIEWER_URL = 'https://zzasqas.github.io/ArkRecodetools/roster-viewer.html';
   let captured = false; // 只處理一次（登入回應）
 
   function showToast(msg, ok = true, duration = 4000) {
@@ -167,5 +167,5 @@
     return res;
   };
 
-  console.log('[ArkRecode Roster] v1.0.2 已載入（frame:', location.href, '），掃描 RouterHandler 中...');
+  console.log('[ArkRecode Roster] v1.0.3 已載入（frame:', location.href, '），掃描 RouterHandler 中...');
 })();

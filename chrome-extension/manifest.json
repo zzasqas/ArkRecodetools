@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ArkRecode 角色列表擷取",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "在網頁版遊戲登入時擷取你擁有的角色清單，一鍵在角色列表檢視器開啟。",
   "icons": {
     "16": "icon16.png",

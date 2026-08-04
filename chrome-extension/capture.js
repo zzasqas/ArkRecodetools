@@ -5,7 +5,7 @@
   'use strict';
 
   const TARGET_ROUTE = 'AccountHandler.Login';
-  const VIEWER_URL = 'https://arkrecodetools-production.up.railway.app/roster-viewer.html';
+  const VIEWER_URL = 'https://zzasqas.github.io/ArkRecodetools/roster-viewer.html';
   let captured = false; // 只處理一次（登入回應）
 
   function showToast(msg, ok = true, duration = 4000) {
@@ -129,5 +129,5 @@
     return res;
   };
 
-  console.log('[ArkRecode Roster] v1.0.2 外掛已載入（frame:', location.href, '），掃描 RouterHandler 中...');
+  console.log('[ArkRecode Roster] v1.0.3 外掛已載入（frame:', location.href, '），掃描 RouterHandler 中...');
 })();
