@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ArkRecode 角色列表擷取",
+  "version": "1.0.2",
+  "description": "在網頁版遊戲登入時擷取你擁有的角色清單，一鍵在角色列表檢視器開啟。",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://game-arkre-labs.ecchi.xxx/*",
+        "https://www.ero-labs.com/*"
+      ],
+      "js": ["capture.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ]
+}

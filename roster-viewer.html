@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>角色列表檢視器 — ArkRecode</title>
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<!-- 完整角色目錄（id→名/英名/元素/職業/星），JS 全域＝免 fetch，本地 file:// 也能跑 -->
+<!-- 由 scripts/gen_roster_catalog.py 產生 -->
+<script src="roster-catalog.js"></script>
+<style>
+:root{--bg:#0f1117;--panel:#181b24;--panel2:#20242f;--line:#2c313d;--txt:#e8eaf0;
+--muted:#8b93a5;--accent:#a06bff;--sans:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);padding:22px 26px;min-height:100vh}
+.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand{font-weight:900;font-size:21px;background:linear-gradient(90deg,#ff7fac,#a06bff);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top a{font-size:13px;color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--txt)}
+.bar{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;margin:14px 0 6px}
+.bar input[type=file]{color:var(--muted);font-size:13px}
+.bar input[type=search]{background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+padding:7px 12px;color:var(--txt);font-size:14px;min-width:150px}
+.bar label{font-size:13px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer}
+.filters{display:flex;gap:8px 16px;align-items:center;flex-wrap:wrap;margin:8px 0 4px}
+.fgroup{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.fgroup .lbl{font-size:12px;color:var(--muted);margin-right:2px}
+.pill{border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:20px;
+padding:4px 11px;font-size:13px;cursor:pointer;user-select:none;line-height:1.4}
+.pill.on{color:#fff;border-color:transparent}
+.pill.el-火.on{background:#ef4444}.pill.el-水.on{background:#3b82f6}.pill.el-木.on{background:#22c55e}
+.pill.el-光.on{background:#eab308;color:#1a1a1a}.pill.el-暗.on{background:#8b5cf6}
+.pill.rar.on,.pill.cls.on{background:var(--accent);color:#fff}
+.meta{color:var(--muted);font-size:13px;margin:10px 0 8px}
+.meta b{color:var(--accent)}
+.share{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.sbtn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.sbtn:hover{filter:brightness(1.1)}
+.sharehint{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px 9px;
+text-align:center;transition:transform .1s}
+.card:hover{transform:translateY(-2px)}
+.card.missing{opacity:.38}
+.spare{position:absolute;top:4px;right:4px;z-index:2;background:var(--accent);color:#fff;font-size:11px;
+font-weight:700;line-height:1;padding:2px 5px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.awk{color:#ffb454;font-weight:600}
+.thumb{width:72px;height:72px;margin:0 auto 6px;border-radius:8px;overflow:hidden;border:2px solid var(--line);
+display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1.25;font-weight:600;padding:3px}
+.thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.el-火 .thumb{border-color:#ef4444;background:#7f1d1d;color:#fca5a5}
+.el-水 .thumb{border-color:#3b82f6;background:#1e3a5f;color:#93c5fd}
+.el-木 .thumb{border-color:#22c55e;background:#14532d;color:#86efac}
+.el-光 .thumb{border-color:#eab308;background:#713f12;color:#fde047}
+.el-暗 .thumb{border-color:#8b5cf6;background:#3b0764;color:#c4b5fd}
+.el- .thumb{border-color:#6b7280;background:#374151;color:#d1d5db}
+.cname{font-size:13px;font-weight:600}
+.cmeta{font-size:11px;color:var(--muted);margin-top:2px}
+.stars{color:#fbbf24;letter-spacing:-1px}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:28px;text-align:center;color:var(--muted);margin-top:20px;line-height:1.7}
+.drop b{color:var(--txt)}
+.drop code,.help code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
+.help{max-width:760px;margin:18px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px}
+.help h2{font-size:16px;margin-bottom:12px;color:var(--accent)}
+.help ol{margin:0 0 4px;padding-left:22px;display:flex;flex-direction:column;gap:12px}
+.help li{font-size:14px;line-height:1.75;color:var(--txt)}
+.help a{color:#c4b5fd}
+.help .tip{margin-top:14px;font-size:13px;color:var(--muted)}
+.help u{text-decoration-color:var(--muted)}
+.top .help-toggle{cursor:pointer;color:var(--accent)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">角色列表檢視器</span>
+  <a href="./index.html">← 回工具首頁</a>
+  <a class="help-toggle" id="helpToggle">使用說明</a>
+</div>
+<div class="bar">
+  <input type="file" id="file" accept=".json,application/json">
+  <input type="search" id="q" placeholder="搜尋名字 / 英文 / ID">
+  <label><input type="checkbox" id="onlyOwned" checked> 只看擁有</label>
+</div>
+<div class="filters" id="filters"></div>
+<div class="meta" id="meta"></div>
+<div class="share hidden" id="share">
+  <button class="sbtn" id="btnLink">🔗 複製分享連結</button>
+  <button class="sbtn" id="btnImg">🖼️ 匯出成圖片</button>
+  <span class="sharehint">分享的是「目前篩選後顯示」的角色——先用上面篩掉三星/四星等不要的，再分享。</span>
+</div>
+<div class="grid" id="grid"></div>
+<div class="drop" id="drop">
+  <div style="font-size:15px;color:var(--txt);margin-bottom:6px;">還沒有角色資料</div>
+  <div>照下面 3 步取得你的角色列表；或把已下載的 <code>arkrecode_roster_*.json</code> 拖曳／
+    <label style="color:var(--accent);cursor:pointer;text-decoration:underline;">選檔<input type="file" id="file2" accept=".json,application/json" style="display:none"></label>進來。</div>
+</div>
+
+<section class="help" id="help">
+  <h2>怎麼分享我的角色庫？</h2>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+    抓一次自己的角色，就能丟連結或圖片給別人——<b style="color:var(--txt)">求配對建議</b>或<b style="color:var(--txt)">賣帳號</b>時很方便。
+    收到的人<b style="color:var(--txt)">什麼都不用裝</b>。</p>
+  <ol>
+    <li><b>裝一次擷取工具</b>（只需一次）：裝瀏覽器擴充
+      <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">Tampermonkey</a>（免費），
+      再點 → <a href="arkrecode-roster-capture.user.js">安裝「角色列表擷取」腳本</a>（按「安裝」即可）。
+      <span style="color:var(--muted)">（之後會改成一鍵安裝的 Chrome 外掛，更簡單。）</span></li>
+    <li><b>用瀏覽器開<u>網頁版</u>遊戲登入</b>（網址 <code>game-arkre-labs.ecchi.xxx</code>；
+      PC 客戶端不行，因為要攔瀏覽器封包）。登入成功後右上角自動跳出小面板 → 點
+      <b>「🔗 直接在檢視器開啟」</b>，就會開這一頁並帶入你的角色。</li>
+    <li><b>篩掉不要的、再分享</b>：用上方篩選（元素／職業／星）把三星、四星等不重要的先濾掉，
+      然後：
+      <ul style="margin-top:6px;padding-left:18px;">
+        <li><b>🔗 複製分享連結</b> → 貼給對方，他點開就看到你篩選後的角色（可自己再篩，適合問配對）。</li>
+        <li><b>🖼️ 匯出成圖片</b> → 一張 PNG 存到「下載」資料夾，貼 Discord／賣帳號貼文最直接。</li>
+      </ul>
+    </li>
+  </ol>
+  <p class="tip">分享出去的只有「當下篩選後顯示」的角色，所以先濾再分享就不會露出一堆下水道三星。</p>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+const ELEMENTS=['暗','光','火','水','木']; // 有價值的光暗排前面
+const CLASSES=['狙擊','術師','戰士','重裝','先鋒','醫療'];
+const RARITIES=[5,4,3];
+
+// 角色目錄：roster-catalog.js 的 window.ROSTER_CATALOG（id→名/英名/元素/職業/星）
+const CATALOG = (() => {
+  const src = window.ROSTER_CATALOG || {};
+  const out = {};
+  for (const id in src) out[id] = { id, ...src[id] };
+  return out;
+})();
+
+let CHARS=[], INFO={}, F={el:new Set(),cls:new Set(),rar:new Set([5])}; // 預設只看五星
+
+function stars(n){ return '★'.repeat(n||0); }
+function sval(c){ return c.o?c.o.star:(c.rarity||0); }
+// 元素序（暗光火水木）→ 實際星級 → 突破 → id
+function cmpChar(a,b){ return ELEMENTS.indexOf(a.element)-ELEMENTS.indexOf(b.element)
+  || sval(b)-sval(a) || (b.o?b.o.awaken:0)-(a.o?a.o.awaken:0) || String(a.id).localeCompare(String(b.id)); }
+
+function buildFilters(){
+  const pill=(kind,val,label,extraCls='')=>
+    `<span class="pill ${kind} ${extraCls}" data-kind="${kind}" data-val="${val}">${label}</span>`;
+  const group=(lbl,html)=>`<div class="fgroup"><span class="lbl">${lbl}</span>${html}</div>`;
+  $("filters").innerHTML=
+     group('元素', ELEMENTS.map(e=>pill('el',e,e,'el-'+e)).join(''))
+    +group('職業', CLASSES.map(c=>pill('cls',c,c)).join(''))
+    +group('星',   RARITIES.map(r=>pill('rar',r,r+'★')).join(''));
+  $("filters").querySelectorAll('.pill').forEach(p=>{
+    const kind=p.dataset.kind;
+    const set=kind==='el'?F.el:kind==='cls'?F.cls:F.rar;
+    const key=kind==='rar'?Number(p.dataset.val):p.dataset.val;
+    if(set.has(key)) p.classList.add('on'); // 反映預設篩選
+    p.onclick=()=>{ set.has(key)?set.delete(key):set.add(key); p.classList.toggle('on'); render(); };
+  });
+}
+
+function passes(c){
+  if($("onlyOwned").checked && !c.owned) return false;
+  if(F.el.size && !F.el.has(c.element)) return false;
+  if(F.cls.size && !F.cls.has(c.cls)) return false;
+  if(F.rar.size && !F.rar.has(c.rarity)) return false;
+  const q=$("q").value.trim().toLowerCase();
+  if(q && !((c.name||'').toLowerCase().includes(q)||(c.nameEN||'').toLowerCase().includes(q)||(c.id||'').toLowerCase().includes(q))) return false;
+  return true;
+}
+
+// 圖標：local 圖標 → char-art → 元素色底+名字。用 data-fallback 逐步降級。
+function thumbHTML(c){
+  if(!c.name) return c.id;
+  const local=`local/星隕角色圖標/${encodeURIComponent(c.name)}.png`;
+  const art=`assets/char-art/${encodeURIComponent(c.name)}.webp`;
+  return `<img src="${local}" alt="${c.name}" data-art="${art}" data-name="${c.name}"
+    onerror="if(this.dataset.art){this.src=this.dataset.art;this.dataset.art='';}else{this.parentNode.textContent=this.dataset.name;}">`;
+}
+
+function cardHTML(c){
+  const st = c.owned && c.o ? c.o.star : c.rarity;   // 擁有→實際星級；未擁有→基礎星
+  const parts=[];
+  if(stars(st)) parts.push(`<span class="stars">${stars(st)}</span>`);
+  if(c.owned && c.o && c.o.awaken) parts.push(`<span class="awk">突${c.o.awaken}</span>`);
+  if(c.cls) parts.push(c.cls);
+  const spare = c.owned && c.o && c.o.count>1 ? `<span class="spare" title="多 ${c.o.count-1} 個副本">+${c.o.count-1}</span>` : '';
+  return `<div class="card el-${c.element||''} ${c.owned?'':'missing'}">${spare}
+    <div class="thumb">${thumbHTML(c)}</div>
+    <div class="cname">${c.name||c.id}</div>
+    <div class="cmeta">${parts.join(' · ')||'&nbsp;'}</div></div>`;
+}
+
+function render(){
+  const rows=CHARS.filter(passes);
+  rows.sort(cmpChar);
+  $("grid").innerHTML=rows.map(cardHTML).join("");
+  const src=INFO.account?`帳號 ${INFO.account}`:(INFO.source||"");
+  $("meta").innerHTML=`擁有 <b>${INFO.ownedCount}</b> / ${CHARS.length} 名　`
+    +`<span style="opacity:.7">${src} · 擷取於 ${INFO.exportedAt?INFO.exportedAt.slice(0,16).replace('T',' '):"-"}</span>　顯示 ${rows.length} 筆`;
+}
+
+function load(json){
+  try{
+    const d=JSON.parse(json);
+    // 聚合同一角色的多個副本：count=幾個、star/awaken/lv 取最高（主力那隻）
+    const agg={};
+    (d.owned||d.characters||[]).forEach(x=>{
+      const id=(x&&x.id)||x; if(!id) return;
+      const a=agg[id]||(agg[id]={count:0,star:0,awaken:0,lv:0});
+      a.count++; a.star=Math.max(a.star,x.star||0); a.awaken=Math.max(a.awaken,x.awaken||0); a.lv=Math.max(a.lv,x.lv||0);
+    });
+    CHARS=Object.values(CATALOG).map(c=>({...c, owned:!!agg[c.id], o:agg[c.id]}));
+    // 擷取到但目錄沒有的 id（新角色未 sync）：仍列出
+    Object.keys(agg).forEach(id=>{ if(!CATALOG[id]) CHARS.push({id,name:id,nameEN:'',element:'',cls:'',rarity:0,owned:true,o:agg[id]}); });
+    INFO={source:d.source||'',account:d.account,exportedAt:d.exportedAt,ownedCount:Object.keys(agg).length};
+    $("drop").classList.add("hidden");
+    $("help").classList.add("hidden");
+    $("share").classList.remove("hidden");
+    render();
+  }catch(e){ $("meta").textContent="讀取失敗：不是有效的擷取 JSON（"+e+"）"; }
+}
+
+function pick(f){ const r=new FileReader(); r.onload=()=>load(r.result); r.readAsText(f,"utf-8"); }
+
+// 目前篩選後、且擁有的角色（分享/匯出都用這個＝先篩再分享）
+function visibleOwned(){
+  return CHARS.filter(c=>passes(c)&&c.owned).sort(cmpChar);
+}
+
+// ── 複製分享連結：把「篩選後顯示」的角色塞進網址，對方點開即看，免安裝 ──
+function shareLink(){
+  const list=visibleOwned();
+  if(!list.length){ alert('目前沒有可分享的角色（先載入並確認篩選）'); return; }
+  const payload={source:INFO.source||'shared',account:INFO.account,
+    exportedAt:INFO.exportedAt,ownedCount:list.length,owned:list.map(c=>({id:c.id}))};
+  const url=location.origin+location.pathname+'#data='+encodeURIComponent(JSON.stringify(payload));
+  navigator.clipboard.writeText(url).then(
+    ()=>toast(`已複製分享連結（${list.length} 隻）—貼給對方即可，他免安裝直接看`),
+    ()=>prompt('複製這個連結分享：',url));
+}
+
+const ELCOLOR={火:['#7f1d1d','#ef4444','#fca5a5'],水:['#1e3a5f','#3b82f6','#93c5fd'],
+  木:['#14532d','#22c55e','#86efac'],光:['#713f12','#eab308','#fde047'],
+  暗:['#3b0764','#8b5cf6','#c4b5fd'],'':['#374151','#6b7280','#d1d5db']};
+
+function loadIcon(name){
+  return new Promise(res=>{
+    if(!name){ res(null); return; }
+    const local='local/星隕角色圖標/'+encodeURIComponent(name)+'.png';
+    const art='assets/char-art/'+encodeURIComponent(name)+'.webp';
+    const im=new Image();
+    im.onload=()=>res(im);
+    im.onerror=()=>{ if(im.src.indexOf('char-art')<0){ im.src=art; } else res(null); };
+    im.src=local;
+  });
+}
+
+// ── 匯出成圖片：把篩選後顯示的角色畫成一張 PNG（賣帳號/貼文用，對方看圖免點）──
+async function exportImage(){
+  const list=visibleOwned();
+  if(!list.length){ alert('目前沒有可匯出的角色'); return; }
+  toast('產生圖片中…');
+  const icons=await Promise.all(list.map(c=>loadIcon(c.name)));
+  const cols=Math.min(10,Math.max(6,Math.ceil(Math.sqrt(list.length)*1.4)));
+  const cw=104,ch=140,pad=14,head=64;
+  const rows=Math.ceil(list.length/cols);
+  const W=cols*cw+pad*2, H=head+rows*ch+pad;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const x=cv.getContext('2d');
+  x.fillStyle='#0f1117'; x.fillRect(0,0,W,H);
+  // 標頭
+  x.fillStyle='#e8eaf0'; x.font='bold 20px "Noto Sans TC",sans-serif';
+  x.fillText((INFO.account?INFO.account+' 的角色庫':'角色庫')+`　${list.length} 隻`, pad, 34);
+  x.fillStyle='#8b93a5'; x.font='12px sans-serif';
+  x.fillText('by ArkRecode 角色列表檢視器'+(INFO.exportedAt?' · '+INFO.exportedAt.slice(0,10):''), pad, 52);
+  const rr=(px,py,w,h,r)=>{x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);
+    x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();};
+  list.forEach((c,i)=>{
+    const col=i%cols, row=(i/cols)|0;
+    const px=pad+col*cw, py=head+row*ch;
+    const [bg,bd,tx]=ELCOLOR[c.element]||ELCOLOR[''];
+    const tsz=72, tx0=px+(cw-tsz)/2, ty0=py;
+    // 縮圖框
+    x.fillStyle=bg; rr(tx0,ty0,tsz,tsz,8); x.fill();
+    const im=icons[i];
+    if(im){ x.save(); rr(tx0,ty0,tsz,tsz,8); x.clip();
+      // object-fit: cover, 對齊上緣
+      const s=Math.max(tsz/im.width,tsz/im.height), dw=im.width*s, dh=im.height*s;
+      x.drawImage(im, tx0+(tsz-dw)/2, ty0, dw, dh); x.restore();
+    } else { x.fillStyle=tx; x.font='600 12px "Noto Sans TC",sans-serif'; x.textAlign='center';
+      wrapText(x,c.name,px+cw/2,ty0+tsz/2-4,tsz-10,14); x.textAlign='left'; }
+    x.lineWidth=2; x.strokeStyle=bd; rr(tx0,ty0,tsz,tsz,8); x.stroke();
+    // 副本數角標（多幾個）
+    if(c.o && c.o.count>1){
+      const bw=Math.max(22,12+String(c.o.count-1).length*7), bx=tx0+tsz-bw+3, by=ty0-3;
+      x.fillStyle='#a06bff'; rr(bx,by,bw,16,8); x.fill();
+      x.fillStyle='#fff'; x.font='700 11px sans-serif'; x.textAlign='center';
+      x.fillText('+'+(c.o.count-1), bx+bw/2, by+12);
+    }
+    const st = c.o ? c.o.star : c.rarity; // 實際星級
+    // 名字
+    x.fillStyle='#e8eaf0'; x.font='600 13px "Noto Sans TC",sans-serif'; x.textAlign='center';
+    x.fillText(clip(x,c.name||c.id,cw-6), px+cw/2, ty0+tsz+15);
+    // 實際星級 + 突破
+    x.font='11px sans-serif'; x.fillStyle='#fbbf24';
+    x.fillText(clip(x,'★'.repeat(st)+(c.o&&c.o.awaken?' 突'+c.o.awaken:''),cw-4), px+cw/2, ty0+tsz+30);
+    // 職業
+    if(c.cls){ x.fillStyle='#8b93a5'; x.fillText(c.cls, px+cw/2, ty0+tsz+44); }
+    x.textAlign='left';
+  });
+  cv.toBlob(b=>{
+    if(!b){ alert('匯出失敗（本地 file:// 開啟時瀏覽器會擋畫布，請用線上版）'); return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download=`角色庫${INFO.account?'_'+INFO.account:''}_${list.length}隻.png`; a.click();
+    toast('已匯出圖片到「下載」資料夾');
+  },'image/png');
+}
+function clip(x,s,max){ s=String(s); while(x.measureText(s).width>max&&s.length>1) s=s.slice(0,-1); return s; }
+function wrapText(x,s,cx,cy,max,lh){ const w=[...String(s)]; let line='',lines=[];
+  for(const ch of w){ if(x.measureText(line+ch).width>max){lines.push(line);line=ch;} else line+=ch; }
+  lines.push(line); const y0=cy-(lines.length-1)*lh/2;
+  lines.forEach((l,i)=>x.fillText(l,cx,y0+i*lh)); }
+function toast(msg){ const m=$("meta"); const o=m.innerHTML; m.dataset.o=m.dataset.o||o;
+  m.innerHTML=`<b>${msg}</b>`; clearTimeout(toast._t); toast._t=setTimeout(()=>render(),2600); }
+
+$("file").onchange=e=>{ if(e.target.files[0]) pick(e.target.files[0]); };
+$("btnLink").onclick=shareLink;
+$("btnImg").onclick=exportImage;
+$("file2").onchange=e=>{ if(e.target.files[0]) pick(e.target.files[0]); };
+$("helpToggle").onclick=()=>$("help").classList.toggle("hidden");
+$("q").oninput=render;
+$("onlyOwned").onchange=render;
+document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("drop",e=>{e.preventDefault(); if(e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);});
+buildFilters();
+// 擷取腳本用 #data=... 帶資料進來 → 直接載入，免下載免選檔
+(function(){
+  const m=location.hash.match(/^#data=(.+)$/);
+  if(m){ try{ load(decodeURIComponent(m[1])); history.replaceState(null,'',location.pathname); }catch(e){} }
+})();
+if(!window.ROSTER_CATALOG){
+  $("meta").textContent="找不到 roster-catalog.js，請確認它與 roster-viewer.html 在 ArkRecodetools 根目錄（跑 scripts/gen_roster_catalog.py 產生）。";
+}
+</script>
+</body>
+</html>
