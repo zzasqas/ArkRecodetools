@@ -147,7 +147,7 @@ ArkRecodetools/
 - 匯入 JSON 後，以元素色卡（暗光火水木排序）顯示擁有角色，支援元素／職業／星級篩選
 - 顯示每個角色的實際星級（含突破第 6 顆）與副本數
 - **🔗 複製分享連結**：把篩選後的角色清單壓進網址，對方點開即看到，免安裝工具
-- **🖼️ 匯出成圖片**：產生 PNG 一鍵下載，適合貼 Discord 或賣帳號貼文
+- **🖼️ 匯出成圖片**：產生 PNG 一鍵下載，適合貼 Discord 或分享帳號角色
 - 角色頭像優先顯示 `assets/char-art/` 本機 WebP，次選 wiki 來源，最後降級為元素色底＋名字
 - 角色目錄由 `roster-catalog.js` 提供（`scripts/gen_roster_catalog.py` 從 `chars.csv` 產生），不依賴 fetch，`file://` 本機也能跑
 

@@ -100,7 +100,7 @@ display:flex;align-items:center;justify-content:center;font-size:11px;line-heigh
 <section class="help" id="help">
   <h2>怎麼分享我的角色庫？</h2>
   <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-    抓一次自己的角色，就能丟連結或圖片給別人——<b style="color:var(--txt)">求配對建議</b>或<b style="color:var(--txt)">賣帳號</b>時很方便。
+    抓一次自己的角色，就能丟連結或圖片給別人——<b style="color:var(--txt)">求配隊建議</b>或<b style="color:var(--txt)">分享帳號角色</b>時很方便。
     收到的人<b style="color:var(--txt)">什麼都不用裝</b>。</p>
   <ol>
     <li><b>裝一次擷取工具</b>（只需一次，二選一）：
@@ -118,8 +118,8 @@ display:flex;align-items:center;justify-content:center;font-size:11px;line-heigh
     <li><b>篩掉不要的、再分享</b>：用上方篩選（元素／職業／星）把三星、四星等不重要的先濾掉，
       然後：
       <ul style="margin-top:6px;padding-left:18px;">
-        <li><b>🔗 複製分享連結</b> → 貼給對方，他點開就看到你篩選後的角色（可自己再篩，適合問配對）。</li>
-        <li><b>🖼️ 匯出成圖片</b> → 一張 PNG 存到「下載」資料夾，貼 Discord／賣帳號貼文最直接。</li>
+        <li><b>🔗 複製分享連結</b> → 貼給對方，他點開就看到你篩選後的角色（可自己再篩，適合問配隊）。</li>
+        <li><b>🖼️ 匯出成圖片</b> → 一張 PNG 存到「下載」資料夾，貼 Discord／分享帳號角色最直接。</li>
       </ul>
     </li>
   </ol>
@@ -270,7 +270,7 @@ function loadIcon(name){
   });
 }
 
-// ── 匯出成圖片：把篩選後顯示的角色畫成一張 PNG（賣帳號/貼文用，對方看圖免點）──
+// ── 匯出成圖片：把篩選後顯示的角色畫成一張 PNG（分享帳號角色/貼文用，對方看圖免點）──
 async function exportImage(){
   const list=visibleOwned();
   if(!list.length){ alert('目前沒有可匯出的角色'); return; }
