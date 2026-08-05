@@ -182,12 +182,12 @@ function passes(c){
   return true;
 }
 
-// 圖標：local 圖標 → char-art → 元素色底+名字。用 data-fallback 逐步降級。
+// 圖標：遊戲小圖（char-icons）→ char-art → 元素色底+名字。用 data-fallback 逐步降級。
 function thumbHTML(c){
   if(!c.name) return c.id;
-  const local=`local/星隕角色圖標/${encodeURIComponent(c.name)}.png`;
+  const icon=`assets/char-icons/${encodeURIComponent(c.name)}.webp`;
   const art=`assets/char-art/${encodeURIComponent(c.name)}.webp`;
-  return `<img src="${local}" alt="${c.name}" data-art="${art}" data-name="${c.name}"
+  return `<img src="${icon}" alt="${c.name}" data-art="${art}" data-name="${c.name}"
     onerror="if(this.dataset.art){this.src=this.dataset.art;this.dataset.art='';}else{this.parentNode.textContent=this.dataset.name;}">`;
 }
 
@@ -261,12 +261,12 @@ const ELCOLOR={火:['#7f1d1d','#ef4444','#fca5a5'],水:['#1e3a5f','#3b82f6','#93
 function loadIcon(name){
   return new Promise(res=>{
     if(!name){ res(null); return; }
-    const local='local/星隕角色圖標/'+encodeURIComponent(name)+'.png';
+    const icon='assets/char-icons/'+encodeURIComponent(name)+'.webp';
     const art='assets/char-art/'+encodeURIComponent(name)+'.webp';
     const im=new Image();
     im.onload=()=>res(im);
     im.onerror=()=>{ if(im.src.indexOf('char-art')<0){ im.src=art; } else res(null); };
-    im.src=local;
+    im.src=icon;
   });
 }
 
