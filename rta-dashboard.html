@@ -10,6 +10,12 @@
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',system-ui,sans-serif;padding:0 0 60px;}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
 .topnote{background:#0d2818;border:1px solid #1f5c3a;color:#6FD99A;font-size:13px;padding:8px 14px;border-radius:8px;margin:14px 0;text-align:center;}
+.topnav{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);}
+.topnav .brand{font-weight:800;color:#E2E8F0;font-size:15px;}
+.topnav a{color:var(--muted);text-decoration:none;font-size:13.5px;transition:color .15s;}
+.topnav a:hover{color:var(--blue-l);}
+.topnav a.home{color:var(--blue-l);}
+.topnav .spacer{margin-left:auto;}
 header{padding:26px 0 6px;}
 h1{font-size:26px;font-weight:900;color:#E2E8F0;}
 h1 .s{background:linear-gradient(135deg,var(--blue-l),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
@@ -87,6 +93,14 @@ body.tinted .legend{opacity:1;}
 .guide-body a{color:#93C5FD;}
 </style></head><body>
 <div class="wrap">
+<div class="topnav">
+  <span class="brand">Ark Re:Code 工具集</span>
+  <a class="home" href="./index.html">← 回工具首頁</a>
+  <span class="spacer"></span>
+  <a href="./roster-viewer.html">角色列表</a>
+  <a href="./character-db.html">角色資料庫</a>
+  <a href="./tier-list/tier-list.html">強度榜</a>
+</div>
 <div class="topnote">🔒 你的 JSON 只在這台電腦的瀏覽器裡分析，<b>不會上傳任何伺服器</b>。</div>
 <header><h1>RTA <span class="s">對戰分析</span></h1><div class="sub" id="sub"></div></header>
 <div class="importbar">
@@ -111,7 +125,7 @@ body.tinted .legend{opacity:1;}
 <b>1. 安裝「篡改猴 Tampermonkey」瀏覽器外掛</b>
 <ul><li>Edge：<a href="https://microsoftedge.microsoft.com/addons/detail/%E7%AF%A1%E6%94%B9%E7%8C%B4/iikmkjmpaadaobahmlepeloendndfphd" target="_blank" rel="noopener">Edge 擴充商店 · 篡改猴 →</a></li>
 <li>Chrome：於 Chrome 線上應用程式商店搜尋「Tampermonkey」安裝。</li></ul>
-<b>2. 安裝 RTA 匯出腳本</b>：收到腳本檔（<code>.user.js</code>）後直接拖入瀏覽器視窗，篡改猴會跳出安裝確認頁，點「安裝」即可。安裝前可看到完整原始碼、可自行檢查；腳本只比對遊戲網域，不在其他網站執行。
+<b>2. 安裝 RTA 匯出腳本</b>：<a href="./arkrecode-rta-capture.user.js">點此下載 RTA 匯出腳本（.user.js）→</a>，下載後直接拖入瀏覽器視窗，篡改猴會跳出安裝確認頁，點「安裝」即可。安裝前可看到完整原始碼、可自行檢查；腳本只比對遊戲網域，不在其他網站執行。
 <h3>每次使用方法</h3>
 <ol><li><b>用瀏覽器開遊戲網頁版</b>：前往 <code>www.ero-labs.com</code> 登入，跟平常一樣操作。</li>
 <li><b>等面板自動彈出</b>：登入成功後，頁面右上角會出現深色面板，顯示「✅ RTA 擷取成功：N 場」，無需手動觸發。</li>
