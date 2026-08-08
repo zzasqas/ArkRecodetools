@@ -33,3 +33,5 @@ research/
 # 系統檔
 .DS_Store
 Thumbs.db
+local/*.html
+local/*.bat

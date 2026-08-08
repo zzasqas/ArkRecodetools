@@ -259,12 +259,12 @@ body.lang-en span[data-lang="en"]{display:inline;}
             <div class="tool-card-name" data-lang="en">Guild Battle Recorder</div>
           </div>
           <div class="tool-card-desc">
-            <span data-lang="zh">記錄公會戰（GvG）對手陣容，整合速度推算，一鍵複製分享文字方便貼至社群。</span>
-            <span data-lang="en">Record GvG opponent lineups with integrated speed estimation. One-click copy for Discord sharing.</span>
+            <span data-lang="zh">把公會戰遇到的對手陣容一筆筆記下來，整合速度推算，之後配隊、擋刀都有依據，還能一鍵複製成文字貼到公會群組一起討論。</span>
+            <span data-lang="en">Keep a running log of the GvG opponent lineups you face, with built-in speed estimation — so you draft and defend with data, then copy to share with your guild.</span>
           </div>
           <div class="tool-card-notes">
-            <span data-lang="zh">📍 兩塔同時記錄，自動推算對手速度。</span>
-            <span data-lang="en">📍 Record two towers at once, auto-estimate opponent speed.</span>
+            <span data-lang="zh">📍 中塔、主堡兩塔同時記錄。</span>
+            <span data-lang="en">📍 Records mid-tower and stronghold at once.</span>
           </div>
         </div>
         <div class="tool-card-footer">
@@ -284,12 +284,12 @@ body.lang-en span[data-lang="en"]{display:inline;}
             <div class="tool-card-name" data-lang="en">Battle Recorder</div>
           </div>
           <div class="tool-card-desc">
-            <span data-lang="zh">記錄戰鬥結果，支援歷史搜尋、角色暱稱搜尋與策略推薦，可選連接 Google Sheet 紀錄統計、查找對戰組合。</span>
-            <span data-lang="en">Log battle results with history search, nickname lookup, and strategy suggestions. Optional Google Sheet integration for stat tracking and matchup reference.</span>
+            <span data-lang="zh">每一場戰鬥都幫你留底，用歷史或角色暱稱一搜就找到，還會依對手陣容教你該怎麼打；想長期追勝率，可連接 Google Sheet 自動累積統計。</span>
+            <span data-lang="en">Log every battle and find it by history or nickname, with tips on how to play each matchup. Connect a Google Sheet to auto-track your win rate over time.</span>
           </div>
           <div class="tool-card-notes">
-            <span data-lang="zh">📍 整合速度計算器。</span>
-            <span data-lang="en">📍 Speed calculator is built into this page.</span>
+            <span data-lang="zh">📍 速度計算器已內建在同一頁。</span>
+            <span data-lang="en">📍 Speed calculator built into the page.</span>
           </div>
         </div>
         <div class="tool-card-footer">
@@ -309,12 +309,12 @@ body.lang-en span[data-lang="en"]{display:inline;}
             <div class="tool-card-name" data-lang="en">Character Database</div>
           </div>
           <div class="tool-card-desc">
-            <span data-lang="zh">中英文角色名稱與暱稱對照，參照煙雨閣強度表，可拉出配裝各屬性權重並直接帶入配裝工具。</span>
-            <span data-lang="en">Chinese/English name and nickname reference. Based on Yan-Yu-Ge tier rankings. Pull stat weights and jump directly into the optimizer.</span>
+            <span data-lang="zh">中英文名稱＋公會慣用暱稱一次查清楚，對照煙雨閣強度榜，還能拉出各屬性配裝權重，一鍵帶進配裝計算器開始練角。</span>
+            <span data-lang="en">Look up Chinese/English names and common nicknames, cross-referenced with the Yan-Yu-Ge tier list — then pull stat weights straight into the optimizer.</span>
           </div>
           <div class="tool-card-notes">
-            <span data-lang="zh">📍 點擊角色可直接帶入推薦配裝設定。</span>
-            <span data-lang="en">📍 Click any character to pre-fill the optimizer with recommended settings.</span>
+            <span data-lang="zh">📍 點角色自動帶入推薦配裝設定。</span>
+            <span data-lang="en">📍 Click a character to pre-fill build settings.</span>
           </div>
         </div>
         <div class="tool-card-footer">
@@ -334,12 +334,12 @@ body.lang-en span[data-lang="en"]{display:inline;}
             <div class="tool-card-name" data-lang="en">Equip Optimizer</div>
           </div>
           <div class="tool-card-desc">
-            <span data-lang="zh">依照權重篩選裝備組合，計算符合條件之最佳 8 組裝備，並支援手動配套與多角色裝備鎖定、匯出。</span>
-            <span data-lang="en">Filter equipment by weighted stats and calculate the top 8 valid build combinations. Supports manual picks and multi-character equipment locking.</span>
+            <span data-lang="zh">設好套裝、速度區間與各屬性權重，瞬間從你的裝備庫算出符合條件的最佳 8 組配裝；支援手動配套、多角色鎖裝、存方案與匯出，練單角或配整隊都一次到位。</span>
+            <span data-lang="en">Set your sets, speed range, and stat weights, and instantly compute the top 8 valid builds from your gear pool — with manual picks, multi-character locking, saved plans, and export.</span>
           </div>
           <div class="tool-card-notes">
             <span data-lang="zh">📍 裝備 JSON 匯出方式見下方說明。</span>
-            <span data-lang="en">📍 See the guide below for equipment JSON export.</span>
+            <span data-lang="en">📍 See the equipment JSON export guide below.</span>
           </div>
         </div>
         <div class="tool-card-footer">
@@ -349,61 +349,106 @@ body.lang-en span[data-lang="en"]{display:inline;}
         </div>
       </a>
 
-    </div>
-
-    <!-- Tier List 連結 -->
-    <div style="margin-top:16px;padding:12px 16px;border:1px dashed #334155;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🏆</span>
-        <div>
-          <span data-lang="zh" style="font-size:14px;font-weight:600;color:#e2e8f0;">社群強度 Tier List</span>
-          <span data-lang="en" style="font-size:14px;font-weight:600;color:#e2e8f0;">Community Tier List</span>
-          <span style="margin-left:8px;font-size:11px;color:#64748b;background:#1e293b;padding:1px 7px;border-radius:4px;border:1px solid #334155;">Beta</span>
-          <div data-lang="zh" style="font-size:12px;color:#64748b;margin-top:2px;">社群共同評鑑角色強度，每週更新</div>
-          <div data-lang="en" style="font-size:12px;color:#64748b;margin-top:2px;">Community-voted character tier list, updated weekly</div>
+      <!-- 社群強度榜 -->
+      <a class="tool-card" href="./tier-list/tier-list.html">
+        <div class="tool-card-accent" style="background:linear-gradient(90deg,#FBBF24,#FCD34D);"></div>
+        <div class="tool-card-body">
+          <div class="tool-card-header">
+            <div class="tool-card-icon">🏆</div>
+            <div class="tool-card-name" data-lang="zh">社群強度榜</div>
+            <div class="tool-card-name" data-lang="en">Community Tier List</div>
+          </div>
+          <div class="tool-card-desc">
+            <span data-lang="zh">這個版本到底誰強？由玩家社群一起投票評鑑，看誰穩坐 T0、誰被低估，榜單每週更新——你也能投下自己的一票，一起決定風向。</span>
+            <span data-lang="en">Who's actually strong this patch? The community votes it out — see who's T0 and who's underrated, updated weekly. Cast your own vote and shape the meta.</span>
+          </div>
+          <div class="tool-card-notes">
+            <span data-lang="zh">📍 你的每一票都會左右排名。</span>
+            <span data-lang="en">📍 Every vote moves the rankings.</span>
+          </div>
         </div>
-      </div>
-      <a href="./tier-list/tier-list.html" style="flex-shrink:0;font-size:13px;color:#93c5fd;text-decoration:none;padding:6px 14px;border:1px solid #1e3a5f;border-radius:6px;background:rgba(30,58,138,0.2);white-space:nowrap;transition:background 0.15s;"
-        onmouseover="this.style.background='rgba(30,58,138,0.4)'" onmouseout="this.style.background='rgba(30,58,138,0.2)'">
-        <span data-lang="zh">前往投票 →</span>
-        <span data-lang="en">Vote Now →</span>
-      </a>
-    </div>
-
-    <!-- 每日代管 連結 -->
-    <div style="margin-top:12px;padding:12px 16px;border:1px dashed #3a3320;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🤖</span>
-        <div>
-          <span data-lang="zh" style="font-size:14px;font-weight:600;color:#e2e8f0;">每日代管服務</span>
-          <span data-lang="en" style="font-size:14px;font-weight:600;color:#e2e8f0;">Daily Boost Service</span>
-          <div data-lang="zh" style="font-size:12px;color:#64748b;margin-top:2px;">每日代打體力／活動，方案與定價說明</div>
-          <div data-lang="en" style="font-size:12px;color:#64748b;margin-top:2px;">Daily stamina/event clearing — plans and pricing</div>
+        <div class="tool-card-footer">
+          <span class="tool-arrow" data-lang="zh">前往投票 →</span>
+          <span class="tool-arrow" data-lang="en">Vote →</span>
+          <span class="tool-meta">Beta</span>
         </div>
-      </div>
-      <a href="./daikan.html" style="flex-shrink:0;font-size:13px;color:#fbbf24;text-decoration:none;padding:6px 14px;border:1px solid #5a4a1e;border-radius:6px;background:rgba(180,130,20,0.15);white-space:nowrap;transition:background 0.15s;"
-        onmouseover="this.style.background='rgba(180,130,20,0.3)'" onmouseout="this.style.background='rgba(180,130,20,0.15)'">
-        <span data-lang="zh">了解服務 →</span>
-        <span data-lang="en">Learn More →</span>
       </a>
-    </div>
 
-    <!-- 角色列表檢視器 連結 -->
-    <div style="margin-top:12px;padding:12px 16px;border:1px dashed #33234a;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🎴</span>
-        <div>
-          <span data-lang="zh" style="font-size:14px;font-weight:600;color:#e2e8f0;">角色列表檢視器</span>
-          <span data-lang="en" style="font-size:14px;font-weight:600;color:#e2e8f0;">Roster Viewer</span>
-          <div data-lang="zh" style="font-size:12px;color:#64748b;margin-top:2px;">裝外掛擷取自己的角色庫，元素色卡＋篩選，可複製分享連結或匯出成圖片（求配隊／分享帳號角色）</div>
-          <div data-lang="en" style="font-size:12px;color:#64748b;margin-top:2px;">Capture your roster with the extension; filter, share a link or export an image</div>
+      <!-- 每日代管服務 -->
+      <a class="tool-card" href="./daikan.html">
+        <div class="tool-card-accent" style="background:linear-gradient(90deg,#10B981,#34D399);"></div>
+        <div class="tool-card-body">
+          <div class="tool-card-header">
+            <div class="tool-card-icon">🤖</div>
+            <div class="tool-card-name" data-lang="zh">每日代管服務</div>
+            <div class="tool-card-name" data-lang="en">Daily Boost Service</div>
+          </div>
+          <div class="tool-card-desc">
+            <span data-lang="zh">沒時間天天上線爬體力、刷活動？交給我們每日自動代打，體力不浪費、限時活動不錯過，帳號進度穩穩往前；多種方案搭配透明定價，任你挑。</span>
+            <span data-lang="en">No time to log in daily for stamina and events? We auto-clear your dailies — no wasted energy, no missed limited-time events. Multiple plans, transparent pricing.</span>
+          </div>
+          <div class="tool-card-notes">
+            <span data-lang="zh">📍 方案與定價，點進來看。</span>
+            <span data-lang="en">📍 See plans &amp; pricing inside.</span>
+          </div>
         </div>
-      </div>
-      <a href="./roster-viewer.html" style="flex-shrink:0;font-size:13px;color:#c4b5fd;text-decoration:none;padding:6px 14px;border:1px solid #3b0764;border-radius:6px;background:rgba(139,92,246,0.15);white-space:nowrap;transition:background 0.15s;"
-        onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
-        <span data-lang="zh">開啟檢視器 →</span>
-        <span data-lang="en">Open Viewer →</span>
+        <div class="tool-card-footer">
+          <span class="tool-arrow" data-lang="zh">了解方案 →</span>
+          <span class="tool-arrow" data-lang="en">Learn More →</span>
+          <span class="tool-meta">Service</span>
+        </div>
       </a>
+
+      <!-- 角色列表檢視器 -->
+      <a class="tool-card" href="./roster-viewer.html">
+        <div class="tool-card-accent" style="background:linear-gradient(90deg,#A78BFA,#C4B5FD);"></div>
+        <div class="tool-card-body">
+          <div class="tool-card-header">
+            <div class="tool-card-icon">🎴</div>
+            <div class="tool-card-name" data-lang="zh">角色列表檢視器</div>
+            <div class="tool-card-name" data-lang="en">Roster Viewer</div>
+          </div>
+          <div class="tool-card-desc">
+            <span data-lang="zh">用外掛一鍵擷取你的整套角色庫，依五行元素上色、可自由篩選，手上有哪些角、練到哪一眼看完；想求配隊或炫耀帳號，複製分享連結或匯出成圖。</span>
+            <span data-lang="en">Capture your entire roster in one click — element-colored and fully filterable, so you see every character at a glance. Copy a share link or export an image.</span>
+          </div>
+          <div class="tool-card-notes">
+            <span data-lang="zh">📍 需搭配瀏覽器外掛擷取角色。</span>
+            <span data-lang="en">📍 Requires the browser extension.</span>
+          </div>
+        </div>
+        <div class="tool-card-footer">
+          <span class="tool-arrow" data-lang="zh">開啟檢視器 →</span>
+          <span class="tool-arrow" data-lang="en">Open Viewer →</span>
+          <span class="tool-meta">Extension</span>
+        </div>
+      </a>
+
+      <!-- RTA 對戰分析 -->
+      <a class="tool-card" href="./rta-dashboard.html">
+        <div class="tool-card-accent" style="background:linear-gradient(90deg,#F43F5E,#FB7185);"></div>
+        <div class="tool-card-body">
+          <div class="tool-card-header">
+            <div class="tool-card-icon">⚔️</div>
+            <div class="tool-card-name" data-lang="zh">RTA 對戰分析</div>
+            <div class="tool-card-name" data-lang="en">RTA Match Analysis</div>
+          </div>
+          <div class="tool-card-desc">
+            <span data-lang="zh">匯入你的 RTA 戰績，立刻看穿：哪些角色最會幫你贏、對手最愛 ban 你什麼、被哪些隊剋、一速有沒有輸人——選角、ban 角一目了然，還能多次匯入累積看趨勢。</span>
+            <span data-lang="en">Import your RTA logs and instantly see which characters win most, what opponents love to ban, which teams counter you, and if you're losing the speed race — with trends across imports.</span>
+          </div>
+          <div class="tool-card-notes">
+            <span data-lang="zh">📍 需匯入對戰 JSON（附教學），全程本地不上傳。</span>
+            <span data-lang="en">📍 Import JSON (guide inside), runs locally.</span>
+          </div>
+        </div>
+        <div class="tool-card-footer">
+          <span class="tool-arrow" data-lang="zh">開始分析 →</span>
+          <span class="tool-arrow" data-lang="en">Analyze →</span>
+          <span class="tool-meta">Beta</span>
+        </div>
+      </a>
+
     </div>
 
   </section>
