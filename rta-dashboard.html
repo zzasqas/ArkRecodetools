@@ -66,7 +66,11 @@ body.tinted .legend{opacity:1;}
 .filters button.active{background:var(--bg3);color:var(--blue-l);border-color:var(--blue);}
 .muted{color:var(--muted);font-size:12px;}
 .scroll{overflow-x:auto;}
-.spark{width:100%;height:70px;}
+.spark{width:100%;height:88px;}
+.chartctl{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;}
+.cg{display:inline-flex;gap:6px;}
+.cg button{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:4px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;}
+.cg button.active{background:var(--bg3);color:var(--blue-l);border-color:var(--blue);}
 .pair{display:grid;gap:20px;}
 .pair>div h2{margin-top:20px;}
 @media(min-width:1680px){.wrap{max-width:1560px;}.pair{grid-template-columns:1fr 1fr;gap:28px;align-items:start;}}
@@ -278,14 +282,62 @@ function renderAll(G){
   <div class="tile"><div class="v">${pct(sg.filter(g=>g.won).length,sg.length)}%</div><div class="k">後手勝率 (${sg.length}場)</div></div>
   </div>`));
 
-  // 賽季走勢
+  // 賽季走勢：指標可複選(排名/積分) + 粒度(逐場/分段) + 範圍窗口
   (function(){
-    const ranks=G.map(g=>g.myRank);const mn=Math.min(...ranks),mx=Math.max(...ranks);
-    const w=1140,h=70,pad=4;const xs=i=>pad+i*(w-2*pad)/((ranks.length-1)||1);
-    const ys=r=>pad+(r-mn)/((mx-mn)||1)*(h-2*pad);
-    const dpts=ranks.map((r,i)=>`${xs(i)},${ys(r)}`).join(' ');
-    const pts=G.map((g,i)=>`<circle cx="${xs(i)}" cy="${ys(g.myRank)}" r="2.5" fill="${g.won?'#4ADE80':'#F87171'}"/>`).join('');
-    sect('賽季走勢','',el(`<div class="scroll"><svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${dpts}" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity=".6"/>${pts}</svg><div class="muted">排名走勢（上=排名較前；綠點=勝、紅點=敗）。範圍 ${mn}–${mx}。</div></div>`));
+    const SEG=4; // 每日切幾段（依當天場次數均分）；賽季約14天×4≈56點
+    const COL={rank:'#60A5FA', score:'#FBBF24'}, MN={rank:'排名', score:'積分'};
+    const box=el(`<div><div class="chartctl">
+      <span class="cg" data-g="metric"><button data-v="rank" class="active">排名</button><button data-v="score">積分</button></span>
+      <span class="cg" data-g="mode"><button data-v="game" class="active">逐場</button><button data-v="seg">分段</button></span>
+      <span class="cg" data-g="range"><button data-v="50">最近50</button><button data-v="100">最近100</button><button data-v="all" class="active">全部</button></span>
+    </div><div class="scroll"><div id="chartbox"></div></div></div>`);
+    const metrics=new Set(['rank']); let mode='game', range='all';
+    function points(){
+      if(mode==='seg'){
+        const byDay=new Map();
+        for(const g of G){const d=g.t.slice(0,5); if(!byDay.has(d))byDay.set(d,[]); byDay.get(d).push(g);}
+        const out=[];
+        for(const [d,gs] of byDay){const k=Math.min(SEG,gs.length);
+          for(let s=0;s<k;s++){const chunk=gs.slice(Math.floor(s*gs.length/k),Math.floor((s+1)*gs.length/k));
+            if(!chunk.length)continue; const last=chunk[chunk.length-1], w=chunk.filter(x=>x.won).length, net=chunk.reduce((a,x)=>a+x.delta,0);
+            out.push({g:last, ok:net>=0, label:`${d} 第${s+1}/${k}段｜${w}勝${chunk.length-w}敗｜${net>=0?'+':''}${net}`});}}
+        return out;
+      }
+      const arr=(range==='all')?G:G.slice(-(+range));
+      return arr.map(g=>({g, ok:g.won, label:`${g.t}｜排名 ${g.myRank}｜積分 ${g.myScore}｜${g.won?'勝':'敗'} ${g.delta>=0?'+':''}${g.delta}`}));
+    }
+    function draw(){
+      box.querySelector('.cg[data-g="range"]').style.display = mode==='seg'?'none':'inline-flex';
+      const base=points(), n=base.length, active=[...metrics];
+      const w=1140,h=88,pad=6, xs=i=>pad+i*(w-2*pad)/((n-1)||1);
+      const yFor=(m)=>{const vals=base.map(b=>m==='score'?b.g.myScore:b.g.myRank);
+        const good=vals.filter(v=>v!=null), mn=Math.min(...good), mx=Math.max(...good), rg=(mx-mn)||1;
+        return {vals, mn, mx, ys:v=> m==='score'? pad+(mx-v)/rg*(h-2*pad) : pad+(v-mn)/rg*(h-2*pad)};};
+      let svg='';
+      const scales={};
+      for(const m of active){const sc=yFor(m); scales[m]=sc;
+        const pts=sc.vals.map((v,i)=>v==null?null:`${xs(i)},${sc.ys(v)}`).filter(Boolean).join(' ');
+        svg+=`<polyline points="${pts}" fill="none" stroke="${COL[m]}" stroke-width="1.6" opacity=".85"/>`;}
+      // 單指標才畫勝敗圓點；複選只留線避免糊
+      if(active.length===1 && n<=100){const m=active[0], sc=scales[m];
+        svg+=base.map((b,i)=>{const v=sc.vals[i]; return v==null?'':`<circle cx="${xs(i)}" cy="${sc.ys(v)}" r="${n>60?1.8:2.6}" fill="${b.ok?'#4ADE80':'#F87171'}"><title>${b.label}</title></circle>`;}).join('');}
+      const legend=active.map(m=>`<span style="color:${COL[m]};font-weight:600">━ ${MN[m]}</span>`).join('　');
+      const modeN=mode==='seg'?`分段（每日 ${SEG} 段）`:'逐場';
+      const note=active.length>1?'兩線各自正規化、皆「較好在上」':(mode==='seg'?'綠點=該段淨分為正':'綠點=勝、紅點=敗');
+      const rangeTxt=active.map(m=>`${MN[m]} ${scales[m].mn}–${scales[m].mx}`).join('｜');
+      box.querySelector('#chartbox').innerHTML=`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${svg}</svg>
+        <div class="muted">${legend}　｜　${modeN}；上＝較好；${note}。共 ${n} 點（${rangeTxt}）。${active.length===1&&n>100?' 點過多只留線。':''}</div>`;
+    }
+    box.querySelectorAll('.cg').forEach(g=>{const grp=g.dataset.g;
+      g.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+        if(grp==='metric'){const v=b.dataset.v;
+          if(metrics.has(v)){ if(metrics.size>1){metrics.delete(v);b.classList.remove('active');} }
+          else { metrics.add(v); b.classList.add('active'); }
+        } else { if(grp==='mode')mode=b.dataset.v; else range=b.dataset.v;
+          g.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b)); }
+        draw();});});
+    draw();
+    sect('賽季走勢','排名／積分可複選疊看、粒度逐場或分段（每日切段）；場次多時切範圍',box);
   })();
 
   // 角色表
