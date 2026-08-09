@@ -1,22 +1,20 @@
 // ==UserScript==
 // @name         ArkRecode RTA 紀錄擷取
 // @namespace    https://github.com/zzasqas/ArkRecodetools
-// @version      1.0.2
+// @version      1.0.3
 // @description  登入後自動擷取 RTA 對戰紀錄，下載 JSON 供分析用。不碰帳號密碼，只讀遊戲已回傳的資料。
 // @author       zzasqas
 // @match        https://game-arkre-labs.ecchi.xxx/*
 // @match        https://www.ero-labs.com/*
-// @grant        GM_xmlhttpRequest
-// @grant        GM_setClipboard
-// @connect      game-arkre-labs.ecchi.xxx
+// @grant        none
 // @run-at       document-start
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  // 用 unsafeWindow 才能真正攔截到頁面的 fetch/XHR，而不是 Tampermonkey 沙盒的代理
-  const _w = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
+  // @grant none → 直接跑在頁面 context，window 就是真實 window，不需要 unsafeWindow
+  const _w = window;
 
   const ROUTER_URL = 'https://game-arkre-labs.ecchi.xxx/Router/RouterHandler.ashx';
   const LOGIN_ROUTE = 'AccountHandler.Login';
@@ -105,29 +103,27 @@
       data: { AID: aid, SessionID: sessionId },
     });
 
-    GM_xmlhttpRequest({
+    // 用頁面自己的 fetch（腳本跑在 game-arkre-labs.ecchi.xxx iframe 裡，同源，不需要 CORS）
+    fetch(ROUTER_URL, {
       method: 'POST',
-      url: ROUTER_URL,
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'User-Agent': 'UnityPlayer/2022.3.62f2 (UnityWebRequest/1.0, libcurl/8.10.1-DEV)',
-      },
-      data: payload,
-      onload(res) {
-        try {
-          const json = JSON.parse(res.responseText);
-          const logs = json?.Logs ?? [];
-          if (!logs.length) { toast('RTA 紀錄為空', false); return; }
-          showPanel(playerName, myCuid, logs);
-        } catch (e) {
-          toast('QueryRTALog 解析失敗：' + e.message, false);
-          console.log('[RTA Capture] 原始回應：', res.responseText?.slice(0, 200));
-        }
-      },
-      onerror(e) {
-        toast('QueryRTALog 請求失敗', false);
-        console.log('[RTA Capture] 請求錯誤：', e);
-      },
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: payload,
+    })
+    .then(r => r.text())
+    .then(text => {
+      try {
+        const json = JSON.parse(text);
+        const logs = json?.Logs ?? [];
+        if (!logs.length) { toast('RTA 紀錄為空', false); return; }
+        showPanel(playerName, myCuid, logs);
+      } catch (e) {
+        toast('QueryRTALog 解析失敗：' + e.message, false);
+        console.log('[RTA Capture] 原始回應：', text?.slice(0, 200));
+      }
+    })
+    .catch(e => {
+      toast('QueryRTALog 請求失敗', false);
+      console.log('[RTA Capture] 請求錯誤：', e);
     });
   }
 
@@ -167,7 +163,7 @@
     return null;
   }
 
-  // ── 攔截 XHR（用 unsafeWindow 的 prototype）────────────────────
+  // ── 攔截 XHR ───────────────────────────────────────────────────
   const XHR = _w.XMLHttpRequest.prototype;
   const origOpen = XHR.open, origSend = XHR.send;
   XHR.open = function (method, url, ...rest) {
@@ -185,7 +181,7 @@
     return origSend.call(this, body);
   };
 
-  // ── 攔截 fetch（用 unsafeWindow.fetch）─────────────────────────
+  // ── 攔截 fetch ─────────────────────────────────────────────────
   const origFetch = _w.fetch;
   _w.fetch = async function (input, init) {
     const url = typeof input === 'string' ? input : input?.url ?? '';
@@ -200,5 +196,5 @@
     return res;
   };
 
-  console.log('[RTA Capture] v1.0.2 已載入（unsafeWindow 模式），等待登入回應…');
+  console.log('[RTA Capture] v1.0.3 已載入，等待登入回應…');
 })();
