@@ -370,7 +370,7 @@ function renderAll(G){
     }));
     const wl=side==='my'?'勝率':'我方敗率';
     const pickLbl=side==='my'?'選用':'對手選用';
-    let sortKey='n', sortDir=-1;
+    let sortKey='n', sortDir=1;
     const wrap=el(`<div class="scroll"><table class="tight"><thead><tr>
       <th>角色</th>
       <th data-sk="n" data-lbl="${pickLbl}"></th>
@@ -386,11 +386,11 @@ function renderAll(G){
         return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td><td>${slotBar(slot)}</td><td class="num">${ban}</td><td class="num">${pb}</td></tr>`;
       }).join('');
       wrap.querySelectorAll('th[data-sk]').forEach(th=>{
-        th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir<0?' ▾':' ▴'):'');
+        th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir>0?' ▾':' ▴'):'');
       });
     }
     wrap.querySelectorAll('th[data-sk]').forEach(th=>th.onclick=()=>{
-      if(th.dataset.sk===sortKey)sortDir*=-1; else{sortKey=th.dataset.sk;sortDir=-1;}
+      if(th.dataset.sk===sortKey)sortDir*=-1; else{sortKey=th.dataset.sk;sortDir=1;}
       renderBody();
     });
     renderBody();
