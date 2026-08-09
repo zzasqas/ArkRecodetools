@@ -113,6 +113,7 @@ body.tinted .legend{opacity:1;}
 <div class="importbar">
   <label class="btn">📂 匯入 JSON<input type="file" id="file" accept=".json,application/json" hidden></label>
   <button class="btn ghost" id="switchacc" hidden>切換帳號</button>
+  <button class="btn ghost" id="exportall" hidden>⬇ 匯出完整 JSON</button>
   <button class="btn ghost" id="reimport" hidden>清除重來</button>
   <label class="switch" id="tintwrap" hidden><input type="checkbox" id="tint"> 依屬性上色角色名</label>
   <span class="legend"><b class="fire">火</b><b class="ice">水</b><b class="earth">木</b><b class="light">光</b><b class="dark">暗</b></span>
@@ -132,8 +133,7 @@ body.tinted .legend{opacity:1;}
 <b>1. 安裝「篡改猴 Tampermonkey」瀏覽器外掛</b>
 <ul><li>Edge：<a href="https://microsoftedge.microsoft.com/addons/detail/%E7%AF%A1%E6%94%B9%E7%8C%B4/iikmkjmpaadaobahmlepeloendndfphd" target="_blank" rel="noopener">Edge 擴充商店 · 篡改猴 →</a></li>
 <li>Chrome：於 Chrome 線上應用程式商店搜尋「Tampermonkey」安裝。</li></ul>
-<b>2. 開啟「允許使用者腳本」</b>：Chrome / Edge 新版本預設禁用使用者腳本。安裝篡改猴後，若瀏覽器頂部出現黃色提示「請啟用『允許使用者腳本』」→ 直接點擊即可。若無提示，手動操作：在網址列輸入 <code>edge://extensions</code>（Chrome 用 <code>chrome://extensions</code>）→ 找到「篡改猴」→「詳細資料」→ 開啟「允許使用者腳本」→ 重整頁面。此設定只需操作一次。
-<b>3. 安裝 RTA 匯出腳本</b>：<a href="./arkrecode-rta-capture.user.js">點此下載 RTA 匯出腳本（.user.js）→</a>，下載後直接拖入瀏覽器視窗，篡改猴會跳出安裝確認頁，點「安裝」即可。安裝前可看到完整原始碼、可自行檢查；腳本只比對遊戲網域，不在其他網站執行。
+<b>2. 安裝 RTA 匯出腳本</b>：<a href="./arkrecode-rta-capture.user.js">點此下載 RTA 匯出腳本（.user.js）→</a>，下載後直接拖入瀏覽器視窗，篡改猴會跳出安裝確認頁，點「安裝」即可。安裝前可看到完整原始碼、可自行檢查；腳本只比對遊戲網域，不在其他網站執行。
 <h3>每次使用方法</h3>
 <ol><li><b>用瀏覽器開遊戲網頁版</b>：前往 <code>www.ero-labs.com</code> 登入，跟平常一樣操作。</li>
 <li><b>等面板自動彈出</b>：登入成功後，頁面右上角會出現深色面板，顯示「✅ RTA 擷取成功：N 場」，無需手動觸發。</li>
@@ -255,7 +255,7 @@ function applyMe(logs,me){
   const games=buildGames(logs,me);
   if(!games.length){ alert('這個帳號沒有可分析的場次'); return; }
   try{ localStorage.setItem('rta_me',me); }catch(e){}
-  $('landing').style.display='none'; $('reimport').hidden=false; $('tintwrap').hidden=false;
+  $('landing').style.display='none'; $('exportall').hidden=false; $('reimport').hidden=false; $('tintwrap').hidden=false;
   $('switchacc').hidden = candidatesOf(logs).length<2;
   $('impinfo').textContent = lastImport ? `目前共 ${lastImport.total} 場｜本次 +${lastImport.added}、重複略過 ${lastImport.dup}` : `共 ${games.length} 場`;
   renderAll(games); window.scrollTo(0,0);
@@ -501,9 +501,18 @@ dz.addEventListener('click',()=>$('file').click());
 $('tint').onchange=e=>document.body.classList.toggle('tinted',e.target.checked);
 $('switchacc').onclick=()=>{ const pool=loadPool(); lastImport={added:0,dup:0,total:pool.length};
   $('landing').style.display=''; showPicker(pool,candidatesOf(pool)); window.scrollTo(0,0); };
+$('exportall').onclick=()=>{
+  const pool=loadPool(), me=+localStorage.getItem('rta_me')||0;
+  const payload={cuid:me||undefined, matchCount:pool.length, logs:pool};
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`rta_merged_${pool.length}games_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
 $('reimport').onclick=()=>{ if(!confirm('清除已累積的所有匯入資料？'))return;
   try{localStorage.removeItem('rta_logs');localStorage.removeItem('rta_me');}catch(e){}
-  app.innerHTML='';$('landing').style.display='';$('reimport').hidden=true;$('switchacc').hidden=true;$('tintwrap').hidden=true;
+  app.innerHTML='';$('landing').style.display='';$('exportall').hidden=true;$('reimport').hidden=true;$('switchacc').hidden=true;$('tintwrap').hidden=true;
   document.body.classList.remove('tinted');$('tint').checked=false;$('sub').textContent='';$('picker').innerHTML='';$('impinfo').textContent='';lastImport=null; };
 
 // ---- 啟動：讀 localStorage 已累積的池子 ----
