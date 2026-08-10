@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-KKMtOlwinUfHf44OOqKh14XneAWXKuLjUw2tQRNceXY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-JLZ3SSSzXcZDBlF7ekpzF9aGHFY5aC/Jcr69fteTL4Q='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -436,8 +436,6 @@ function renderAll(G){
       <th>角色</th>
       <th data-sk="n" data-lbl="${pickLbl}"></th>
       <th data-sk="wp" data-lbl="${wl}"></th>
-      <th data-sk="wp60" data-lbl="近60"></th>
-      <th data-sk="wp30" data-lbl="近30"></th>
       <th>順位 一二三四五</th>
       <th class="num" data-sk="banP" data-lbl="被ban%"></th>
       <th class="num" data-sk="pbP" data-lbl="被preban%"></th>
@@ -446,9 +444,10 @@ function renderAll(G){
       const rows=[...allRows].sort((a,b)=>(b[sortKey]-a[sortKey])*sortDir);
       wrap.querySelector('tbody').innerHTML=rows.map(({s,n,wp,wp60,wp30,n60,n30,ban,pb,banP,pbP,slot})=>{
         const col=side==='my'?(wp>=70?'win':wp<55?'lose':''):(wp>=40?'lose':'');
-        const rc=r=>r<0?'':((side==='my'?r>=wp:r<=wp)?'win':'lose');
-        const rcell=(r,c)=>`<td class="${rc(r)}" title="${c} 場">${r<0?'–':r+'%'}</td>`;
-        return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td>${rcell(wp60,n60)}${rcell(wp30,n30)}<td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
+        const rClr=r=>r<0?'var(--muted)':((side==='my'?r>=wp:r<=wp)?'#86EFAC':'#FCA5A5');
+        const rone=(r,c,lbl)=>`<span style="color:${rClr(r)}" title="${lbl} ${c} 場">${r<0?'–':r+'%'}</span>`;
+        const recent=`<span style="font-size:12px;margin-left:8px;padding-left:8px;border-left:1px solid var(--border2)">${rone(wp60,n60,'近60場')} · ${rone(wp30,n30,'近30場')}</span>`;
+        return `<tr><td>${cn(s)}</td><td>${n}</td><td><span class="${col}">${wp}%</span>${recent}</td><td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
       }).join('');
       wrap.querySelectorAll('th[data-sk]').forEach(th=>{
         th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir>0?' ▾':' ▴'):'');
@@ -462,8 +461,8 @@ function renderAll(G){
     return wrap;
   }
   const pair=el(`<div class="pair"></div>`);app.appendChild(pair);
-  sect('我方角色','選用場次≥3；順位=一~五選分佈；被ban/被preban=對手拆你的次數',charTable('my'),pair);
-  sect('對手角色','「我方敗率」=對上此角我輸的比例；被我ban/preban=我拆他的次數',charTable('opp'),pair);
+  sect('我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban=對手拆你的次數',charTable('my'),pair);
+  sect('對手角色','「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；被我ban/preban=我拆他的次數',charTable('opp'),pair);
 
   // pre-ban 配對
   (function(){
