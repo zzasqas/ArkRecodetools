@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-s30xTPmNRTtN4NVe7JdBAPq+qeDSACIjBVG9gOgxnU0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -167,11 +168,47 @@ body.tinted .legend{opacity:1;}
 const REF = {"names": {"H001": "夏妮", "H002": "菲莉斯", "H003": "諾可琳", "H004": "蘿莎萊", "H005": "奈蘭希爾", "H006": "璐茜婭", "H007": "艾瑞兒", "H008": "赫賽迪雅", "H009": "菈法瑞", "H010": "吉妮茲", "H011": "愛莉卡", "H012": "泰里莎", "H013": "蓋妲", "H014": "莎莉絲特", "H015": "多恩", "H016": "埃帕蒂", "H017": "普利蔓", "H018": "奧德雅", "H019": "克萊兒", "H020": "柏妮絲", "H021": "複製體吉妮茲", "H022": "喬瑟琳", "H023": "異變的奧普懷妮", "H024": "異變的埃帕蒂", "H025": "璐茜瑪", "H026": "卡洛琳", "H027": "奧普懷妮", "H028": "吉賽爾", "H029": "喬依絲", "H030": "茱莉亞", "H031": "瑪蒂爾達", "H032": "蜜麗恩", "H033": "伊娥絲", "H034": "格蘿妮婭", "H035": "朵琳", "H036": "茉伊拉", "H037": "迪爾德麗", "H038": "寇希爾", "H039": "哈魯緹", "H040": "安熙恩", "H041": "艾米", "H042": "卡麗希", "H043": "芭索蘿", "H044": "莉娜", "H045": "洛蒂", "H046": "路易絲", "H047": "翠絲特", "H048": "克拉菈", "H049": "艾樂萊思", "H050": "複製體卡洛琳", "H051": "複製體芭索蘿", "H052": "複製體吉賽爾", "H053": "複製體瑪蒂爾達", "H054": "複製體克拉菈", "H055": "異變的使徒", "H056": "複製體卡麗希", "H057": "復仇的寇希爾", "H058": "復仇的路易絲", "H059": "複製體迪爾德麗", "H060": "使徒", "H061": "瘋狂的格蘿妮婭", "H062": "複製體喬依絲", "H063": "梅芙", "H064": "西爾維納", "H065": "邦妮", "H066": "翠西", "H067": "希蓓爾", "H068": "派狄亞", "H069": "歐爾嘉", "H070": "瓦妮莎", "H071": "尤菲米亞", "H072": "彌卡伊勒", "H073": "珍", "H074": "史嘉蕾", "H075": "拉娜", "H076": "露比", "H077": "葛瑞絲", "H078": "歐戴摩亞", "H079": "貝琳", "H080": "茵羅洛", "H081": "布洛瑟姆", "H082": "緹娜", "H083": "奎妮", "H084": "塔亞", "H085": "薩菲爾", "H086": "安特亞", "H087": "耶莉卡", "H088": "辛狄", "H089": "帕梅勒", "H090": "瑪夏", "H091": "皮提特", "H092": "費南雪", "H093": "凱蒂達", "H094": "潘黛希亞", "H095": "希諾莉", "H096": "佩忒菈", "H097": "賈妮絲", "H098": "涅瓦", "H099": "萊拉", "H100": "塔琳", "H101": "維爾莉特", "H102": "穆麗兒", "H103": "伊比", "H104": "華勒弗", "H105": "潘倪克思", "H106": "瑟妮卡", "H107": "盧妮艾塔", "H108": "萊莎曼德", "H109": "哈蒂", "H110": "潔莉摩爾", "H111": "黛琳娜", "H112": "玳蓮", "H113": "菲莉西婭", "H114": "奧麗芙", "H115": "絕望的夏妮", "H116": "守護者艾瑞兒", "H117": "厄德萊雅", "H118": "安泰西亞", "H119": "Aoi Hinamori", "H120": "崔西里亞", "H121": "赤鬼伯伯", "H122": "柯絲瑪爾", "H123": "新春的莎莉絲特", "H124": "歐貝恩絲", "H125": "光明女神玳蓮", "H126": "蓋兒", "H127": "納克莎", "H128": "伊娃", "H129": "亞畢絲", "H130": "碧海的諾可琳", "H131": "蓓蕾卡", "H132": "妮諾楷西", "H133": "挪亞", "H134": "奧柏絲蒂恩", "H135": "巴爾托絲", "H136": "赫蘿薇克", "H137": "天宮咲夜", "H138": "貝兒", "H139": "蛛美", "H140": "蝶子", "H141": "Projekt Melody", "H142": "HongKongDoll", "H143": "彩伽", "H144": "杏仁ミル", "H145": "朱音", "H146": "聖誕的蜜拉貝兒", "H147": "東雲ft.坊橋夜泊", "H148": "新春的蜜娜", "H149": "璀璨誓約的露比", "H150": "璀璨誓約的伊娥絲", "H151": "夏日的喬依絲", "H152": "夏日的珮忒菈", "H153": "兔女郎愛莉卡", "H156": "烏爾德", "H160": "可伊", "H162": "泳池魅影吉妮茲", "H163": "歸還者璐茜婭", "H165": "彼岸花茱莉亞", "H166": "紫煙", "H167": "貓祭", "H168": "繼任者彌卡伊勒", "H170": "甜蜜美夢安熙恩", "H171": "加加琳", "H172": "南瓜鬼怪萊拉", "H173": "時界巡者Aoi", "H174": "啦啦隊蓓蕾卡", "H175": "小女將希蓓爾", "H176": "蜜茶多恩", "H177": "追憶的瑪夏", "H178": "喧鬧之星哈蒂", "H179": "重裝助手翠絲特", "H180": "烈酒赤兔芭索蘿", "H181": "自信拉娜", "H182": "望月", "H183": "米德", "H184": "尤莉", "H187": "絢爛夏花卡洛琳", "H188": "雪江", "H192": "愛戀泡影的玳蓮", "H601": "莉莉婭", "H602": "芽路", "H603": "神樂", "H604": "水紀", "H606": "露娜", "H612": "空", "H613": "咲", "H809": "伊娥絲熊熊", "H810": "璀璨誓約的伊娥絲熊熊", "H811": "璐茜婭熊熊"}, "el": {"H001": "fire", "H002": "fire", "H003": "fire", "H004": "fire", "H005": "fire", "H006": "fire", "H007": "ice", "H008": "ice", "H009": "ice", "H010": "ice", "H011": "ice", "H012": "ice", "H013": "earth", "H014": "earth", "H015": "earth", "H016": "earth", "H017": "earth", "H018": "earth", "H019": "light", "H020": "light", "H021": "light", "H022": "light", "H023": "dark", "H024": "dark", "H025": "dark", "H026": "fire", "H027": "fire", "H028": "fire", "H029": "fire", "H030": "fire", "H031": "fire", "H032": "fire", "H033": "fire", "H034": "ice", "H035": "ice", "H036": "ice", "H037": "ice", "H038": "ice", "H039": "ice", "H040": "ice", "H041": "earth", "H042": "earth", "H043": "earth", "H044": "earth", "H045": "earth", "H046": "earth", "H047": "earth", "H048": "earth", "H049": "light", "H050": "light", "H051": "light", "H052": "light", "H053": "light", "H054": "light", "H055": "dark", "H056": "dark", "H057": "dark", "H058": "dark", "H059": "dark", "H060": "dark", "H061": "dark", "H062": "dark", "H063": "ice", "H064": "ice", "H065": "ice", "H066": "ice", "H067": "ice", "H068": "ice", "H069": "ice", "H070": "ice", "H071": "ice", "H072": "ice", "H073": "fire", "H074": "fire", "H075": "fire", "H076": "fire", "H077": "fire", "H078": "fire", "H079": "fire", "H080": "fire", "H081": "fire", "H082": "earth", "H083": "earth", "H084": "earth", "H085": "earth", "H086": "earth", "H087": "earth", "H088": "earth", "H089": "earth", "H090": "light", "H091": "light", "H092": "light", "H093": "light", "H094": "light", "H095": "light", "H097": "light", "H098": "dark", "H099": "dark", "H100": "dark", "H101": "dark", "H102": "dark", "H103": "dark", "H104": "dark", "H105": "dark", "H106": "fire", "H107": "fire", "H108": "light", "H109": "fire", "H110": "ice", "H111": "earth", "H112": "ice", "H113": "dark", "H114": "light", "H115": "dark", "H116": "light", "H117": "fire", "H118": "fire", "H119": "fire", "H120": "earth", "H121": "fire", "H122": "ice", "H123": "fire", "H124": "dark", "H125": "light", "H126": "dark", "H127": "light", "H128": "dark", "H129": "earth", "H130": "ice", "H131": "ice", "H133": "light", "H134": "dark", "H135": "earth", "H136": "fire", "H137": "light", "H138": "light", "H139": "fire", "H140": "dark", "H141": "ice", "H142": "earth", "H144": "earth", "H145": "fire", "H146": "fire", "H148": "fire", "H149": "ice", "H150": "light", "H151": "fire", "H152": "earth", "H153": "ice", "H156": "ice", "H160": "light", "H162": "ice", "H163": "ice", "H165": "dark", "H166": "dark", "H167": "fire", "H168": "ice", "H170": "light", "H171": "dark", "H172": "fire", "H173": "ice", "H174": "earth", "H175": "ice", "H176": "earth", "H177": "fire", "H178": "ice", "H179": "earth", "H180": "fire", "H181": "light", "H182": "dark", "H183": "light", "H184": "dark", "H187": "earth", "H188": "fire", "H192": "ice", "H601": "ice", "H602": "fire", "H603": "earth", "H604": "ice", "H606": "fire", "H612": "earth", "H613": "earth", "H809": "fire", "H810": "light"}, "fast": ["H182", "H163", "H153", "H178", "H121", "H058", "H136", "H150", "H612", "H114", "H108"]};
 const NM=REF.names, EL=REF.el, FAST=new Set(REF.fast);
 const nm=s=>NM[s]||s;
-const cn=s=>`<span class="cn el-${EL[s]||'none'}">${nm(s)}</span>`;
+const esc=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+const cn=s=>`<span class="cn el-${EL[s]||'none'}">${esc(nm(s))}</span>`;
 const pct=(w,n)=>n?Math.round(w/n*100):0;
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
 const app=document.getElementById('app');
 const $=id=>document.getElementById(id);
+const MAX_RTA_BYTES=15*1024*1024, MAX_RTA_LOGS=10000, RTA_ID_RE=/^H\d{3,5}$/;
+const cleanName=value=>typeof value==='string'?value.slice(0,64):'';
+const whole=(value,fallback=0)=>{const n=Number(value);return Number.isSafeInteger(n)?n:fallback;};
+const cuid=value=>{const n=whole(value,null);return n!==null&&n>=0?n:null;};
+const roleId=value=>typeof value==='string'&&RTA_ID_RE.test(value)?value:null;
+function normalizeRole(raw){
+  const id=roleId(raw&&raw.StaticID); if(!id) return null;
+  const oid=raw&&raw._id&&typeof raw._id.$oid==='string'?raw._id.$oid.slice(0,128):'';
+  return {StaticID:id,_id:{$oid:oid}};
+}
+function normalizePlayer(raw){
+  const info=raw&&raw.PlayerInfo, id=cuid(info&&info.CUID); if(id===null) return null;
+  return {PlayerInfo:{CUID:id,Name:cleanName(info.Name)},Score:whole(raw.Score),Win:whole(raw.Win),
+    Lose:whole(raw.Lose),ContinueWin:whole(raw.ContinueWin)};
+}
+function normalizeLog(raw){
+  if(!raw||typeof raw!=='object') return null;
+  const time=Number(raw.Time&&raw.Time.$date), c1=cuid(raw.CUID1), c2=cuid(raw.CUID2);
+  if(!Number.isFinite(time)||c1===null||c2===null) return null;
+  const roles=list=>Array.isArray(list)?list.map(normalizeRole).filter(Boolean).slice(0,5):[];
+  const ids=list=>Array.isArray(list)?list.map(roleId).filter(Boolean).slice(0,5):[];
+  const oidList=Array.isArray(raw.BanList)?raw.BanList.map(v=>typeof v==='string'?v.slice(0,128):'').slice(0,2):['',''];
+  return {Time:{$date:time},CUID1:c1,CUID2:c2,WinCUID:cuid(raw.WinCUID),
+    CUID1AddScore:whole(raw.CUID1AddScore),CUID2AddScore:whole(raw.CUID2AddScore),
+    CUID1Rank:whole(raw.CUID1Rank),CUID2Rank:whole(raw.CUID2Rank),IsEnterBattle:Boolean(raw.IsEnterBattle),
+    Role1List:roles(raw.Role1List),Role2List:roles(raw.Role2List),BanList:oidList,
+    PreBan1List:ids(raw.PreBan1List),PreBan2List:ids(raw.PreBan2List),
+    PlayerInfos:(Array.isArray(raw.PlayerInfos)?raw.PlayerInfos:[]).map(normalizePlayer).filter(Boolean).slice(0,4)};
+}
+function normalizeLogs(list){
+  if(!Array.isArray(list)) throw new Error('找不到 logs 陣列');
+  if(list.length>MAX_RTA_LOGS) throw new Error('對戰筆數過多（上限 10000 場）');
+  let skipped=0; const logs=list.map(row=>{const log=normalizeLog(row);if(!log)skipped++;return log;}).filter(Boolean);
+  return {logs,skipped};
+}
 
 // ---- 由原始 logs + 本人CUID 算出逐場 ----
 function buildGames(logs, me){
@@ -201,10 +238,17 @@ function buildGames(logs, me){
 
 // ---- 讀取 / 合併 / 去重（累積式，可多次匯入） ----
 let lastImport=null;
-function extractLogs(raw){ return Array.isArray(raw)?raw:(raw.logs||raw.Logs||[]); }
+function extractLogs(raw){ return Array.isArray(raw)?raw:(raw&&typeof raw==='object'?(raw.logs||raw.Logs||[]):[]); }
 // 去重鍵：優先用每場結束時間戳（唯一）；無時間才退回 玩家+勝方+分數
 function keyOf(r){ return (r.Time&&r.Time.$date!=null)?('t'+r.Time.$date):('k'+r.CUID1+'_'+r.CUID2+'_'+r.WinCUID+'_'+r.CUID1AddScore); }
-function loadPool(){ try{return JSON.parse(localStorage.getItem('rta_logs'))||[];}catch(e){return [];} }
+function loadPool(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('rta_logs'))||[];
+    const safe=normalizeLogs(raw);
+    if(safe.skipped) savePool(safe.logs);
+    return safe.logs;
+  }catch(e){ return []; }
+}
 function savePool(p){ try{localStorage.setItem('rta_logs',JSON.stringify(p));}catch(e){} }
 function mergeLogs(pool, incoming){
   const seen=new Set(pool.map(keyOf)); let added=0,dup=0; const merged=pool.slice();
@@ -229,11 +273,14 @@ function detectMe(logs){
 
 // ---- 匯入流程（併入池子 → 去重 → 決定本人 → 渲染） ----
 function loadRaw(raw){
-  const incoming=extractLogs(raw);
-  if(!incoming.length){ alert('檔案裡沒有對戰紀錄（找不到 logs）'); return; }
-  const hintMe=(!Array.isArray(raw)&&raw.cuid!=null)?+raw.cuid:null;   // 匯出檔自帶 cuid → 直接用
+  let incoming,skipped;
+  try{ ({logs:incoming,skipped}=normalizeLogs(extractLogs(raw))); }
+  catch(err){ alert('匯入失敗：'+err.message); return; }
+  if(!incoming.length){ alert('檔案裡沒有可用的對戰紀錄'); return; }
+  const hintMe=(!Array.isArray(raw)&&raw&&typeof raw==='object')?cuid(raw.cuid):null;   // 匯出檔自帶 cuid → 直接用
   const {merged,added,dup}=mergeLogs(loadPool(), incoming);
-  savePool(merged); lastImport={added,dup,total:merged.length};
+  if(merged.length>MAX_RTA_LOGS){ alert('匯入後的累積對戰筆數會超過上限 10000 場，請先清除或匯出舊資料'); return; }
+  savePool(merged); lastImport={added,dup,skipped,total:merged.length};
   let me=hintMe!=null?hintMe:(+localStorage.getItem('rta_me')||null);
   if(me==null||!poolHasMe(merged,me)){
     const det=detectMe(merged);
@@ -245,10 +292,14 @@ function loadRaw(raw){
 }
 function showPicker(logs,cands){
   const p=$('picker');
-  p.innerHTML=`<div class="muted" style="margin-bottom:6px">${lastImport?`已累積 ${lastImport.total} 場（本次新增 ${lastImport.added}、重複略過 ${lastImport.dup}）。`:''}請選擇你的角色：</div>`;
+  p.replaceChildren();
+  const summary=document.createElement('div'); summary.className='muted'; summary.style.marginBottom='6px';
+  summary.textContent=(lastImport?`已累積 ${lastImport.total} 場（本次新增 ${lastImport.added}、重複略過 ${lastImport.dup}）。`:'')+'請選擇你的角色：';
+  p.appendChild(summary);
   const box=el(`<div class="picker"></div>`);
-  cands.forEach(c=>{ const b=el(`<button>${c.name} <span class="muted">${c.n} 場</span></button>`);
-    b.onclick=()=>{ p.innerHTML=''; $('landing').style.display='none'; applyMe(logs,c.cuid); }; box.appendChild(b); });
+  cands.forEach(c=>{ const b=document.createElement('button'), count=document.createElement('span');
+    count.className='muted'; count.textContent=` ${c.n} 場`; b.append(document.createTextNode(c.name),count);
+    b.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyMe(logs,c.cuid); }; box.appendChild(b); });
   p.appendChild(box);
 }
 function applyMe(logs,me){
@@ -275,8 +326,12 @@ function renderAll(G){
   for(const g of G){const s=g.won?1:-1;cur=((s>0)===(sign>0))?cur+s:s;sign=s;bw=Math.max(bw,cur);bl=Math.min(bl,cur);}
   const net=G.reduce((a,g)=>a+g.delta,0);
   const fg=G.filter(g=>g.first),sg=G.filter(g=>!g.first);
+  const owp=W/N, recent=k=>{const a=G.slice(-k),w=a.filter(g=>g.won).length;return{w,n:a.length};};
+  const l30=recent(30),l50=recent(50), rCol=o=>o.n&&o.w/o.n>=owp?'g':(o.n?'r':'');
   app.appendChild(el(`<div class="tiles">
   <div class="tile"><div class="v b">${pct(W,N)}%</div><div class="k">總勝率 ${W}–${N-W}</div></div>
+  <div class="tile" title="綠=不低於總勝率、紅=低於（判斷近期調整有沒有效）"><div class="v ${rCol(l50)}">${pct(l50.w,l50.n)}%</div><div class="k">近50勝率 ${l50.w}–${l50.n-l50.w}</div></div>
+  <div class="tile" title="綠=不低於總勝率、紅=低於（判斷近期調整有沒有效）"><div class="v ${rCol(l30)}">${pct(l30.w,l30.n)}%</div><div class="k">近30勝率 ${l30.w}–${l30.n-l30.w}</div></div>
   <div class="tile"><div class="v">${pct(entW,ent.length)}%</div><div class="k">實戰勝率 ${entW}–${ent.length-entW}</div></div>
   <div class="tile"><div class="v g">${bw}</div><div class="k">最長連勝</div></div>
   <div class="tile"><div class="v r">${-bl}</div><div class="k">最長連敗</div></div>
@@ -348,7 +403,7 @@ function renderAll(G){
       let frac=(e.clientX-r.left)/r.width; frac=Math.max(0,Math.min(1,frac));
       const i=Math.round(frac*(hover.n-1)), px=r.left+(hover.n>1?i/(hover.n-1):0.5)*r.width;
       cross.style.display='block'; cross.style.left=(px-wr.left)+'px'; cross.style.top=(r.top-wr.top)+'px'; cross.style.height=r.height+'px';
-      tip.style.display='block'; tip.innerHTML=hover.base[i].label;
+      tip.style.display='block'; tip.textContent=hover.base[i].label;
       tip.style.left=(px-wr.left)+'px'; tip.style.top=(e.clientY-wr.top)+'px';
     });
     wrap.addEventListener('mouseleave',()=>{cross.style.display='none';tip.style.display='none';});
@@ -367,7 +422,8 @@ function renderAll(G){
       pb.forEach(s=>preb[s]=(preb[s]||0)+1);
     }
     const allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({
-      s, n:pick[s], wp:pct(win[s]||0,pick[s]), ban:banned[s]||0, pb:preb[s]||0, slot:slot[s]
+      s, n:pick[s], wp:pct(win[s]||0,pick[s]), ban:banned[s]||0, pb:preb[s]||0,
+      banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,N), slot:slot[s]
     }));
     const wl=side==='my'?'勝率':'我方敗率';
     const pickLbl=side==='my'?'選用':'對手選用';
@@ -377,14 +433,14 @@ function renderAll(G){
       <th data-sk="n" data-lbl="${pickLbl}"></th>
       <th data-sk="wp" data-lbl="${wl}"></th>
       <th>順位 一二三四五</th>
-      <th class="num" data-sk="ban" data-lbl="被ban"></th>
-      <th class="num" data-sk="pb" data-lbl="被preban"></th>
+      <th class="num" data-sk="banP" data-lbl="被ban%"></th>
+      <th class="num" data-sk="pbP" data-lbl="被preban%"></th>
     </tr></thead><tbody></tbody></table></div>`);
     function renderBody(){
       const rows=[...allRows].sort((a,b)=>(b[sortKey]-a[sortKey])*sortDir);
-      wrap.querySelector('tbody').innerHTML=rows.map(({s,n,wp,ban,pb,slot})=>{
+      wrap.querySelector('tbody').innerHTML=rows.map(({s,n,wp,ban,pb,banP,pbP,slot})=>{
         const col=side==='my'?(wp>=70?'win':wp<55?'lose':''):(wp>=40?'lose':'');
-        return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td><td>${slotBar(slot)}</td><td class="num">${ban}</td><td class="num">${pb}</td></tr>`;
+        return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td><td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
       }).join('');
       wrap.querySelectorAll('th[data-sk]').forEach(th=>{
         th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir>0?' ▾':' ▴'):'');
@@ -468,7 +524,7 @@ function renderAll(G){
     const box=el(`<div class="scroll"></div>`);
     wrap.appendChild(bar);wrap.appendChild(box);
     let filt='all',q='';
-    const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}">${nm(s)}<span class="idx">${i+1}</span></span>`).join('  ');
+    const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}">${esc(nm(s))}<span class="idx">${i+1}</span></span>`).join('  ');
     function render(){
       const rows=G.slice().reverse().filter(g=>{
         if(filt==='win'&&!g.won)return false;if(filt==='lose'&&g.won)return false;
@@ -478,7 +534,7 @@ function renderAll(G){
         rows.map(g=>`<tr><td>${g.t}</td><td><span class="tag ${g.first?'first':'second'}">${g.first?'先':'後'}</span></td>
           <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}${g.entered?'':'*'}</td>
           <td class="${g.delta>=0?'pos':'neg'}">${g.delta>=0?'+':''}${g.delta}</td>
-          <td>${g.myRank}</td><td>${g.opp}</td>
+          <td>${g.myRank}</td><td>${esc(g.opp)}</td>
           <td class="muted">${g.oppRank} / ${g.oppScore??'?'} / 連${g.oppCW??'?'}</td>
           <td class="roster">${roster(g.my,g.myBan)}</td><td class="roster">${roster(g.op,g.opBan)}</td></tr>`).join('')
         }</tbody></table><div class="muted">共 ${rows.length} 場。結果後的 * =未實戰(閃避)。陣容數字=選取順位；刪除線=被 ban。</div>`;
@@ -491,7 +547,10 @@ function renderAll(G){
 }
 
 // ---- 事件接線 ----
-function readFile(f){const rd=new FileReader();rd.onload=()=>{try{loadRaw(JSON.parse(rd.result));}catch(err){alert('JSON 解析失敗：'+err.message);}};rd.readAsText(f);}
+function readFile(f){
+  if(f.size>MAX_RTA_BYTES){ alert('檔案過大（上限 15 MB）'); return; }
+  const rd=new FileReader();rd.onload=()=>{try{loadRaw(JSON.parse(rd.result));}catch(err){alert('JSON 解析失敗：'+err.message);}};rd.readAsText(f);
+}
 $('file').onchange=e=>{const f=e.target.files[0];if(f)readFile(f);e.target.value='';};
 const dz=$('dropzone');
 ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
