@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-s30xTPmNRTtN4NVe7JdBAPq+qeDSACIjBVG9gOgxnU0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-KKMtOlwinUfHf44OOqKh14XneAWXKuLjUw2tQRNceXY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -327,11 +327,9 @@ function renderAll(G){
   const net=G.reduce((a,g)=>a+g.delta,0);
   const fg=G.filter(g=>g.first),sg=G.filter(g=>!g.first);
   const owp=W/N, recent=k=>{const a=G.slice(-k),w=a.filter(g=>g.won).length;return{w,n:a.length};};
-  const l30=recent(30),l50=recent(50), rCol=o=>o.n&&o.w/o.n>=owp?'g':(o.n?'r':'');
+  const l30=recent(30),l60=recent(60), tcol=o=>o.n?(o.w/o.n>=owp?'var(--green)':'var(--red)'):'inherit';
   app.appendChild(el(`<div class="tiles">
-  <div class="tile"><div class="v b">${pct(W,N)}%</div><div class="k">總勝率 ${W}–${N-W}</div></div>
-  <div class="tile" title="綠=不低於總勝率、紅=低於（判斷近期調整有沒有效）"><div class="v ${rCol(l50)}">${pct(l50.w,l50.n)}%</div><div class="k">近50勝率 ${l50.w}–${l50.n-l50.w}</div></div>
-  <div class="tile" title="綠=不低於總勝率、紅=低於（判斷近期調整有沒有效）"><div class="v ${rCol(l30)}">${pct(l30.w,l30.n)}%</div><div class="k">近30勝率 ${l30.w}–${l30.n-l30.w}</div></div>
+  <div class="tile"><div class="v b">${pct(W,N)}%</div><div class="k">總勝率 ${W}–${N-W}</div><div class="k" style="margin-top:3px;font-size:11px" title="綠=不低於總勝率、紅=低於，判斷近期調整成效">近60 <span style="color:${tcol(l60)};font-weight:700">${pct(l60.w,l60.n)}%</span> · 近30 <span style="color:${tcol(l30)};font-weight:700">${pct(l30.w,l30.n)}%</span></div></div>
   <div class="tile"><div class="v">${pct(entW,ent.length)}%</div><div class="k">實戰勝率 ${entW}–${ent.length-entW}</div></div>
   <div class="tile"><div class="v g">${bw}</div><div class="k">最長連勝</div></div>
   <div class="tile"><div class="v r">${-bl}</div><div class="k">最長連敗</div></div>
@@ -421,9 +419,15 @@ function renderAll(G){
       if(ban)banned[ban]=(banned[ban]||0)+1;
       pb.forEach(s=>preb[s]=(preb[s]||0)+1);
     }
+    // 近 N 場的每角勝率（我方）／我方敗率（對手）
+    const pickR={30:{},60:{}},winR={30:{},60:{}};
+    [30,60].forEach(k=>{for(const g of G.slice(-k)){const list=(side==='my'?g.my:g.op),w=(side==='my'?g.won:!g.won);
+      list.forEach(s=>{pickR[k][s]=(pickR[k][s]||0)+1;if(w)winR[k][s]=(winR[k][s]||0)+1;});}});
+    const rwp=(k,s)=>pickR[k][s]?pct(winR[k][s]||0,pickR[k][s]):-1;
     const allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({
       s, n:pick[s], wp:pct(win[s]||0,pick[s]), ban:banned[s]||0, pb:preb[s]||0,
-      banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,N), slot:slot[s]
+      banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,N), slot:slot[s],
+      wp60:rwp(60,s), n60:pickR[60][s]||0, wp30:rwp(30,s), n30:pickR[30][s]||0
     }));
     const wl=side==='my'?'勝率':'我方敗率';
     const pickLbl=side==='my'?'選用':'對手選用';
@@ -432,15 +436,19 @@ function renderAll(G){
       <th>角色</th>
       <th data-sk="n" data-lbl="${pickLbl}"></th>
       <th data-sk="wp" data-lbl="${wl}"></th>
+      <th data-sk="wp60" data-lbl="近60"></th>
+      <th data-sk="wp30" data-lbl="近30"></th>
       <th>順位 一二三四五</th>
       <th class="num" data-sk="banP" data-lbl="被ban%"></th>
       <th class="num" data-sk="pbP" data-lbl="被preban%"></th>
     </tr></thead><tbody></tbody></table></div>`);
     function renderBody(){
       const rows=[...allRows].sort((a,b)=>(b[sortKey]-a[sortKey])*sortDir);
-      wrap.querySelector('tbody').innerHTML=rows.map(({s,n,wp,ban,pb,banP,pbP,slot})=>{
+      wrap.querySelector('tbody').innerHTML=rows.map(({s,n,wp,wp60,wp30,n60,n30,ban,pb,banP,pbP,slot})=>{
         const col=side==='my'?(wp>=70?'win':wp<55?'lose':''):(wp>=40?'lose':'');
-        return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td><td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
+        const rc=r=>r<0?'':((side==='my'?r>=wp:r<=wp)?'win':'lose');
+        const rcell=(r,c)=>`<td class="${rc(r)}" title="${c} 場">${r<0?'–':r+'%'}</td>`;
+        return `<tr><td>${cn(s)}</td><td>${n}</td><td class="${col}">${wp}%</td>${rcell(wp60,n60)}${rcell(wp30,n30)}<td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
       }).join('');
       wrap.querySelectorAll('th[data-sk]').forEach(th=>{
         th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir>0?' ▾':' ▴'):'');
