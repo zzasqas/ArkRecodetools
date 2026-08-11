@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-VahBNYM5a5e3L8wqN5wtqcmg/3ckpwHbzWpA9F3b8ak='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-EQzhX+rI2t9H2oRvyvxlqAdAgMl0uYcA1Q+tFBbhE1I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -231,10 +231,13 @@ function buildGames(logs, me){
     const me1=r.CUID1===me;
     const my=((me1?r.Role1List:r.Role2List)||[]).map(x=>x.StaticID);
     const op=((me1?r.Role2List:r.Role1List)||[]).map(x=>x.StaticID);
-    const id2={};[...(r.Role1List||[]),...(r.Role2List||[])].forEach(x=>{id2[x._id.$oid]=x.StaticID;});
+    // BanList 兩個 oid 的順序不固定，直接查「這隻被 ban 的角色屬於哪一方的 picks」來歸屬，避免標錯/漏標
+    const id2={};
+    (r.Role1List||[]).forEach(x=>{id2[x._id.$oid]={sid:x.StaticID,p1:true};});
+    (r.Role2List||[]).forEach(x=>{id2[x._id.$oid]={sid:x.StaticID,p1:false};});
     const ban=r.BanList||['',''];
-    const myBan=id2[me1?ban[0]:ban[1]]||'';
-    const opBan=id2[me1?ban[1]:ban[0]]||'';
+    let myBan='',opBan='';
+    for(const b of ban){const e=b&&id2[b];if(!e)continue; if(e.p1===me1)myBan=e.sid; else opBan=e.sid;}
     const oppCuid=me1?r.CUID2:r.CUID1;
     const pi=cu=>((r.PlayerInfos||[]).find(p=>p.PlayerInfo.CUID===cu))||{};
     const oP=pi(oppCuid), mP=pi(me);
@@ -516,9 +519,10 @@ function renderAll(G){
   })();
 
   // 角色表
-  function charTable(side){
+  function charTable(side,games){
+    games=games||G; const NN=games.length;
     const pick={},win={},slot={},banned={},preb={};
-    for(const g of G){
+    for(const g of games){
       const list=(side==='my'?g.my:g.op),ban=side==='my'?g.myBan:g.opBan,pb=side==='my'?g.opb:g.mpb;
       list.forEach((s,i)=>{pick[s]=(pick[s]||0)+1;slot[s]=slot[s]||[0,0,0,0,0];slot[s][i]++;
         if(side==='my'?g.won:!g.won)win[s]=(win[s]||0)+1;});
@@ -527,12 +531,12 @@ function renderAll(G){
     }
     // 近 N 場的每角勝率（我方）／我方敗率（對手）
     const pickR={30:{},60:{}},winR={30:{},60:{}};
-    [30,60].forEach(k=>{for(const g of G.slice(-k)){const list=(side==='my'?g.my:g.op),w=(side==='my'?g.won:!g.won);
+    [30,60].forEach(k=>{for(const g of games.slice(-k)){const list=(side==='my'?g.my:g.op),w=(side==='my'?g.won:!g.won);
       list.forEach(s=>{pickR[k][s]=(pickR[k][s]||0)+1;if(w)winR[k][s]=(winR[k][s]||0)+1;});}});
     const rwp=(k,s)=>pickR[k][s]?pct(winR[k][s]||0,pickR[k][s]):-1;
     const allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({
       s, n:pick[s], wp:pct(win[s]||0,pick[s]), ban:banned[s]||0, pb:preb[s]||0,
-      banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,N), slot:slot[s],
+      banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,NN), slot:slot[s],
       wp60:rwp(60,s), n60:pickR[60][s]||0, wp30:rwp(30,s), n30:pickR[30][s]||0
     }));
     const wl=side==='my'?'勝率':'我方敗率';
@@ -553,7 +557,7 @@ function renderAll(G){
         const rClr=r=>r<0?'var(--muted)':((side==='my'?r>=wp:r<=wp)?'#86EFAC':'#FCA5A5');
         const rone=(r,c,lbl)=>`<span style="color:${rClr(r)}" title="${lbl} ${c} 場">${r<0?'–':r+'%'}</span>`;
         const recent=`<span style="font-size:12px;margin-left:8px;padding-left:8px;border-left:1px solid var(--border2)">${rone(wp60,n60,'近60場')} · ${rone(wp30,n30,'近30場')}</span>`;
-        return `<tr><td>${cn(s)}</td><td>${n}</td><td><span class="${col}">${wp}%</span>${recent}</td><td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${N} 場被 pre-ban">${pbP}%</td></tr>`;
+        return `<tr><td>${cn(s)}</td><td>${n}</td><td><span class="${col}">${wp}%</span>${recent}</td><td>${slotBar(slot)}</td><td class="num" title="${ban} 場／選用 ${n} 場中被拆">${banP}%</td><td class="num" title="${pb} 場／全 ${NN} 場被 pre-ban">${pbP}%</td></tr>`;
       }).join('');
       wrap.querySelectorAll('th[data-sk]').forEach(th=>{
         th.textContent=th.dataset.lbl+(th.dataset.sk===sortKey?(sortDir>0?' ▾':' ▴'):'');
@@ -568,7 +572,28 @@ function renderAll(G){
   }
   const pair=el(`<div class="pair"></div>`);app.appendChild(pair);
   sect('我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban=對手拆你的次數',charTable('my'),pair);
-  sect('對手角色','「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；被我ban/preban=我拆他的次數',charTable('opp'),pair);
+  // 對手角色（含對手排名區間切換：只看對到強者時的對手選角）
+  (function(){
+    const oppWrap=el(`<div></div>`);
+    const ctl=el(`<div class="cg" style="margin-bottom:8px;flex-wrap:wrap">
+      <button data-r="0" class="active">全部</button>
+      <button data-r="500">對手≤500</button>
+      <button data-r="200">對手≤200</button>
+      <button data-r="100">對手≤100</button>
+      <button data-r="50">對手≤50</button></div>`);
+    const slot=el(`<div></div>`), info=el(`<div class="muted" style="margin-top:6px"></div>`);
+    oppWrap.appendChild(ctl);oppWrap.appendChild(slot);oppWrap.appendChild(info);
+    function render(thr){
+      const games=thr?G.filter(g=>g.oppRank>0&&g.oppRank<=thr):G;
+      slot.replaceChildren(charTable('opp',games));
+      const w=games.filter(g=>g.won).length;
+      info.textContent=thr?`對手排名 ≤${thr}：${games.length} 場，我 ${w} 勝（${pct(w,games.length)}%）`:`全部 ${games.length} 場`;
+    }
+    ctl.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+      ctl.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render(+b.dataset.r);});
+    render(0);
+    sect('對手角色','「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；上方可切對手排名區間（只看對到強者時他們選什麼）',oppWrap,pair);
+  })();
 
   // 對手強度分層勝率（放在角色表之後）
   (function(){
