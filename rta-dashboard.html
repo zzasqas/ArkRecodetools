@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-6qctZZZv7fG03Cu9Tqks4X0EpvbGsMotoAJAAKDBw4g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-VahBNYM5a5e3L8wqN5wtqcmg/3ckpwHbzWpA9F3b8ak='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -78,6 +78,19 @@ body.tinted .legend{opacity:1;}
 .pair{display:grid;gap:20px;}
 .pair>div h2{margin-top:20px;}
 @media(min-width:1680px){.wrap{max-width:1560px;}.pair{grid-template-columns:1fr 1fr;gap:28px;align-items:start;}}
+/* 右側快速導覽軌（低干擾） */
+.toc{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:7px;padding:10px 6px;max-height:82vh;overflow:auto;scrollbar-width:none;}
+.toc::-webkit-scrollbar{display:none;}
+.toc a{display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--muted);text-decoration:none;font-size:12px;opacity:.45;transition:opacity .15s,color .15s;}
+.toc a .dot{width:16px;height:3px;border-radius:2px;background:var(--dim);transition:.15s;flex:none;}
+.toc a .lbl{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .18s,opacity .18s;}
+.toc:hover a{opacity:.9;}
+.toc:hover a .lbl{max-width:170px;opacity:1;}
+.toc a:hover{color:var(--blue-l);}
+.toc a:hover .dot{background:var(--blue-l);}
+.toc a.active{opacity:1;color:var(--blue-l);}
+.toc a.active .dot{background:var(--blue);width:24px;}
+@media(max-width:1180px){.toc{display:none;}}
 /* 匯入 / 落地 */
 .importbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 2px;}
 .btn{background:linear-gradient(135deg,#1D4ED8,#7C3AED);color:#fff;padding:9px 18px;border-radius:9px;font-size:14px;cursor:pointer;border:none;font-family:inherit;}
@@ -316,6 +329,23 @@ function applyMe(logs,me){
 // ---- 全部渲染 ----
 function slotBar(dist){return `<span class="slot">`+dist.map((c,i)=>`<i class="${c?'on':''}" title="${i+1}選:${c}">${c||''}</i>`).join('')+`</span>`;}
 function sect(title,sub,node,parent){const h=el(`<div><h2>${title}${sub?` <small>${sub}</small>`:''}</h2></div>`);h.appendChild(node);(parent||app).appendChild(h);return h;}
+
+// 右側快速導覽軌：掃 app 內的 h2 + 進階區塊，建可跳轉的圓點軌 + 捲動高亮
+function buildTOC(){
+  const old=document.querySelector('.toc'); if(old) old.remove();
+  const items=[...app.querySelectorAll('h2')].map(h=>({el:h,title:(h.childNodes[0]?h.childNodes[0].textContent:h.textContent).trim()}));
+  const adv=app.querySelector('details.guide > summary'); if(adv) items.push({el:adv,title:'進階比較'});
+  if(items.length<3) return;
+  const toc=el(`<nav class="toc" aria-label="區塊導覽"></nav>`);
+  items.forEach((it,i)=>{ if(!it.el.id) it.el.id='sec'+i;
+    const a=el(`<a href="#${it.el.id}"><span class="lbl">${esc(it.title)}</span><span class="dot"></span></a>`);
+    a.onclick=e=>{e.preventDefault();const d=it.el.closest('details');if(d)d.open=true;it.el.scrollIntoView({behavior:'smooth',block:'start'});};
+    toc.appendChild(a); it._link=a; });
+  document.body.appendChild(toc);
+  const io=new IntersectionObserver(es=>{es.forEach(en=>{ if(en.isIntersecting){
+    items.forEach(it=>it._link.classList.toggle('active',it.el===en.target)); }});},{rootMargin:'-15% 0px -75% 0px'});
+  items.forEach(it=>io.observe(it.el));
+}
 
 // ---- 跨玩家比較（進階功能，全在本機） ----
 function cmpStat(G){
@@ -664,6 +694,8 @@ function renderAll(G){
       b.onclick=()=>{pk.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCompare(ME,c,names,out);};pk.appendChild(b);});
     body.appendChild(pk);body.appendChild(out);app.appendChild(det);
   })();
+
+  buildTOC();
 }
 
 // ---- 事件接線 ----
