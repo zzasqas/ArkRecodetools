@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-XdPH/JY+H8RwR/ORfVLUl/0vyJRJA+/2jLjnJVuvxpU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-k0nWE/CS0S6PMZKFuRXz2B9EcCVJXBQNSNg5KKzcqYc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -61,7 +61,8 @@ body.tinted .legend{opacity:1;}
 .chip{font-size:12px;padding:2px 8px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);}
 .roster{font-size:13.5px;}
 .roster .c{color:var(--text);}
-.roster .banned{color:#9AA3B2;text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;}
+.roster .banned{color:#6b7280;}
+.roster .banned .nmx{text-decoration:line-through;text-decoration-color:#0a0f18;}
 .roster .idx{color:var(--muted);font-size:11px;}
 td.oppn{cursor:help;}
 td.oppn .who{border-bottom:1px dotted var(--muted);}
@@ -249,6 +250,7 @@ function gameOf(r, me){
       myRank:me1?r.CUID1Rank:r.CUID2Rank, oppRank:me1?r.CUID2Rank:r.CUID1Rank,
       myScore:mP.Score, oppScore:oP.Score,
       opp:(oP.PlayerInfo&&oP.PlayerInfo.Name)||String(oppCuid),
+      myName:(mP.PlayerInfo&&mP.PlayerInfo.Name)||String(me),
       oppW:oP.Win, oppL:oP.Lose, oppCW:oP.ContinueWin, entered:r.IsEnterBattle,
       my, myBan, op, opBan,
       mpb:(me1?r.PreBan1List:r.PreBan2List)||[], opb:(me1?r.PreBan2List:r.PreBan1List)||[]};
@@ -324,12 +326,12 @@ function showPicker(logs,cands){
   summary.textContent=(lastImport?`已累積 ${lastImport.total} 場（本次新增 ${lastImport.added}、重複略過 ${lastImport.dup}）。`:'')+'請選擇你的角色，或看全部數據：';
   p.appendChild(summary);
   const box=el(`<div class="picker"></div>`);
-  const allBtn=document.createElement('button'); allBtn.textContent='📊 全部數據（所有玩家混合）';
-  allBtn.style.borderColor='var(--blue)'; allBtn.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyAll(logs); };
-  box.appendChild(allBtn);
   cands.forEach(c=>{ const b=document.createElement('button'), count=document.createElement('span');
     count.className='muted'; count.textContent=` ${c.n} 場`; b.append(document.createTextNode(c.name),count);
     b.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyMe(logs,c.cuid); }; box.appendChild(b); });
+  const allBtn=document.createElement('button'); allBtn.textContent='📊 全部數據（所有玩家混合）';
+  allBtn.style.opacity='.75'; allBtn.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyAll(logs); };
+  box.appendChild(allBtn);
   p.appendChild(box);
 }
 function applyMe(logs,me){
@@ -667,11 +669,13 @@ function renderAll(G){
   (function(){
     const pr={};
     for(const g of G){const f=[...new Set(g.op.filter(s=>s!==g.opBan))].sort();
-      for(let i=0;i<f.length;i++)for(let j=i+1;j<f.length;j++){const k=f[i]+'|'+f[j];pr[k]=(pr[k]||0)+1;}}
-    const rows=Object.entries(pr).filter(([,c])=>c>=4).sort((a,b)=>b[1]-a[1]).slice(0,15);
+      for(let i=0;i<f.length;i++)for(let j=i+1;j<f.length;j++){const k=f[i]+'|'+f[j];(pr[k]=pr[k]||[]).push(g);}}
+    const rows=Object.entries(pr).filter(([,gs])=>gs.length>=4).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
     if(!rows.length) return;
-    sect('對手最後上場的雙人骨架','共現≥4（已扣掉被我ban的那隻）',
-      el(`<div class="chips">`+rows.map(([k,c])=>{const[a,b]=k.split('|');return `<span class="chip">${cn(a)} + ${cn(b)} <b style="color:#93C5FD">${c}</b></span>`;}).join('')+`</div>`));
+    sect('對手最後上場的雙人骨架','共現≥4（已扣掉被我ban的那隻）；%＝對面有此雙人時我方勝率',
+      el(`<div class="chips" style="font-size:18px;gap:8px">`+rows.map(([k,gs])=>{const[a,b]=k.split('|');
+        const w=gs.filter(g=>g.won).length, p=pct(w,gs.length);
+        return `<span class="chip" style="font-size:18px;padding:5px 13px">${cn(a)} + ${cn(b)} <b style="color:#93C5FD">×${gs.length}</b> <b class="${p<45?'lose':p>=60?'win':''}">${p}%</b></span>`;}).join('')+`</div>`));
   })();
 
   // 疑似剋制對
@@ -681,7 +685,7 @@ function renderAll(G){
     const out=[];
     for(const my of Object.keys(myTot)){if(myTot[my]<8)continue;const base=myWin[my]/myTot[my]||0;
       const opp={};for(const g of G){if(!g.my.includes(my))continue;for(const o of new Set(g.op)){opp[o]=opp[o]||[0,0];opp[o][0]++;if(g.won)opp[o][1]++;}}
-      for(const o of Object.keys(opp)){const[c,w]=opp[o];if(c<3)continue;const cw=w/c;if(cw<=base-0.2)out.push({my,o,c,cw,base,drop:base-cw});}}
+      for(const o of Object.keys(opp)){const[c,w]=opp[o];if(c<5)continue;const cw=w/c;if(cw<=base-0.2)out.push({my,o,c,cw,base,drop:base-cw});}}
     out.sort((a,b)=>b.drop-a.drop);
     if(!out.length) return;
     sect('疑似剋制對','我方某角在「對面有 X」時勝率 vs 平時，落差≥20pp（已排除低樣本）',
@@ -714,19 +718,19 @@ function renderAll(G){
     const box=el(`<div class="scroll"></div>`);
     wrap.appendChild(bar);wrap.appendChild(box);
     let filt='all',q='';
-    const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}">${esc(nm(s))}<span class="idx">${i+1}</span></span>`).join('  ');
+    const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}"><span class="nmx">${esc(nm(s))}</span><span class="idx">${i+1}</span></span>`).join('  ');
     const pbList=arr=>(arr||[]).map(nm).filter(Boolean).join('、')||'—';
     const pbTitle=g=>esc(`賽前 Pre-ban\n我：${pbList(g.mpb)}\n──────────\n敵：${pbList(g.opb)}`);
     function render(){
       const rows=G.slice().reverse().filter(g=>{
         if(filt==='win'&&!g.won)return false;if(filt==='lose'&&g.won)return false;
         if(filt==='first'&&!g.first)return false;if(filt==='second'&&g.first)return false;
-        if(q&&!g.opp.toLowerCase().includes(q.toLowerCase()))return false;return true;});
+        if(q&&!((g.myName||'')+' '+g.opp).toLowerCase().includes(q.toLowerCase()))return false;return true;});
       box.innerHTML=`<table><thead><tr><th>時間</th><th>手</th><th>結果</th><th>分</th><th>我排名</th><th>對手</th><th>對手排名/積分/連勝</th><th>我方陣容(順)</th><th>對手陣容(順)</th></tr></thead><tbody>${
         rows.map(g=>`<tr><td>${g.t}</td><td><span class="tag ${g.first?'first':'second'}">${g.first?'先':'後'}</span></td>
           <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}${g.entered?'':'*'}</td>
           <td class="${g.delta>=0?'pos':'neg'}">${g.delta>=0?'+':''}${g.delta}</td>
-          <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}"><span class="who">${esc(g.opp)}</span></td>
+          <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}">${ALLMODE?`<span class="muted">${esc(g.myName)}</span> | <span class="who">${esc(g.opp)}</span>`:`<span class="who">${esc(g.opp)}</span>`}</td>
           <td class="muted">${g.oppRank} / ${g.oppScore??'?'} / 連${g.oppCW??'?'}</td>
           <td class="roster">${roster(g.my,g.myBan)}</td><td class="roster">${roster(g.op,g.opBan)}</td></tr>`).join('')
         }</tbody></table><div class="muted">共 ${rows.length} 場。結果後的 * =未實戰(閃避)。陣容數字=選取順位；紅刪除線=draft 被 ban；<b>對手名 hover 看雙方賽前 pre-ban</b>。</div>`;
