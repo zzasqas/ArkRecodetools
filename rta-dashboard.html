@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-VWAJAOcoxOZ4Jofbi5m4Y2CHWfDAz5eBuihb2u/yYdk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-XdPH/JY+H8RwR/ORfVLUl/0vyJRJA+/2jLjnJVuvxpU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -60,8 +60,11 @@ body.tinted .legend{opacity:1;}
 .chips{display:flex;flex-wrap:wrap;gap:5px;}
 .chip{font-size:12px;padding:2px 8px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);}
 .roster{font-size:13.5px;}
-.roster .c{color:var(--text);}.roster .banned{color:var(--dim);text-decoration:line-through;}
+.roster .c{color:var(--text);}
+.roster .banned{color:#9AA3B2;text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;}
 .roster .idx{color:var(--muted);font-size:11px;}
+td.oppn{cursor:help;}
+td.oppn .who{border-bottom:1px dotted var(--muted);}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center;}
 .filters button,.filters input{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit;}
 .filters button.active{background:var(--bg3);color:var(--blue-l);border-color:var(--blue);}
@@ -712,6 +715,8 @@ function renderAll(G){
     wrap.appendChild(bar);wrap.appendChild(box);
     let filt='all',q='';
     const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}">${esc(nm(s))}<span class="idx">${i+1}</span></span>`).join('  ');
+    const pbList=arr=>(arr||[]).map(nm).filter(Boolean).join('、')||'—';
+    const pbTitle=g=>esc(`賽前 Pre-ban\n我：${pbList(g.mpb)}\n──────────\n敵：${pbList(g.opb)}`);
     function render(){
       const rows=G.slice().reverse().filter(g=>{
         if(filt==='win'&&!g.won)return false;if(filt==='lose'&&g.won)return false;
@@ -721,10 +726,10 @@ function renderAll(G){
         rows.map(g=>`<tr><td>${g.t}</td><td><span class="tag ${g.first?'first':'second'}">${g.first?'先':'後'}</span></td>
           <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}${g.entered?'':'*'}</td>
           <td class="${g.delta>=0?'pos':'neg'}">${g.delta>=0?'+':''}${g.delta}</td>
-          <td>${g.myRank}</td><td>${esc(g.opp)}</td>
+          <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}"><span class="who">${esc(g.opp)}</span></td>
           <td class="muted">${g.oppRank} / ${g.oppScore??'?'} / 連${g.oppCW??'?'}</td>
           <td class="roster">${roster(g.my,g.myBan)}</td><td class="roster">${roster(g.op,g.opBan)}</td></tr>`).join('')
-        }</tbody></table><div class="muted">共 ${rows.length} 場。結果後的 * =未實戰(閃避)。陣容數字=選取順位；刪除線=被 ban。</div>`;
+        }</tbody></table><div class="muted">共 ${rows.length} 場。結果後的 * =未實戰(閃避)。陣容數字=選取順位；紅刪除線=draft 被 ban；<b>對手名 hover 看雙方賽前 pre-ban</b>。</div>`;
     }
     bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{filt=b.dataset.f;bar.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render();});
     bar.querySelector('#q').oninput=e=>{q=e.target.value;render();};
