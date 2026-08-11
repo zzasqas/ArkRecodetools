@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-EQzhX+rI2t9H2oRvyvxlqAdAgMl0uYcA1Q+tFBbhE1I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-VWAJAOcoxOZ4Jofbi5m4Y2CHWfDAz5eBuihb2u/yYdk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -187,7 +187,7 @@ const pct=(w,n)=>n?Math.round(w/n*100):0;
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
 const app=document.getElementById('app');
 const $=id=>document.getElementById(id);
-let POOL=[],ME=null;   // 跨玩家比較用：整包 logs 與本人 CUID
+let POOL=[],ME=null,ALLMODE=false;   // 跨玩家比較用：整包 logs 與本人 CUID；ALLMODE=全部數據混合檢視
 const MAX_RTA_BYTES=15*1024*1024, MAX_RTA_LOGS=10000, RTA_ID_RE=/^H\d{3,5}$/;
 const cleanName=value=>typeof value==='string'?value.slice(0,64):'';
 const whole=(value,fallback=0)=>{const n=Number(value);return Number.isSafeInteger(n)?n:fallback;};
@@ -225,9 +225,8 @@ function normalizeLogs(list){
 }
 
 // ---- 由原始 logs + 本人CUID 算出逐場 ----
-function buildGames(logs, me){
-  const pad=n=>String(n).padStart(2,'0');
-  return logs.filter(r=>r&&r.Time&&(r.CUID1===me||r.CUID2===me)).sort((a,b)=>a.Time.$date-b.Time.$date).map(r=>{
+function gameOf(r, me){
+    const pad=n=>String(n).padStart(2,'0');
     const me1=r.CUID1===me;
     const my=((me1?r.Role1List:r.Role2List)||[]).map(x=>x.StaticID);
     const op=((me1?r.Role2List:r.Role1List)||[]).map(x=>x.StaticID);
@@ -250,7 +249,15 @@ function buildGames(logs, me){
       oppW:oP.Win, oppL:oP.Lose, oppCW:oP.ContinueWin, entered:r.IsEnterBattle,
       my, myBan, op, opBan,
       mpb:(me1?r.PreBan1List:r.PreBan2List)||[], opb:(me1?r.PreBan2List:r.PreBan1List)||[]};
-  });
+}
+function buildGames(logs, me){
+  return logs.filter(r=>r&&r.Time&&(r.CUID1===me||r.CUID2===me)).sort((a,b)=>a.Time.$date-b.Time.$date).map(r=>gameOf(r,me));
+}
+// 全部數據：每場一律以 CUID1 為「我方(左)」、CUID2 為「對手(右)」，去重後匯總
+function buildAllGames(logs){
+  const seen=new Set(), out=[];
+  for(const r of logs){ if(!r||!r.Time)continue; const k=keyOf(r); if(seen.has(k))continue; seen.add(k); out.push(gameOf(r,r.CUID1)); }
+  return out.sort((a,b)=>0);   // 順序不重要（全部數據不畫走勢）
 }
 
 // ---- 讀取 / 合併 / 去重（累積式，可多次匯入） ----
@@ -311,9 +318,12 @@ function showPicker(logs,cands){
   const p=$('picker');
   p.replaceChildren();
   const summary=document.createElement('div'); summary.className='muted'; summary.style.marginBottom='6px';
-  summary.textContent=(lastImport?`已累積 ${lastImport.total} 場（本次新增 ${lastImport.added}、重複略過 ${lastImport.dup}）。`:'')+'請選擇你的角色：';
+  summary.textContent=(lastImport?`已累積 ${lastImport.total} 場（本次新增 ${lastImport.added}、重複略過 ${lastImport.dup}）。`:'')+'請選擇你的角色，或看全部數據：';
   p.appendChild(summary);
   const box=el(`<div class="picker"></div>`);
+  const allBtn=document.createElement('button'); allBtn.textContent='📊 全部數據（所有玩家混合）';
+  allBtn.style.borderColor='var(--blue)'; allBtn.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyAll(logs); };
+  box.appendChild(allBtn);
   cands.forEach(c=>{ const b=document.createElement('button'), count=document.createElement('span');
     count.className='muted'; count.textContent=` ${c.n} 場`; b.append(document.createTextNode(c.name),count);
     b.onclick=()=>{ p.replaceChildren(); $('landing').style.display='none'; applyMe(logs,c.cuid); }; box.appendChild(b); });
@@ -326,7 +336,16 @@ function applyMe(logs,me){
   $('landing').style.display='none'; $('exportall').hidden=false; $('reimport').hidden=false; $('tintwrap').hidden=false;
   $('switchacc').hidden = candidatesOf(logs).length<2;
   $('impinfo').textContent = lastImport ? `目前共 ${lastImport.total} 場｜本次 +${lastImport.added}、重複略過 ${lastImport.dup}` : `共 ${games.length} 場`;
-  POOL=logs; ME=me; renderAll(games); window.scrollTo(0,0);
+  ALLMODE=false; POOL=logs; ME=me; renderAll(games); window.scrollTo(0,0);
+}
+function applyAll(logs){
+  const games=buildAllGames(logs);
+  if(!games.length){ alert('沒有可分析的場次'); return; }
+  ALLMODE=true; POOL=logs; ME=null;
+  $('landing').style.display='none'; $('exportall').hidden=false; $('reimport').hidden=false; $('tintwrap').hidden=false;
+  $('switchacc').hidden=false;
+  $('impinfo').textContent = `全部數據：${games.length} 場（所有玩家、已去重）`;
+  renderAll(games); window.scrollTo(0,0);
 }
 
 // ---- 全部渲染 ----
@@ -427,9 +446,17 @@ function renderCompare(aC,bC,names,box){
 
 function renderAll(G){
   app.innerHTML='';
-  $('sub').textContent=`共 ${G.length} 場 · ${G[0].t}–${G[G.length-1].t} · CUID1=先手（先出手）`;
+  $('sub').textContent = ALLMODE
+    ? `全部數據（所有玩家）· ${G.length} 場 · 左＝先手方(CUID1)、右＝後手方(CUID2)；可用下方排名區間篩選`
+    : `共 ${G.length} 場 · ${G[0].t}–${G[G.length-1].t} · CUID1=先手（先出手）`;
 
   const W=G.filter(g=>g.won).length,N=G.length;
+  if(ALLMODE){
+    app.appendChild(el(`<div class="tiles">
+    <div class="tile"><div class="v b">${N}</div><div class="k">總場數（全部玩家、已去重）</div></div>
+    <div class="tile"><div class="v">${pct(W,N)}%</div><div class="k">先手方(左)勝率</div></div>
+    </div>`));
+  } else {
   const ent=G.filter(g=>g.entered),entW=ent.filter(g=>g.won).length;
   let bw=0,bl=0,cur=0,sign=0;
   for(const g of G){const s=g.won?1:-1;cur=((s>0)===(sign>0))?cur+s:s;sign=s;bw=Math.max(bw,cur);bl=Math.min(bl,cur);}
@@ -447,9 +474,10 @@ function renderAll(G){
   <div class="tile"><div class="v">${pct(fg.filter(g=>g.won).length,fg.length)}%</div><div class="k">先手勝率 (${fg.length}場)</div></div>
   <div class="tile"><div class="v">${pct(sg.filter(g=>g.won).length,sg.length)}%</div><div class="k">後手勝率 (${sg.length}場)</div></div>
   </div>`));
+  }
 
-  // 賽季走勢：指標可複選(排名/積分) + 粒度(逐場/分段) + 範圍窗口
-  (function(){
+  // 賽季走勢：指標可複選(排名/積分) + 粒度(逐場/分段) + 範圍窗口（全部數據時隱藏）
+  if(!ALLMODE)(function(){
     const SEG=4; // 每日切幾段（依當天場次數均分）；賽季約14天×4≈56點
     const COL={rank:'#60A5FA', score:'#FBBF24'}, MN={rank:'排名', score:'積分'};
     const box=el(`<div><div class="chartctl">
@@ -570,29 +598,29 @@ function renderAll(G){
     renderBody();
     return wrap;
   }
-  const pair=el(`<div class="pair"></div>`);app.appendChild(pair);
-  sect('我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban=對手拆你的次數',charTable('my'),pair);
-  // 對手角色（含對手排名區間切換：只看對到強者時的對手選角）
+  // 對手排名區間切換：同時作用於我方(左)＋對手(右)兩表，看得出 draft 隨對手強度的轉移
   (function(){
-    const oppWrap=el(`<div></div>`);
-    const ctl=el(`<div class="cg" style="margin-bottom:8px;flex-wrap:wrap">
+    const ctl=el(`<div class="cg" style="margin:6px 0 2px;flex-wrap:wrap">
+      <span class="muted" style="align-self:center;margin-right:4px">對手排名區間：</span>
       <button data-r="0" class="active">全部</button>
-      <button data-r="500">對手≤500</button>
-      <button data-r="200">對手≤200</button>
-      <button data-r="100">對手≤100</button>
-      <button data-r="50">對手≤50</button></div>`);
-    const slot=el(`<div></div>`), info=el(`<div class="muted" style="margin-top:6px"></div>`);
-    oppWrap.appendChild(ctl);oppWrap.appendChild(slot);oppWrap.appendChild(info);
+      <button data-r="500">≤500</button>
+      <button data-r="200">≤200</button></div>`);
+    const info=el(`<div class="muted" style="margin:2px 0 8px"></div>`);
+    app.appendChild(ctl);app.appendChild(info);
+    const pair=el(`<div class="pair"></div>`);app.appendChild(pair);
+    const mySlot=el(`<div></div>`), opSlot=el(`<div></div>`);
+    sect('我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban=對手拆你的次數',mySlot,pair);
+    sect('對手角色','「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；被我ban/preban=我拆他的次數',opSlot,pair);
     function render(thr){
       const games=thr?G.filter(g=>g.oppRank>0&&g.oppRank<=thr):G;
-      slot.replaceChildren(charTable('opp',games));
-      const w=games.filter(g=>g.won).length;
-      info.textContent=thr?`對手排名 ≤${thr}：${games.length} 場，我 ${w} 勝（${pct(w,games.length)}%）`:`全部 ${games.length} 場`;
+      mySlot.replaceChildren(charTable('my',games));
+      opSlot.replaceChildren(charTable('opp',games));
+      const w=games.filter(g=>g.won).length, lbl=ALLMODE?'先手方勝率':'我方勝率';
+      info.textContent=thr?`只算對手排名 ≤${thr}：${games.length} 場，${lbl} ${pct(w,games.length)}%（左右兩表同步套用）`:`全部 ${games.length} 場（左右兩表同步）`;
     }
     ctl.querySelectorAll('button').forEach(b=>b.onclick=()=>{
       ctl.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render(+b.dataset.r);});
     render(0);
-    sect('對手角色','「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；上方可切對手排名區間（只看對到強者時他們選什麼）',oppWrap,pair);
   })();
 
   // 對手強度分層勝率（放在角色表之後）
@@ -704,8 +732,8 @@ function renderAll(G){
     sect('逐場明細','可篩選先後手/勝敗、搜尋對手',wrap);
   })();
 
-  // 進階功能：跨玩家比較（可收合，全在本機）
-  (function(){
+  // 進階功能：跨玩家比較（可收合，全在本機）；全部數據模式沒有「你」可比，跳過
+  if(!ALLMODE)(function(){
     const cnt={},names={};
     for(const r of POOL){for(const c of [r.CUID1,r.CUID2])cnt[c]=(cnt[c]||0)+1;for(const p of (r.PlayerInfos||[]))names[p.PlayerInfo.CUID]=p.PlayerInfo.Name;}
     const cands=Object.keys(cnt).map(Number).filter(c=>c!==ME&&cnt[c]>=30).sort((a,b)=>cnt[b]-cnt[a]);
