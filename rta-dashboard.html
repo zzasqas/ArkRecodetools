@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-k0nWE/CS0S6PMZKFuRXz2B9EcCVJXBQNSNg5KKzcqYc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-huHxmZ9lcy5HfFvTbv2DhvuzJ8bLL59WcebzqAIaTt8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -251,6 +251,7 @@ function gameOf(r, me){
       myScore:mP.Score, oppScore:oP.Score,
       opp:(oP.PlayerInfo&&oP.PlayerInfo.Name)||String(oppCuid),
       myName:(mP.PlayerInfo&&mP.PlayerInfo.Name)||String(me),
+      myCuid:me, oppCuid,
       oppW:oP.Win, oppL:oP.Lose, oppCW:oP.ContinueWin, entered:r.IsEnterBattle,
       my, myBan, op, opBan,
       mpb:(me1?r.PreBan1List:r.PreBan2List)||[], opb:(me1?r.PreBan2List:r.PreBan1List)||[]};
@@ -260,9 +261,10 @@ function buildGames(logs, me){
 }
 // 全部數據：每場一律以 CUID1 為「我方(左)」、CUID2 為「對手(右)」，去重後匯總
 function buildAllGames(logs){
-  const seen=new Set(), out=[];
-  for(const r of logs){ if(!r||!r.Time)continue; const k=keyOf(r); if(seen.has(k))continue; seen.add(k); out.push(gameOf(r,r.CUID1)); }
-  return out.sort((a,b)=>0);   // 順序不重要（全部數據不畫走勢）
+  const seen=new Set(), rows=[];
+  for(const r of logs){ if(!r||!r.Time)continue; const k=keyOf(r); if(seen.has(k))continue; seen.add(k); rows.push(r); }
+  rows.sort((a,b)=>a.Time.$date-b.Time.$date);   // 依時間升序，逐場明細 reverse 後即新→舊
+  return rows.map(r=>gameOf(r,r.CUID1));
 }
 
 // ---- 讀取 / 合併 / 去重（累積式，可多次匯入） ----
@@ -675,7 +677,7 @@ function renderAll(G){
     sect('對手最後上場的雙人骨架','共現≥4（已扣掉被我ban的那隻）；%＝對面有此雙人時我方勝率',
       el(`<div class="chips" style="font-size:18px;gap:8px">`+rows.map(([k,gs])=>{const[a,b]=k.split('|');
         const w=gs.filter(g=>g.won).length, p=pct(w,gs.length);
-        return `<span class="chip" style="font-size:18px;padding:5px 13px">${cn(a)} + ${cn(b)} <b style="color:#93C5FD">×${gs.length}</b> <b class="${p<45?'lose':p>=60?'win':''}">${p}%</b></span>`;}).join('')+`</div>`));
+        return `<span class="chip" style="font-size:18px;padding:5px 13px">${cn(a)} + ${cn(b)} <b style="color:#93C5FD">×${gs.length}</b><span style="color:#5b6879;font-size:.7em;margin:0 10px;vertical-align:2px">|</span><b class="${p<45?'lose':p>=60?'win':''}">${p}%</b></span>`;}).join('')+`</div>`));
   })();
 
   // 疑似剋制對
@@ -720,7 +722,14 @@ function renderAll(G){
     let filt='all',q='';
     const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}"><span class="nmx">${esc(nm(s))}</span><span class="idx">${i+1}</span></span>`).join('  ');
     const pbList=arr=>(arr||[]).map(nm).filter(Boolean).join('、')||'—';
-    const pbTitle=g=>esc(`賽前 Pre-ban\n我：${pbList(g.mpb)}\n──────────\n敵：${pbList(g.opb)}`);
+    const pbTitle=g=>esc(`賽前 Pre-ban\n${ALLMODE?'先手方':'我'}：${pbList(g.mpb)}\n──────────\n${ALLMODE?'後手方':'敵'}：${pbList(g.opb)}`);
+    // 全部數據：判斷「主體玩家」（撈資料者，≥50 場）；名字欄主體在前(暗)、實際對手用白字
+    const gc={}; if(ALLMODE)for(const r of POOL){gc[r.CUID1]=(gc[r.CUID1]||0)+1;gc[r.CUID2]=(gc[r.CUID2]||0)+1;}
+    const isMain=c=>gc[c]>=50;
+    const oppName=g=>{ if(!ALLMODE) return `<span class="who">${esc(g.opp)}</span>`;
+      const mainMy = isMain(g.myCuid) || !isMain(g.oppCuid);
+      const mainNm = mainMy?g.myName:g.opp, oppNm = mainMy?g.opp:g.myName;
+      return `<span class="muted">${esc(mainNm)}</span> <span style="color:var(--dim)">|</span> <span class="who" style="color:#fff">${esc(oppNm)}</span>`; };
     function render(){
       const rows=G.slice().reverse().filter(g=>{
         if(filt==='win'&&!g.won)return false;if(filt==='lose'&&g.won)return false;
@@ -730,7 +739,7 @@ function renderAll(G){
         rows.map(g=>`<tr><td>${g.t}</td><td><span class="tag ${g.first?'first':'second'}">${g.first?'先':'後'}</span></td>
           <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}${g.entered?'':'*'}</td>
           <td class="${g.delta>=0?'pos':'neg'}">${g.delta>=0?'+':''}${g.delta}</td>
-          <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}">${ALLMODE?`<span class="muted">${esc(g.myName)}</span> | <span class="who">${esc(g.opp)}</span>`:`<span class="who">${esc(g.opp)}</span>`}</td>
+          <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}">${oppName(g)}</td>
           <td class="muted">${g.oppRank} / ${g.oppScore??'?'} / 連${g.oppCW??'?'}</td>
           <td class="roster">${roster(g.my,g.myBan)}</td><td class="roster">${roster(g.op,g.opBan)}</td></tr>`).join('')
         }</tbody></table><div class="muted">共 ${rows.length} 場。結果後的 * =未實戰(閃避)。陣容數字=選取順位；紅刪除線=draft 被 ban；<b>對手名 hover 看雙方賽前 pre-ban</b>。</div>`;
