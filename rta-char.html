@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-74JDZwWCfaVA+ijM5/2Y0acf8DRr92gm4FQ4O/c2hXg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星隕計劃 · RTA 角色深度分析</title>
+<style>
+:root{--bg:#080D18;--bg2:#0D1424;--bg3:#111B2E;--border:#1E293B;--border2:#2A3A52;
+--text:#CBD5E1;--muted:#64748B;--dim:#334155;--blue:#3B82F6;--blue-l:#93C5FD;
+--purple:#8B5CF6;--teal:#2DD4BF;--amber:#FBBF24;--red:#F87171;--green:#4ADE80;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',system-ui,sans-serif;padding:0 0 60px;}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
+.topnav{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);}
+.topnav .brand{font-weight:800;color:#E2E8F0;font-size:15px;}
+.topnav a{color:var(--muted);text-decoration:none;font-size:13.5px;transition:color .15s;}
+.topnav a:hover,.topnav a.home{color:var(--blue-l);}
+header{padding:24px 0 6px;}
+h1{font-size:24px;font-weight:900;color:#E2E8F0;}
+h1 .s{background:linear-gradient(135deg,var(--blue-l),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sub{color:var(--muted);font-size:13px;margin-top:4px;}
+h2{font-size:16px;color:#E2E8F0;margin:26px 0 10px;padding-left:10px;border-left:3px solid var(--blue);}
+h2 small{color:var(--muted);font-size:12px;font-weight:400;margin-left:8px;}
+.ctlrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;}
+.cg{display:inline-flex;gap:6px;flex-wrap:wrap;}
+.cg button{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 12px;font-size:13px;cursor:pointer;font-family:inherit;}
+.cg button.active{background:var(--bg3);color:var(--blue-l);border-color:var(--blue);}
+select,input{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 11px;font:14px inherit;}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0;}
+.tile{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;}
+.tile .v{font-size:23px;font-weight:800;color:#E2E8F0;}
+.tile .v.b{color:var(--blue-l);}
+.tile .k{font-size:12px;color:var(--muted);margin-top:2px;}
+.pair{display:grid;gap:16px;}
+@media(min-width:900px){.pair{grid-template-columns:1fr 1fr;}}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg2);border-radius:10px;overflow:hidden;}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+th{background:var(--bg3);color:var(--blue-l);font-weight:500;font-size:12.5px;}
+td.num,th.num{text-align:center;width:56px;}
+tr:hover td{background:rgba(59,130,246,.05);}
+.win{color:var(--green);}.lose{color:var(--red);}
+.cn.el-fire{color:#F98A8A;}.cn.el-ice{color:#7BB6F5;}.cn.el-earth{color:#6FD99A;}.cn.el-light{color:#F6CE5C;}.cn.el-dark{color:#B39AF3;}
+.scroll{overflow-x:auto;}
+.muted{color:var(--muted);font-size:12.5px;}
+.note{background:#0d1a2e;border:1px solid #1f3a5c;color:#9fc4ee;font-size:12.5px;padding:8px 13px;border-radius:8px;margin:10px 0;}
+.hdr{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:10px 0 2px;}
+.hdr .big{font-size:22px;font-weight:800;}
+.empty{color:var(--muted);padding:16px;text-align:center;font-size:13px;}
+.tblcap{font-size:13px;font-weight:700;margin:2px 0 6px;}
+.tblcap.hi{color:var(--green);}.tblcap.lo{color:var(--red);}
+</style></head>
+<body><div class="wrap">
+<nav class="topnav"><span class="brand">Ark Re:Code 工具集</span>
+  <a class="home" href="./rta-dashboard.html">← RTA 對戰分析</a>
+  <a href="./index.html">工具首頁</a>
+  <a href="./roster-viewer.html">角色列表</a>
+</nav>
+<header><h1>RTA <span class="s">角色深度分析</span></h1>
+<div class="sub" id="sub">選一張角色，看「選了它之後，對面有誰／哪組合，勝率多少」。讀取對戰分析已匯入的本機資料。</div></header>
+
+<div id="app"></div>
+</div>
+
+<script>
+const REF = {"names": {"H001": "夏妮", "H002": "菲莉斯", "H003": "諾可琳", "H004": "蘿莎萊", "H005": "奈蘭希爾", "H006": "璐茜婭", "H007": "艾瑞兒", "H008": "赫賽迪雅", "H009": "菈法瑞", "H010": "吉妮茲", "H011": "愛莉卡", "H012": "泰里莎", "H013": "蓋妲", "H014": "莎莉絲特", "H015": "多恩", "H016": "埃帕蒂", "H017": "普利蔓", "H018": "奧德雅", "H019": "克萊兒", "H020": "柏妮絲", "H021": "複製體吉妮茲", "H022": "喬瑟琳", "H023": "異變的奧普懷妮", "H024": "異變的埃帕蒂", "H025": "璐茜瑪", "H026": "卡洛琳", "H027": "奧普懷妮", "H028": "吉賽爾", "H029": "喬依絲", "H030": "茱莉亞", "H031": "瑪蒂爾達", "H032": "蜜麗恩", "H033": "伊娥絲", "H034": "格蘿妮婭", "H035": "朵琳", "H036": "茉伊拉", "H037": "迪爾德麗", "H038": "寇希爾", "H039": "哈魯緹", "H040": "安熙恩", "H041": "艾米", "H042": "卡麗希", "H043": "芭索蘿", "H044": "莉娜", "H045": "洛蒂", "H046": "路易絲", "H047": "翠絲特", "H048": "克拉菈", "H049": "艾樂萊思", "H050": "複製體卡洛琳", "H051": "複製體芭索蘿", "H052": "複製體吉賽爾", "H053": "複製體瑪蒂爾達", "H054": "複製體克拉菈", "H055": "異變的使徒", "H056": "複製體卡麗希", "H057": "復仇的寇希爾", "H058": "復仇的路易絲", "H059": "複製體迪爾德麗", "H060": "使徒", "H061": "瘋狂的格蘿妮婭", "H062": "複製體喬依絲", "H063": "梅芙", "H064": "西爾維納", "H065": "邦妮", "H066": "翠西", "H067": "希蓓爾", "H068": "派狄亞", "H069": "歐爾嘉", "H070": "瓦妮莎", "H071": "尤菲米亞", "H072": "彌卡伊勒", "H073": "珍", "H074": "史嘉蕾", "H075": "拉娜", "H076": "露比", "H077": "葛瑞絲", "H078": "歐戴摩亞", "H079": "貝琳", "H080": "茵羅洛", "H081": "布洛瑟姆", "H082": "緹娜", "H083": "奎妮", "H084": "塔亞", "H085": "薩菲爾", "H086": "安特亞", "H087": "耶莉卡", "H088": "辛狄", "H089": "帕梅勒", "H090": "瑪夏", "H091": "皮提特", "H092": "費南雪", "H093": "凱蒂達", "H094": "潘黛希亞", "H095": "希諾莉", "H096": "佩忒菈", "H097": "賈妮絲", "H098": "涅瓦", "H099": "萊拉", "H100": "塔琳", "H101": "維爾莉特", "H102": "穆麗兒", "H103": "伊比", "H104": "華勒弗", "H105": "潘倪克思", "H106": "瑟妮卡", "H107": "盧妮艾塔", "H108": "萊莎曼德", "H109": "哈蒂", "H110": "潔莉摩爾", "H111": "黛琳娜", "H112": "玳蓮", "H113": "菲莉西婭", "H114": "奧麗芙", "H115": "絕望的夏妮", "H116": "守護者艾瑞兒", "H117": "厄德萊雅", "H118": "安泰西亞", "H119": "Aoi Hinamori", "H120": "崔西里亞", "H121": "赤鬼伯伯", "H122": "柯絲瑪爾", "H123": "新春的莎莉絲特", "H124": "歐貝恩絲", "H125": "光明女神玳蓮", "H126": "蓋兒", "H127": "納克莎", "H128": "伊娃", "H129": "亞畢絲", "H130": "碧海的諾可琳", "H131": "蓓蕾卡", "H132": "妮諾楷西", "H133": "挪亞", "H134": "奧柏絲蒂恩", "H135": "巴爾托絲", "H136": "赫蘿薇克", "H137": "天宮咲夜", "H138": "貝兒", "H139": "蛛美", "H140": "蝶子", "H141": "Projekt Melody", "H142": "HongKongDoll", "H143": "彩伽", "H144": "杏仁ミル", "H145": "朱音", "H146": "聖誕的蜜拉貝兒", "H147": "東雲ft.坊橋夜泊", "H148": "新春的蜜娜", "H149": "璀璨誓約的露比", "H150": "璀璨誓約的伊娥絲", "H151": "夏日的喬依絲", "H152": "夏日的珮忒菈", "H153": "兔女郎愛莉卡", "H156": "烏爾德", "H160": "可伊", "H162": "泳池魅影吉妮茲", "H163": "歸還者璐茜婭", "H165": "彼岸花茱莉亞", "H166": "紫煙", "H167": "貓祭", "H168": "繼任者彌卡伊勒", "H170": "甜蜜美夢安熙恩", "H171": "加加琳", "H172": "南瓜鬼怪萊拉", "H173": "時界巡者Aoi", "H174": "啦啦隊蓓蕾卡", "H175": "小女將希蓓爾", "H176": "蜜茶多恩", "H177": "追憶的瑪夏", "H178": "喧鬧之星哈蒂", "H179": "重裝助手翠絲特", "H180": "烈酒赤兔芭索蘿", "H181": "自信拉娜", "H182": "望月", "H183": "米德", "H184": "尤莉", "H187": "絢爛夏花卡洛琳", "H188": "雪江", "H192": "愛戀泡影的玳蓮", "H601": "莉莉婭", "H602": "芽路", "H603": "神樂", "H604": "水紀", "H606": "露娜", "H612": "空", "H613": "咲", "H809": "伊娥絲熊熊", "H810": "璀璨誓約的伊娥絲熊熊", "H811": "璐茜婭熊熊"}, "el": {"H001": "fire", "H002": "fire", "H003": "fire", "H004": "fire", "H005": "fire", "H006": "fire", "H007": "ice", "H008": "ice", "H009": "ice", "H010": "ice", "H011": "ice", "H012": "ice", "H013": "earth", "H014": "earth", "H015": "earth", "H016": "earth", "H017": "earth", "H018": "earth", "H019": "light", "H020": "light", "H021": "light", "H022": "light", "H023": "dark", "H024": "dark", "H025": "dark", "H026": "fire", "H027": "fire", "H028": "fire", "H029": "fire", "H030": "fire", "H031": "fire", "H032": "fire", "H033": "fire", "H034": "ice", "H035": "ice", "H036": "ice", "H037": "ice", "H038": "ice", "H039": "ice", "H040": "ice", "H041": "earth", "H042": "earth", "H043": "earth", "H044": "earth", "H045": "earth", "H046": "earth", "H047": "earth", "H048": "earth", "H049": "light", "H050": "light", "H051": "light", "H052": "light", "H053": "light", "H054": "light", "H055": "dark", "H056": "dark", "H057": "dark", "H058": "dark", "H059": "dark", "H060": "dark", "H061": "dark", "H062": "dark", "H063": "ice", "H064": "ice", "H065": "ice", "H066": "ice", "H067": "ice", "H068": "ice", "H069": "ice", "H070": "ice", "H071": "ice", "H072": "ice", "H073": "fire", "H074": "fire", "H075": "fire", "H076": "fire", "H077": "fire", "H078": "fire", "H079": "fire", "H080": "fire", "H081": "fire", "H082": "earth", "H083": "earth", "H084": "earth", "H085": "earth", "H086": "earth", "H087": "earth", "H088": "earth", "H089": "earth", "H090": "light", "H091": "light", "H092": "light", "H093": "light", "H094": "light", "H095": "light", "H097": "light", "H098": "dark", "H099": "dark", "H100": "dark", "H101": "dark", "H102": "dark", "H103": "dark", "H104": "dark", "H105": "dark", "H106": "fire", "H107": "fire", "H108": "light", "H109": "fire", "H110": "ice", "H111": "earth", "H112": "ice", "H113": "dark", "H114": "light", "H115": "dark", "H116": "light", "H117": "fire", "H118": "fire", "H119": "fire", "H120": "earth", "H121": "fire", "H122": "ice", "H123": "fire", "H124": "dark", "H125": "light", "H126": "dark", "H127": "light", "H128": "dark", "H129": "earth", "H130": "ice", "H131": "ice", "H133": "light", "H134": "dark", "H135": "earth", "H136": "fire", "H137": "light", "H138": "light", "H139": "fire", "H140": "dark", "H141": "ice", "H142": "earth", "H144": "earth", "H145": "fire", "H146": "fire", "H148": "fire", "H149": "ice", "H150": "light", "H151": "fire", "H152": "earth", "H153": "ice", "H156": "ice", "H160": "light", "H162": "ice", "H163": "ice", "H165": "dark", "H166": "dark", "H167": "fire", "H168": "ice", "H170": "light", "H171": "dark", "H172": "fire", "H173": "ice", "H174": "earth", "H175": "ice", "H176": "earth", "H177": "fire", "H178": "ice", "H179": "earth", "H180": "fire", "H181": "light", "H182": "dark", "H183": "light", "H184": "dark", "H187": "earth", "H188": "fire", "H192": "ice", "H601": "ice", "H602": "fire", "H603": "earth", "H604": "ice", "H606": "fire", "H612": "earth", "H613": "earth", "H809": "fire", "H810": "light"}, "fast": ["H182", "H163", "H153", "H178", "H121", "H058", "H136", "H150", "H612", "H114", "H108"]};
+const NM=REF.names, EL=REF.el;
+const nm=s=>NM[s]||s;
+const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const cn=s=>`<span class="cn el-${EL[s]||'none'}">${esc(nm(s))}</span>`;
+const pct=(w,n)=>n?Math.round(w/n*100):0;
+const el=h=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
+const app=document.getElementById('app');
+
+function loadPool(){try{return JSON.parse(localStorage.getItem('rta_logs'))||[];}catch(e){return [];}}
+function parseGame(r){
+  if(!r||!r.Time) return null;
+  const p1=(r.Role1List||[]).map(x=>x.StaticID), p2=(r.Role2List||[]).map(x=>x.StaticID);
+  const id2={};(r.Role1List||[]).forEach(x=>id2[x._id.$oid]={sid:x.StaticID,s:1});(r.Role2List||[]).forEach(x=>id2[x._id.$oid]={sid:x.StaticID,s:2});
+  let ban1='',ban2='';
+  for(const b of (r.BanList||[])){const e=b&&id2[b];if(!e)continue;if(e.s===1)ban1=e.sid;else ban2=e.sid;}
+  return {p1,p2,win1:r.WinCUID===r.CUID1,ban1,ban2,pre1:r.PreBan1List||[],pre2:r.PreBan2List||[],c1:r.CUID1,c2:r.CUID2};
+}
+
+const POOL=loadPool().map(parseGame).filter(Boolean);
+// 玩家場次（判斷主體：≥50）
+const gc={}, names={};
+for(const g of POOL){for(const c of [g.c1,g.c2])gc[c]=(gc[c]||0)+1;}
+for(const r of loadPool()){for(const p of (r.PlayerInfos||[])){const pi=p.PlayerInfo||{};if(pi.CUID!=null)names[pi.CUID]=pi.Name;}}
+const mains=Object.keys(gc).map(Number).filter(c=>gc[c]>=50).sort((a,b)=>gc[b]-gc[a]);
+
+let SUBJECT='ALL', CHAR=null;
+
+function comboKeys(arr,k){ // unordered k-combos of array
+  const out=[]; const rec=(start,acc)=>{ if(acc.length===k){out.push(acc.slice());return;} for(let i=start;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop();} }; rec(0,[]); return out;
+}
+
+function analyze(A){
+  let scope = SUBJECT==='ALL'?POOL:POOL.filter(g=>g.c1===SUBJECT||g.c2===SUBJECT);
+  const total=scope.length;
+  let banned=0,prebanned=0;
+  for(const g of scope){ if(g.ban1===A||g.ban2===A)banned++; if(g.pre1.includes(A)||g.pre2.includes(A))prebanned++; }
+  const aGames=[];
+  for(const g of scope){
+    let side=0;
+    if(SUBJECT==='ALL') side = g.p1.includes(A)?1:(g.p2.includes(A)?2:0);
+    else { const ps=g.c1===SUBJECT?1:2; if((ps===1?g.p1:g.p2).includes(A)) side=ps; }
+    if(!side) continue;
+    const myBan=side===1?g.ban1:g.ban2, oppBan=side===1?g.ban2:g.ban1;
+    if(myBan===A) continue; // A 被 draft-ban，沒上場
+    const myField=(side===1?g.p1:g.p2).filter(s=>s!==myBan && s!==A);
+    const oppField=(side===1?g.p2:g.p1).filter(s=>s!==oppBan);
+    aGames.push({won: side===1?g.win1:!g.win1, myField, oppField});
+  }
+  return {total,banned,prebanned,aGames};
+}
+
+// 由 aGames 對「某集合來源(oppField/myField)」的 k-combo 聚合勝率
+function agg(aGames, srcKey, k){
+  const tot={},win={},names2={};
+  for(const g of aGames){
+    const src=[...new Set(g[srcKey])].sort();
+    for(const combo of comboKeys(src,k)){
+      const key=combo.join('|'); tot[key]=(tot[key]||0)+1; if(g.won)win[key]=(win[key]||0)+1; names2[key]=combo;
+    }
+  }
+  return Object.keys(tot).map(key=>({combo:names2[key],n:tot[key],w:win[key]||0,wr:pct(win[key]||0,tot[key])}));
+}
+
+function twoTables(title,sub,rows,minN,baseline){
+  rows=rows.filter(r=>r.n>=minN);
+  const wrap=el(`<div><h2>${title}${sub?` <small>${sub}</small>`:''}</h2></div>`);
+  if(!rows.length){ wrap.appendChild(el(`<div class="empty">樣本不足（門檻 ≥${minN}）</div>`)); return wrap; }
+  const mk=(list,cap,cls)=>{
+    const body=list.map(r=>{
+      const col=r.wr>=baseline?'win':'lose';
+      return `<tr><td>${r.combo.map(cn).join(' + ')}</td><td class="num">${r.n}</td><td class="num ${col}">${r.wr}%</td></tr>`;
+    }).join('');
+    return `<div><div class="tblcap ${cls}">${cap}</div><div class="scroll"><table><thead><tr><th>對象</th><th class="num">共現</th><th class="num">勝率</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+  };
+  const hi=[...rows].sort((a,b)=>b.wr-a.wr||b.n-a.n).slice(0,12);
+  const lo=[...rows].sort((a,b)=>a.wr-b.wr||b.n-a.n).slice(0,12);
+  wrap.appendChild(el(`<div class="pair">${mk(hi,'▲ 高勝（適合續選 '+nm(CHAR)+'）','hi')}${mk(lo,'▼ 低勝（考慮改選／ban 掉對面這張）','lo')}</div>`));
+  return wrap;
+}
+
+function render(){
+  app.innerHTML='';
+  // 控制列：主體 + 角色
+  const ctl=el(`<div class="ctlrow"></div>`);
+  const subG=el(`<div class="cg" id="subG"></div>`);
+  const allB=el(`<button class="${SUBJECT==='ALL'?'active':''}">全部數據</button>`);
+  allB.onclick=()=>{SUBJECT='ALL';render();}; subG.appendChild(allB);
+  mains.forEach(c=>{const b=el(`<button class="${SUBJECT===c?'active':''}">${esc(names[c]||('#'+c))} <span class="muted">${gc[c]}</span></button>`);b.onclick=()=>{SUBJECT=c;render();};subG.appendChild(b);});
+  ctl.appendChild(el(`<span class="muted">主體：</span>`)); ctl.appendChild(subG);
+  // 角色下拉：出現過的角色，依出場次數
+  const seen={};
+  const scope=SUBJECT==='ALL'?POOL:POOL.filter(g=>g.c1===SUBJECT||g.c2===SUBJECT);
+  for(const g of scope){const fld= SUBJECT==='ALL'?[...g.p1,...g.p2]:( ( (g.c1===SUBJECT?g.p1:g.p2)) ); for(const s of fld)seen[s]=(seen[s]||0)+1;}
+  const opts=Object.keys(seen).sort((a,b)=>seen[b]-seen[a]);
+  if(CHAR==null&&opts.length)CHAR=opts[0];
+  const sel=el(`<select id="charSel">${opts.map(s=>`<option value="${s}"${s===CHAR?' selected':''}>${esc(nm(s))}（${seen[s]}）</option>`).join('')}</select>`);
+  sel.onchange=e=>{CHAR=e.target.value;render();};
+  ctl.appendChild(el(`<span class="muted">角色：</span>`)); ctl.appendChild(sel);
+  app.appendChild(ctl);
+
+  if(!POOL.length){ app.appendChild(el(`<div class="note">還沒有資料。請先到 <a href="./rta-dashboard.html" style="color:#93C5FD">RTA 對戰分析</a> 匯入 JSON，再回來這頁（共用同一份本機資料）。</div>`)); return; }
+  if(!CHAR){ app.appendChild(el(`<div class="empty">此範圍沒有可分析的角色</div>`)); return; }
+
+  const R=analyze(CHAR);
+  const base=pct(R.aGames.filter(g=>g.won).length,R.aGames.length);
+  app.appendChild(el(`<div class="hdr"><span class="big">${cn(CHAR)}</span><span class="muted">${SUBJECT==='ALL'?'全部數據':esc(names[SUBJECT]||'')} · 實際上場 ${R.aGames.length} 場</span></div>`));
+  app.appendChild(el(`<div class="tiles">
+    <div class="tile"><div class="v b">${base}%</div><div class="k">上場勝率（${R.aGames.filter(g=>g.won).length}–${R.aGames.length-R.aGames.filter(g=>g.won).length}）</div></div>
+    <div class="tile"><div class="v">${pct(R.banned,R.total)}%</div><div class="k">被 draft-ban（${R.banned}/${R.total}）</div></div>
+    <div class="tile"><div class="v">${pct(R.prebanned,R.total)}%</div><div class="k">被 pre-ban（${R.prebanned}/${R.total}）</div></div>
+  </div>`));
+  app.appendChild(el(`<div class="note">上下兩表一起看：<b>左＝高勝</b>（${nm(CHAR)} 打得贏，續選）／<b>右＝低勝</b>（打不贏，考慮改選或 ban 掉對面那張）。門檻：單一≥8、雙人≥6、三人≥6；建議用「全部數據」看樣本較足。</div>`));
+
+  app.appendChild(twoTables(`對面單一角色`,`帶 ${nm(CHAR)} 時、對面有此角的勝率`,agg(R.aGames,'oppField',1),8,base));
+  app.appendChild(twoTables(`對面雙人組合`,`對面同時有這兩張`,agg(R.aGames,'oppField',2),6,base));
+  app.appendChild(twoTables(`對面三人組合`,`對面同時有這三張（樣本稀疏，僅供方向）`,agg(R.aGames,'oppField',3),6,base));
+  app.appendChild(twoTables(`我方隊友搭配`,`${nm(CHAR)} ＋ 這張隊友同隊時的勝率（誰讓它發揮）`,agg(R.aGames,'myField',1),6,base));
+}
+render();
+</script>
+</body></html>
