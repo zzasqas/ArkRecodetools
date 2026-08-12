@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-nO98c9ZSWnGIFEI08qdbVwQB4bpp65xRqjEdiTZAy9A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-0tdie2EYRBGwQApKhO7/VYo4RBs26ULo+GxhSL6U5+U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -66,6 +66,8 @@ const NM=REF.names, EL=REF.el;
 const nm=s=>NM[s]||s;
 const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const cn=s=>`<span class="cn el-${EL[s]||'none'}">${esc(nm(s))}</span>`;
+const ELC={fire:'#F98A8A',ice:'#7BB6F5',earth:'#6FD99A',light:'#F6CE5C',dark:'#B39AF3'};
+const elColor=s=>ELC[EL[s]]||'var(--text)';
 const pct=(w,n)=>n?Math.round(w/n*100):0;
 const el=h=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
 const app=document.getElementById('app');
@@ -87,7 +89,7 @@ for(const g of POOL){for(const c of [g.c1,g.c2])gc[c]=(gc[c]||0)+1;}
 for(const r of loadPool()){for(const p of (r.PlayerInfos||[])){const pi=p.PlayerInfo||{};if(pi.CUID!=null)names[pi.CUID]=pi.Name;}}
 const mains=Object.keys(gc).map(Number).filter(c=>gc[c]>=50).sort((a,b)=>gc[b]-gc[a]);
 
-let SUBJECTS=new Set(), RANKFILTER=0, CHAR=null;   // SUBJECTS 空=全部數據；RANKFILTER 0=全部
+let SUBJECTS=new Set(), RANKFILTER=0, FILTER_EL='', PERSP='mine', CHAR=null;   // PERSP mine=我方選A / enemy=敵方選A
 
 function comboKeys(arr,k){ // unordered k-combos of array
   const out=[]; const rec=(start,acc)=>{ if(acc.length===k){out.push(acc.slice());return;} for(let i=start;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop();} }; rec(0,[]); return out;
@@ -101,17 +103,19 @@ function analyze(A){
   for(const g of scope){ if(g.ban1===A||g.ban2===A)banned++; if(g.pre1.includes(A)||g.pre2.includes(A))prebanned++; }
   const aGames=[];
   for(const g of scope){
-    let side=0;
-    if(useAll) side = g.p1.includes(A)?1:(g.p2.includes(A)?2:0);
-    else { if(SUBJECTS.has(g.c1)&&g.p1.includes(A))side=1; else if(SUBJECTS.has(g.c2)&&g.p2.includes(A))side=2; }
-    if(!side) continue;
-    const oppRank=side===1?g.rank2:g.rank1;
+    const aOn = g.p1.includes(A)?1:(g.p2.includes(A)?2:0);   // A 在哪一隊
+    if(!aOn) continue;
+    const mySide = PERSP==='mine' ? aOn : (aOn===1?2:1);      // 我方＝有A那隊(mine) / 沒A那隊(enemy)
+    if(!useAll && !SUBJECTS.has(mySide===1?g.c1:g.c2)) continue;
+    const oppSide=mySide===1?2:1;
+    const oppRank=oppSide===1?g.rank1:g.rank2;
     if(RANKFILTER && !(oppRank>0 && oppRank<=RANKFILTER)) continue;   // 只算對手排名 ≤門檻
-    const myBan=side===1?g.ban1:g.ban2, oppBan=side===1?g.ban2:g.ban1;
-    if(myBan===A) continue; // A 被 draft-ban，沒上場
-    const myField=(side===1?g.p1:g.p2).filter(s=>s!==myBan && s!==A);
-    const oppField=(side===1?g.p2:g.p1).filter(s=>s!==oppBan);
-    aGames.push({won: side===1?g.win1:!g.win1, myField, oppField});
+    const myBan=mySide===1?g.ban1:g.ban2, oppBan=oppSide===1?g.ban1:g.ban2;
+    if(PERSP==='mine' && myBan===A) continue;    // 我方 A 被 ban，沒上場
+    if(PERSP==='enemy' && oppBan===A) continue;  // 敵方 A 被我 ban，等於沒對到
+    const myField=(mySide===1?g.p1:g.p2).filter(s=>s!==myBan && s!==A);
+    const foeField=(oppSide===1?g.p1:g.p2).filter(s=>s!==oppBan && s!==A);
+    aGames.push({won: mySide===1?g.win1:!g.win1, myField, foeField});
   }
   return {total,banned,prebanned,aGames};
 }
@@ -128,14 +132,10 @@ function agg(aGames, srcKey, k){
   return Object.keys(tot).map(key=>({combo:names2[key],n:tot[key],w:win[key]||0,wr:pct(win[key]||0,tot[key])}));
 }
 
-function twoTables(title,sub,rows,minN,baseline,kind){
+function twoTables(title,sub,rows,minN,baseline,hiCap,loCap){
   rows=rows.filter(r=>r.n>=minN);
   const wrap=el(`<div><h2>${title}${sub?` <small>${sub}</small>`:''}</h2></div>`);
   if(!rows.length){ wrap.appendChild(el(`<div class="empty">樣本不足（門檻 ≥${minN}）</div>`)); return wrap; }
-  const X=nm(CHAR);
-  const caps = kind==='ally'
-    ? {hi:`▲ 適合和 ${X} 一起選（同隊勝率高）`, lo:`▼ 避免和 ${X} 同時選（同隊勝率低）`}
-    : {hi:`▲ 帶 ${X} 打得贏（對面有這些時、我方勝率高）`, lo:`▼ 帶 ${X} 打不贏（對面有這些時勝率低→改選 ${X} 或 ban 掉對面）`};
   const mk=(list,cap,cls)=>{
     const body=list.map(r=>{
       const col=r.wr>=baseline?'win':'lose';
@@ -145,13 +145,19 @@ function twoTables(title,sub,rows,minN,baseline,kind){
   };
   const hi=[...rows].sort((a,b)=>b.wr-a.wr||b.n-a.n).slice(0,12);
   const lo=[...rows].sort((a,b)=>a.wr-b.wr||b.n-a.n).slice(0,12);
-  wrap.appendChild(el(`<div class="pair">${mk(hi,caps.hi,'hi')}${mk(lo,caps.lo,'lo')}</div>`));
+  wrap.appendChild(el(`<div class="pair">${mk(hi,hiCap,'hi')}${mk(lo,loCap,'lo')}</div>`));
   return wrap;
 }
 
 function render(){
   app.innerHTML='';
   const useAll=SUBJECTS.size===0;
+  // 控制列 0：視角（我方選 A / 敵方選 A）
+  const ctl0=el(`<div class="ctlrow"></div>`);
+  ctl0.appendChild(el(`<span class="muted">視角：</span>`));
+  const pG=el(`<div class="cg"></div>`);
+  [['mine','我方選這角色'],['enemy','敵方選這角色']].forEach(([v,lbl])=>{const b=el(`<button class="${PERSP===v?'active':''}">${lbl}</button>`);b.onclick=()=>{PERSP=v;render();};pG.appendChild(b);});
+  ctl0.appendChild(pG); app.appendChild(ctl0);
   // 控制列 1：主體（可複選）
   const ctl=el(`<div class="ctlrow"></div>`);
   ctl.appendChild(el(`<span class="muted">主體(可複選)：</span>`));
@@ -168,36 +174,63 @@ function render(){
   const rkG=el(`<div class="cg"></div>`);
   [[0,'全部'],[1000,'≤1000'],[500,'≤500'],[200,'≤200']].forEach(([v,lbl])=>{const b=el(`<button class="${RANKFILTER===v?'active':''}">${lbl}</button>`);b.onclick=()=>{RANKFILTER=v;render();};rkG.appendChild(b);});
   ctl2.appendChild(rkG);
-  // 角色下拉：主體範圍內出現過的角色
+  app.appendChild(ctl2);
+  // 控制列 3：屬性篩選 + 角色（依出場多→少；選單上色）
+  const ctl3=el(`<div class="ctlrow"></div>`);
   const scope=useAll?POOL:POOL.filter(g=>SUBJECTS.has(g.c1)||SUBJECTS.has(g.c2));
   const seen={};
   for(const g of scope){ const lists = useAll?[g.p1,g.p2]:[SUBJECTS.has(g.c1)?g.p1:[],SUBJECTS.has(g.c2)?g.p2:[]]; for(const L of lists)for(const s of L)seen[s]=(seen[s]||0)+1; }
-  const opts=Object.keys(seen).sort((a,b)=>seen[b]-seen[a]);
-  if((CHAR==null||!seen[CHAR])&&opts.length)CHAR=opts[0];
-  const sel=el(`<select>${opts.map(s=>`<option value="${s}"${s===CHAR?' selected':''}>${esc(nm(s))}（${seen[s]}）</option>`).join('')}</select>`);
+  ctl3.appendChild(el(`<span class="muted">屬性：</span>`));
+  const elG=el(`<div class="cg"></div>`);
+  [['','全部'],['dark','暗'],['light','光'],['fire','火'],['ice','水'],['earth','木']].forEach(([v,lbl])=>{
+    const b=el(`<button class="${FILTER_EL===v?'active':''}"${v?` style="color:${ELC[v]}"`:''}>${lbl}</button>`);
+    b.onclick=()=>{FILTER_EL=v;CHAR=null;render();}; elG.appendChild(b);});
+  ctl3.appendChild(elG);
+  let opts=Object.keys(seen).sort((a,b)=>seen[b]-seen[a]);
+  if(FILTER_EL) opts=opts.filter(s=>EL[s]===FILTER_EL);
+  if((CHAR==null||!opts.includes(CHAR))&&opts.length)CHAR=opts[0];
+  const sel=el(`<select>${opts.map(s=>`<option value="${s}"${s===CHAR?' selected':''} style="color:${elColor(s)};background:#0D1424">${esc(nm(s))}（${seen[s]}）</option>`).join('')}</select>`);
+  if(CHAR) sel.style.color=elColor(CHAR);
   sel.onchange=e=>{CHAR=e.target.value;render();};
-  ctl2.appendChild(el(`<span class="muted" style="margin-left:8px">角色：</span>`)); ctl2.appendChild(sel);
-  app.appendChild(ctl2);
+  ctl3.appendChild(el(`<span class="muted" style="margin-left:8px">角色：</span>`)); ctl3.appendChild(sel);
+  app.appendChild(ctl3);
 
   if(!POOL.length){ app.appendChild(el(`<div class="note">還沒有資料。請先到 <a href="./rta-dashboard.html" style="color:#93C5FD">RTA 對戰分析</a> 匯入 JSON，再回來這頁（共用同一份本機資料）。</div>`)); return; }
   if(!CHAR){ app.appendChild(el(`<div class="empty">此範圍沒有可分析的角色</div>`)); return; }
 
   const R=analyze(CHAR);
+  const X=nm(CHAR), mine=PERSP==='mine';
   const wins=R.aGames.filter(g=>g.won).length, base=pct(wins,R.aGames.length);
   const subLbl = useAll?'全部數據':[...SUBJECTS].map(c=>names[c]||('#'+c)).join('＋');
   const rkLbl = RANKFILTER?`｜對手排名 ≤${RANKFILTER}`:'';
-  app.appendChild(el(`<div class="hdr"><span class="big">${cn(CHAR)}</span><span class="muted">${esc(subLbl)}${rkLbl} · 實際上場 ${R.aGames.length} 場</span></div>`));
+  app.appendChild(el(`<div class="hdr"><span class="big">${cn(CHAR)}</span><span class="muted">${mine?'我方選':'敵方選'} · ${esc(subLbl)}${rkLbl} · ${mine?'上場':'對到'} ${R.aGames.length} 場</span></div>`));
   app.appendChild(el(`<div class="tiles">
-    <div class="tile"><div class="v b">${base}%</div><div class="k">上場勝率（${wins}–${R.aGames.length-wins}）</div></div>
+    <div class="tile"><div class="v b">${base}%</div><div class="k">${mine?`${X} 上場勝率`:`對上 ${X} 我方勝率`}（${wins}–${R.aGames.length-wins}）</div></div>
     <div class="tile"><div class="v">${pct(R.banned,R.total)}%</div><div class="k">被 draft-ban（${R.banned}/${R.total}）</div></div>
     <div class="tile"><div class="v">${pct(R.prebanned,R.total)}%</div><div class="k">被 pre-ban（${R.prebanned}/${R.total}）</div></div>
   </div>`));
-  app.appendChild(el(`<div class="note">兩表一起看：<b>左＝勝率高、右＝勝率低</b>。對面類的右表＝${nm(CHAR)} 打不贏的對手(改選或 ban 掉對面那張)；隊友類的右表＝和 ${nm(CHAR)} 不合、避免同時選。門檻 單一≥8/雙人≥6/三人≥6；建議用「全部數據」樣本較足。</div>`));
+  app.appendChild(el(`<div class="note">${mine
+    ? `你選了 <b>${X}</b>：左表＝<b>要帶／打得贏</b>，右表＝<b>別帶／打不贏</b>（可改選或 ban 掉對面那張）。`
+    : `對面選了 <b>${X}</b>：左表＝<b>拿去打 ${X} 勝率高（該帶）</b>，右表＝<b>勝率低（別帶）</b>。`
+    } 門檻 單一≥8/雙人≥6/三人≥6；建議用「全部數據」樣本較足。</div>`));
 
-  app.appendChild(twoTables(`對面單一角色`,`對面有此角時、我方帶 ${nm(CHAR)} 的勝率`,agg(R.aGames,'oppField',1),8,base,'opp'));
-  app.appendChild(twoTables(`對面雙人組合`,`對面同時有這兩張時`,agg(R.aGames,'oppField',2),6,base,'opp'));
-  app.appendChild(twoTables(`對面三人組合`,`對面同時有這三張時（樣本稀疏，僅供方向）`,agg(R.aGames,'oppField',3),6,base,'opp'));
-  app.appendChild(twoTables(`我方隊友搭配`,`和 ${nm(CHAR)} 同隊的隊友`,agg(R.aGames,'myField',1),6,base,'ally'));
+  if(mine){
+    app.appendChild(twoTables(`我方隊友搭配`,`和 ${X} 同隊的隊友`,agg(R.aGames,'myField',1),6,base,
+      `▲ 適合和 ${X} 一起帶（同隊勝率高）`,`▼ 儘量別和 ${X} 一起帶（同隊勝率低）`));
+    app.appendChild(twoTables(`對面單一角色`,`對面有此角時、帶 ${X} 的勝率`,agg(R.aGames,'foeField',1),8,base,
+      `▲ 帶 ${X} 打得贏（對面有這些時勝率高）`,`▼ 帶 ${X} 打不贏（勝率低→改選或 ban 掉對面這張）`));
+    app.appendChild(twoTables(`對面雙人組合`,`對面同時有這兩張時`,agg(R.aGames,'foeField',2),6,base,
+      `▲ 帶 ${X} 打得贏（這雙人在對面時勝率高）`,`▼ 帶 ${X} 打不贏（這雙人在對面時勝率低）`));
+    app.appendChild(twoTables(`對面三人組合`,`對面同時有這三張時（樣本稀疏）`,agg(R.aGames,'foeField',3),6,base,
+      `▲ 帶 ${X} 打得贏`,`▼ 帶 ${X} 打不贏`));
+  } else {
+    app.appendChild(twoTables(`我方對抗 ${X}（單卡）`,`對面有 ${X} 時、我帶此角的勝率`,agg(R.aGames,'myField',1),8,base,
+      `▲ 拿這張打 ${X} 勝率高（該帶）`,`▼ 拿這張打 ${X} 勝率低（別帶）`));
+    app.appendChild(twoTables(`我方對抗 ${X}（雙人組）`,`對面有 ${X} 時、我帶這兩張`,agg(R.aGames,'myField',2),6,base,
+      `▲ 這雙人打 ${X} 勝率高（該一起上）`,`▼ 這雙人打 ${X} 勝率低（別靠這組）`));
+    app.appendChild(twoTables(`${X} 的隊友（對面）`,`對面 ${X} 常搭這些時、我方勝率`,agg(R.aGames,'foeField',1),6,base,
+      `▲ ${X} 搭這些時我反而好打`,`▼ ${X} 搭這些時最難打（要小心）`));
+  }
 }
 render();
 </script>
