@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-74JDZwWCfaVA+ijM5/2Y0acf8DRr92gm4FQ4O/c2hXg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-nO98c9ZSWnGIFEI08qdbVwQB4bpp65xRqjEdiTZAy9A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -77,7 +77,7 @@ function parseGame(r){
   const id2={};(r.Role1List||[]).forEach(x=>id2[x._id.$oid]={sid:x.StaticID,s:1});(r.Role2List||[]).forEach(x=>id2[x._id.$oid]={sid:x.StaticID,s:2});
   let ban1='',ban2='';
   for(const b of (r.BanList||[])){const e=b&&id2[b];if(!e)continue;if(e.s===1)ban1=e.sid;else ban2=e.sid;}
-  return {p1,p2,win1:r.WinCUID===r.CUID1,ban1,ban2,pre1:r.PreBan1List||[],pre2:r.PreBan2List||[],c1:r.CUID1,c2:r.CUID2};
+  return {p1,p2,win1:r.WinCUID===r.CUID1,ban1,ban2,pre1:r.PreBan1List||[],pre2:r.PreBan2List||[],c1:r.CUID1,c2:r.CUID2,rank1:r.CUID1Rank,rank2:r.CUID2Rank};
 }
 
 const POOL=loadPool().map(parseGame).filter(Boolean);
@@ -87,23 +87,26 @@ for(const g of POOL){for(const c of [g.c1,g.c2])gc[c]=(gc[c]||0)+1;}
 for(const r of loadPool()){for(const p of (r.PlayerInfos||[])){const pi=p.PlayerInfo||{};if(pi.CUID!=null)names[pi.CUID]=pi.Name;}}
 const mains=Object.keys(gc).map(Number).filter(c=>gc[c]>=50).sort((a,b)=>gc[b]-gc[a]);
 
-let SUBJECT='ALL', CHAR=null;
+let SUBJECTS=new Set(), RANKFILTER=0, CHAR=null;   // SUBJECTS 空=全部數據；RANKFILTER 0=全部
 
 function comboKeys(arr,k){ // unordered k-combos of array
   const out=[]; const rec=(start,acc)=>{ if(acc.length===k){out.push(acc.slice());return;} for(let i=start;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop();} }; rec(0,[]); return out;
 }
 
 function analyze(A){
-  let scope = SUBJECT==='ALL'?POOL:POOL.filter(g=>g.c1===SUBJECT||g.c2===SUBJECT);
+  const useAll=SUBJECTS.size===0;
+  const scope = useAll?POOL:POOL.filter(g=>SUBJECTS.has(g.c1)||SUBJECTS.has(g.c2));
   const total=scope.length;
   let banned=0,prebanned=0;
   for(const g of scope){ if(g.ban1===A||g.ban2===A)banned++; if(g.pre1.includes(A)||g.pre2.includes(A))prebanned++; }
   const aGames=[];
   for(const g of scope){
     let side=0;
-    if(SUBJECT==='ALL') side = g.p1.includes(A)?1:(g.p2.includes(A)?2:0);
-    else { const ps=g.c1===SUBJECT?1:2; if((ps===1?g.p1:g.p2).includes(A)) side=ps; }
+    if(useAll) side = g.p1.includes(A)?1:(g.p2.includes(A)?2:0);
+    else { if(SUBJECTS.has(g.c1)&&g.p1.includes(A))side=1; else if(SUBJECTS.has(g.c2)&&g.p2.includes(A))side=2; }
     if(!side) continue;
+    const oppRank=side===1?g.rank2:g.rank1;
+    if(RANKFILTER && !(oppRank>0 && oppRank<=RANKFILTER)) continue;   // 只算對手排名 ≤門檻
     const myBan=side===1?g.ban1:g.ban2, oppBan=side===1?g.ban2:g.ban1;
     if(myBan===A) continue; // A 被 draft-ban，沒上場
     const myField=(side===1?g.p1:g.p2).filter(s=>s!==myBan && s!==A);
@@ -125,10 +128,14 @@ function agg(aGames, srcKey, k){
   return Object.keys(tot).map(key=>({combo:names2[key],n:tot[key],w:win[key]||0,wr:pct(win[key]||0,tot[key])}));
 }
 
-function twoTables(title,sub,rows,minN,baseline){
+function twoTables(title,sub,rows,minN,baseline,kind){
   rows=rows.filter(r=>r.n>=minN);
   const wrap=el(`<div><h2>${title}${sub?` <small>${sub}</small>`:''}</h2></div>`);
   if(!rows.length){ wrap.appendChild(el(`<div class="empty">樣本不足（門檻 ≥${minN}）</div>`)); return wrap; }
+  const X=nm(CHAR);
+  const caps = kind==='ally'
+    ? {hi:`▲ 適合和 ${X} 一起選（同隊勝率高）`, lo:`▼ 避免和 ${X} 同時選（同隊勝率低）`}
+    : {hi:`▲ 帶 ${X} 打得贏（對面有這些時、我方勝率高）`, lo:`▼ 帶 ${X} 打不贏（對面有這些時勝率低→改選 ${X} 或 ban 掉對面）`};
   const mk=(list,cap,cls)=>{
     const body=list.map(r=>{
       const col=r.wr>=baseline?'win':'lose';
@@ -138,47 +145,59 @@ function twoTables(title,sub,rows,minN,baseline){
   };
   const hi=[...rows].sort((a,b)=>b.wr-a.wr||b.n-a.n).slice(0,12);
   const lo=[...rows].sort((a,b)=>a.wr-b.wr||b.n-a.n).slice(0,12);
-  wrap.appendChild(el(`<div class="pair">${mk(hi,'▲ 高勝（適合續選 '+nm(CHAR)+'）','hi')}${mk(lo,'▼ 低勝（考慮改選／ban 掉對面這張）','lo')}</div>`));
+  wrap.appendChild(el(`<div class="pair">${mk(hi,caps.hi,'hi')}${mk(lo,caps.lo,'lo')}</div>`));
   return wrap;
 }
 
 function render(){
   app.innerHTML='';
-  // 控制列：主體 + 角色
+  const useAll=SUBJECTS.size===0;
+  // 控制列 1：主體（可複選）
   const ctl=el(`<div class="ctlrow"></div>`);
-  const subG=el(`<div class="cg" id="subG"></div>`);
-  const allB=el(`<button class="${SUBJECT==='ALL'?'active':''}">全部數據</button>`);
-  allB.onclick=()=>{SUBJECT='ALL';render();}; subG.appendChild(allB);
-  mains.forEach(c=>{const b=el(`<button class="${SUBJECT===c?'active':''}">${esc(names[c]||('#'+c))} <span class="muted">${gc[c]}</span></button>`);b.onclick=()=>{SUBJECT=c;render();};subG.appendChild(b);});
-  ctl.appendChild(el(`<span class="muted">主體：</span>`)); ctl.appendChild(subG);
-  // 角色下拉：出現過的角色，依出場次數
-  const seen={};
-  const scope=SUBJECT==='ALL'?POOL:POOL.filter(g=>g.c1===SUBJECT||g.c2===SUBJECT);
-  for(const g of scope){const fld= SUBJECT==='ALL'?[...g.p1,...g.p2]:( ( (g.c1===SUBJECT?g.p1:g.p2)) ); for(const s of fld)seen[s]=(seen[s]||0)+1;}
-  const opts=Object.keys(seen).sort((a,b)=>seen[b]-seen[a]);
-  if(CHAR==null&&opts.length)CHAR=opts[0];
-  const sel=el(`<select id="charSel">${opts.map(s=>`<option value="${s}"${s===CHAR?' selected':''}>${esc(nm(s))}（${seen[s]}）</option>`).join('')}</select>`);
-  sel.onchange=e=>{CHAR=e.target.value;render();};
-  ctl.appendChild(el(`<span class="muted">角色：</span>`)); ctl.appendChild(sel);
+  ctl.appendChild(el(`<span class="muted">主體(可複選)：</span>`));
+  const subG=el(`<div class="cg"></div>`);
+  const allB=el(`<button class="${useAll?'active':''}">全部數據</button>`);
+  allB.onclick=()=>{SUBJECTS.clear();render();}; subG.appendChild(allB);
+  mains.forEach(c=>{const b=el(`<button class="${SUBJECTS.has(c)?'active':''}">${esc(names[c]||('#'+c))} <span class="muted">${gc[c]}</span></button>`);
+    b.onclick=()=>{ if(SUBJECTS.has(c))SUBJECTS.delete(c); else SUBJECTS.add(c); render(); }; subG.appendChild(b);});
+  ctl.appendChild(subG);
   app.appendChild(ctl);
+  // 控制列 2：對手排名 + 角色
+  const ctl2=el(`<div class="ctlrow"></div>`);
+  ctl2.appendChild(el(`<span class="muted">對手排名：</span>`));
+  const rkG=el(`<div class="cg"></div>`);
+  [[0,'全部'],[1000,'≤1000'],[500,'≤500'],[200,'≤200']].forEach(([v,lbl])=>{const b=el(`<button class="${RANKFILTER===v?'active':''}">${lbl}</button>`);b.onclick=()=>{RANKFILTER=v;render();};rkG.appendChild(b);});
+  ctl2.appendChild(rkG);
+  // 角色下拉：主體範圍內出現過的角色
+  const scope=useAll?POOL:POOL.filter(g=>SUBJECTS.has(g.c1)||SUBJECTS.has(g.c2));
+  const seen={};
+  for(const g of scope){ const lists = useAll?[g.p1,g.p2]:[SUBJECTS.has(g.c1)?g.p1:[],SUBJECTS.has(g.c2)?g.p2:[]]; for(const L of lists)for(const s of L)seen[s]=(seen[s]||0)+1; }
+  const opts=Object.keys(seen).sort((a,b)=>seen[b]-seen[a]);
+  if((CHAR==null||!seen[CHAR])&&opts.length)CHAR=opts[0];
+  const sel=el(`<select>${opts.map(s=>`<option value="${s}"${s===CHAR?' selected':''}>${esc(nm(s))}（${seen[s]}）</option>`).join('')}</select>`);
+  sel.onchange=e=>{CHAR=e.target.value;render();};
+  ctl2.appendChild(el(`<span class="muted" style="margin-left:8px">角色：</span>`)); ctl2.appendChild(sel);
+  app.appendChild(ctl2);
 
   if(!POOL.length){ app.appendChild(el(`<div class="note">還沒有資料。請先到 <a href="./rta-dashboard.html" style="color:#93C5FD">RTA 對戰分析</a> 匯入 JSON，再回來這頁（共用同一份本機資料）。</div>`)); return; }
   if(!CHAR){ app.appendChild(el(`<div class="empty">此範圍沒有可分析的角色</div>`)); return; }
 
   const R=analyze(CHAR);
-  const base=pct(R.aGames.filter(g=>g.won).length,R.aGames.length);
-  app.appendChild(el(`<div class="hdr"><span class="big">${cn(CHAR)}</span><span class="muted">${SUBJECT==='ALL'?'全部數據':esc(names[SUBJECT]||'')} · 實際上場 ${R.aGames.length} 場</span></div>`));
+  const wins=R.aGames.filter(g=>g.won).length, base=pct(wins,R.aGames.length);
+  const subLbl = useAll?'全部數據':[...SUBJECTS].map(c=>names[c]||('#'+c)).join('＋');
+  const rkLbl = RANKFILTER?`｜對手排名 ≤${RANKFILTER}`:'';
+  app.appendChild(el(`<div class="hdr"><span class="big">${cn(CHAR)}</span><span class="muted">${esc(subLbl)}${rkLbl} · 實際上場 ${R.aGames.length} 場</span></div>`));
   app.appendChild(el(`<div class="tiles">
-    <div class="tile"><div class="v b">${base}%</div><div class="k">上場勝率（${R.aGames.filter(g=>g.won).length}–${R.aGames.length-R.aGames.filter(g=>g.won).length}）</div></div>
+    <div class="tile"><div class="v b">${base}%</div><div class="k">上場勝率（${wins}–${R.aGames.length-wins}）</div></div>
     <div class="tile"><div class="v">${pct(R.banned,R.total)}%</div><div class="k">被 draft-ban（${R.banned}/${R.total}）</div></div>
     <div class="tile"><div class="v">${pct(R.prebanned,R.total)}%</div><div class="k">被 pre-ban（${R.prebanned}/${R.total}）</div></div>
   </div>`));
-  app.appendChild(el(`<div class="note">上下兩表一起看：<b>左＝高勝</b>（${nm(CHAR)} 打得贏，續選）／<b>右＝低勝</b>（打不贏，考慮改選或 ban 掉對面那張）。門檻：單一≥8、雙人≥6、三人≥6；建議用「全部數據」看樣本較足。</div>`));
+  app.appendChild(el(`<div class="note">兩表一起看：<b>左＝勝率高、右＝勝率低</b>。對面類的右表＝${nm(CHAR)} 打不贏的對手(改選或 ban 掉對面那張)；隊友類的右表＝和 ${nm(CHAR)} 不合、避免同時選。門檻 單一≥8/雙人≥6/三人≥6；建議用「全部數據」樣本較足。</div>`));
 
-  app.appendChild(twoTables(`對面單一角色`,`帶 ${nm(CHAR)} 時、對面有此角的勝率`,agg(R.aGames,'oppField',1),8,base));
-  app.appendChild(twoTables(`對面雙人組合`,`對面同時有這兩張`,agg(R.aGames,'oppField',2),6,base));
-  app.appendChild(twoTables(`對面三人組合`,`對面同時有這三張（樣本稀疏，僅供方向）`,agg(R.aGames,'oppField',3),6,base));
-  app.appendChild(twoTables(`我方隊友搭配`,`${nm(CHAR)} ＋ 這張隊友同隊時的勝率（誰讓它發揮）`,agg(R.aGames,'myField',1),6,base));
+  app.appendChild(twoTables(`對面單一角色`,`對面有此角時、我方帶 ${nm(CHAR)} 的勝率`,agg(R.aGames,'oppField',1),8,base,'opp'));
+  app.appendChild(twoTables(`對面雙人組合`,`對面同時有這兩張時`,agg(R.aGames,'oppField',2),6,base,'opp'));
+  app.appendChild(twoTables(`對面三人組合`,`對面同時有這三張時（樣本稀疏，僅供方向）`,agg(R.aGames,'oppField',3),6,base,'opp'));
+  app.appendChild(twoTables(`我方隊友搭配`,`和 ${nm(CHAR)} 同隊的隊友`,agg(R.aGames,'myField',1),6,base,'ally'));
 }
 render();
 </script>
