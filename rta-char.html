@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-GYw192eTWn+FdxZwase4XCzMxKuYSltCvQg1AsqXZAA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-zDWCR6aodE0pMJwxKKeJfvm5mCHmzwQDsfNLQLeBOdA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -47,9 +47,11 @@ tr:hover td{background:rgba(59,130,246,.05);}
 .empty{color:var(--muted);padding:16px;text-align:center;font-size:13px;}
 .tblcap{font-size:13px;font-weight:700;margin:2px 0 6px;}
 .tblcap.hi{color:var(--green);}.tblcap.lo{color:var(--red);}
-.slot{display:inline-flex;gap:3px;}
-.slot i{width:30px;height:22px;font-style:normal;font-size:12px;text-align:center;line-height:22px;border-radius:4px;background:var(--bg3);color:var(--dim);}
+.slot{display:inline-flex;gap:4px;}
+.slot i{width:40px;height:24px;font-style:normal;font-size:13px;text-align:center;line-height:24px;border-radius:4px;background:var(--bg3);color:var(--dim);}
 .slot i.on{color:#fff;background:#1c2b45;}
+.slot .pcs{font-size:.6em;color:var(--muted);margin-left:1px;}
+.slot i.on .pcs{color:#9fb3d0;}
 table.big{font-size:15px;}
 table.big th,table.big td{padding:9px 13px;}
 table.big th[data-k]{cursor:pointer;}
@@ -152,22 +154,24 @@ function overallTable(){
     if(g.ban1)ban[g.ban1]=(ban[g.ban1]||0)+1; if(g.ban2)ban[g.ban2]=(ban[g.ban2]||0)+1;
     for(const s of g.pre1)pre[s]=(pre[s]||0)+1; for(const s of g.pre2)pre[s]=(pre[s]||0)+1;
   }
-  const rows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({s,n:pick[s],use:pct(pick[s],total),wr:pct(win[s]||0,pick[s]),slot:slot[s]||[0,0,0,0,0],banP:pct(ban[s]||0,total),preP:pct(pre[s]||0,total)}));
-  let sortKey='n',dir=-1;
-  const slotPct=r=>`<span class="slot">`+r.slot.map((c,i)=>{const p=pct(c,r.n);return `<i class="${p?'on':''}" title="${i+1}選 ${p}%">${p||''}</i>`;}).join('')+`</span>`;
+  const allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({s,n:pick[s],use:pct(pick[s],total),wr:pct(win[s]||0,pick[s]),slot:slot[s]||[0,0,0,0,0],banP:pct(ban[s]||0,total),preP:pct(pre[s]||0,total)}));
+  let sortKey='n',dir=1,showAll=false;   // dir=1 → 由高到低
+  const slotPct=r=>`<span class="slot">`+r.slot.map((c,i)=>{const p=pct(c,r.n);return `<i class="${p?'on':''}" title="${i+1}選 ${p}%">${p?p+'<small class="pcs">%</small>':''}</i>`;}).join('')+`</span>`;
   const det=el(`<details style="margin-top:24px" open><summary style="cursor:pointer;color:#93C5FD;font-weight:700;padding:6px 0;font-size:16px">全角色總覽（使用率 / 勝率 / 順位% / 被ban·preban）</summary></details>`);
-  const wrap=el(`<div class="scroll" style="margin-top:8px"><table class="big"><thead><tr>
+  const bar=el(`<div class="cg" style="margin:8px 0"><button id="tgAll">顯示低使用率(&lt;4%)</button></div>`);
+  const wrap=el(`<div class="scroll" style="margin-top:4px"><table class="big"><thead><tr>
     <th>角色</th><th class="num" data-k="n">使用</th><th class="num" data-k="wr">勝率</th>
     <th>順位%（一二三四五）</th><th class="num" data-k="banP">被ban%</th><th class="num" data-k="preP">被preban%</th></tr></thead><tbody></tbody></table></div>`);
   function body(){
-    rows.sort((a,b)=>(b[sortKey]-a[sortKey])*dir);
-    wrap.querySelector('tbody').innerHTML=rows.map(r=>`<tr><td>${cn(r.s)}</td><td class="num">${r.n}<span class="muted"> (${r.use}%)</span></td><td class="num ${r.wr>=55?'win':r.wr<45?'lose':''}">${r.wr}%</td><td>${slotPct(r)}</td><td class="num">${r.banP}%</td><td class="num">${r.preP}%</td></tr>`).join('');
-    wrap.querySelectorAll('th[data-k]').forEach(th=>th.textContent=({n:'使用',wr:'勝率',banP:'被ban%',preP:'被preban%'})[th.dataset.k]+(th.dataset.k===sortKey?(dir<0?' ▾':' ▴'):''));
+    const shown=allRows.filter(r=>showAll||r.use>=4).sort((a,b)=>(b[sortKey]-a[sortKey])*dir);
+    wrap.querySelector('tbody').innerHTML=shown.map(r=>`<tr><td>${cn(r.s)}</td><td class="num">${r.n}<span class="muted"> (${r.use}%)</span></td><td class="num ${r.wr>=55?'win':r.wr<45?'lose':''}">${r.wr}%</td><td>${slotPct(r)}</td><td class="num">${r.banP}%</td><td class="num">${r.preP}%</td></tr>`).join('');
+    wrap.querySelectorAll('th[data-k]').forEach(th=>th.textContent=({n:'使用',wr:'勝率',banP:'被ban%',preP:'被preban%'})[th.dataset.k]+(th.dataset.k===sortKey?(dir>0?' ▾':' ▴'):''));
   }
-  wrap.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)dir*=-1;else{sortKey=k;dir=-1;}body();});
+  wrap.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)dir*=-1;else{sortKey=k;dir=1;}body();});
+  bar.querySelector('#tgAll').onclick=()=>{showAll=!showAll;bar.querySelector('#tgAll').textContent=showAll?'隱藏低使用率':'顯示低使用率(<4%)';body();};
   body();
-  det.appendChild(wrap);
-  det.appendChild(el(`<div class="muted" style="margin-top:6px">全部資料 ${total} 場、雙方合計（不分敵我、不受上方主體/視角/排名影響）；使用=實際上場次數(已扣被ban)＋占總場比例、勝率=該角所在隊伍勝率、順位%=每個選位佔該角出場的比例、被ban/preban 以總場次為分母。點欄位標題可排序。</div>`));
+  det.appendChild(bar); det.appendChild(wrap);
+  det.appendChild(el(`<div class="muted" style="margin-top:6px">全部資料 ${total} 場、雙方合計（不分敵我、不受上方主體/視角/排名影響）；預設隱藏使用率 &lt;4% 的角色。使用=次數＋占總場%、勝率=該角所在隊伍勝率、順位%=各選位佔該角出場比例、被ban/preban 以總場次為分母。點欄位標題可排序。</div>`));
   return det;
 }
 
