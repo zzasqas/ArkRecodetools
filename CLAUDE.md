@@ -25,6 +25,25 @@
 
 ---
 
+## Tier List 社群投票暫停收集 — 恢復方式（2026-08-19 起）
+
+Railway 的投票收集服務已停用。`tier-list.html` 的分級編輯、分享連結、JSON 匯出、官方匯出全部照舊，只有「投票模式 / 提交排名」的入口被關掉。
+
+**恢復步驟**：先確認 Railway 服務已重新啟動並設好 `ADMIN_TOKEN`，再全域搜尋 `TIERLIST_SUBMIT_HIDDEN`：
+
+| 檔案 | 標記形式 | 還原動作 |
+|------|---------|---------|
+| `tier-list/tier-list.html` | `const SUBMIT_HIDDEN = true;` | 改成 `false`，其餘標記區塊會自動恢復顯示 |
+| `tier-list/tier-list.html` | 工具列與使用說明各有一組 `{/* TIERLIST_SUBMIT_HIDDEN_START … END */}` | 只是可讀性標記，`SUBMIT_HIDDEN` 改 false 後不需再動 |
+| `README.md` | 「社群 Tier List」段落與工具一覽 | 改回描述投票提交會送出哪些欄位 |
+| `tier-list/CLAUDE.md` | `POST /submit` 段落的停用註記 | 刪除註記 |
+
+> ⚠️ **投票資料只存在 Railway 磁碟的 `server/submissions.jsonl`，repo 內沒有副本。**
+> 停用或刪除 Railway 服務前，務必先用 `GET /admin/download?token=` 撈一份下來存檔。
+> `server/server.js` 的驗證與限流程式碼保持原樣，隨時可重新啟用。
+
+---
+
 ## ⚠️ 近期變更（委託協作者更新，2026-05）
 
 對戰紀錄器（`battle-recorder.html`）已英文化並調整角色資料架構，重點如下：

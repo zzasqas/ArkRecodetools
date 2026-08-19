@@ -101,6 +101,10 @@ const LS_DEVICE_ID  = 'tierlist_device_id';
 const LS_SUBMITTED  = 'tierlist_submitted';
 const RAILWAY_URL   = 'https://arkrecodetools-production.up.railway.app';
 
+// TIERLIST_SUBMIT_HIDDEN：社群投票提交暫停中（Railway 收集服務已停用）。
+// 編輯、匯出、分享連結不受影響。恢復方式：改成 false，並確認 Railway 服務已重新啟動。
+const SUBMIT_HIDDEN = true;
+
 // 預設隱藏：所有 3★ 角色（下水道）+ 強度較低的 4★/5★，首次載入自動套用
 const DEFAULT_HIDDEN = new Set([
   // 3★ 火
@@ -797,7 +801,8 @@ function App() {
   const [charNotes,     setCharNotes]     = useState(()=>loadModeData(currentModeId).charNotes);
   const [charPlusMinus, setCharPlusMinus] = useState(()=>loadModeData(currentModeId).charPlusMinus);
   const [noteModal,     setNoteModal]     = useState(null);
-  const [voteMode,      setVoteMode]      = useState(()=>localStorage.getItem('tierlist_vote_mode')==='1');
+  // TIERLIST_SUBMIT_HIDDEN：提交停用時強制退出投票模式，避免舊 localStorage 把介面鎖住
+  const [voteMode,      setVoteMode]      = useState(()=>!SUBMIT_HIDDEN&&localStorage.getItem('tierlist_vote_mode')==='1');
   const [submitModal,   setSubmitModal]   = useState(null); // modeId or null
   const [showGuide,     setShowGuide]     = useState(false);
   const [navOpen,       setNavOpen]       = useState(false);
@@ -1181,6 +1186,8 @@ function App() {
                 onChange={e=>{ if(e.target.files[0]) { importJSON(e.target.files[0]); e.target.value=''; } }}/>
               <span style={{color:'#334155',margin:'0 2px'}}>|</span>
             </>}
+            {/* TIERLIST_SUBMIT_HIDDEN_START */}
+            {!SUBMIT_HIDDEN&&<>
             {voteMode&&(
               canSubmitMode(currentModeId)
                 ? <button onClick={()=>{
@@ -1198,6 +1205,8 @@ function App() {
               style={{...btnStyle(voteMode),borderColor:voteMode?'#1d4ed8':'#334155',color:voteMode?'#93c5fd':'#64748b'}}>
               🗳️ {voteMode?'投票模式 ON':'投票模式'}
             </button>
+            </>}
+            {/* TIERLIST_SUBMIT_HIDDEN_END */}
           </div>
           <span className="text-xs text-slate-600 ml-2">v0.1.0</span>
         </div>
@@ -1214,12 +1223,18 @@ function App() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 24px'}}>
             <div>① 從下方「池子」拖曳角色到 Tier 列進行排名</div>
             <div>② 點角色左上角 × 可隱藏不需要的角色（初始已隱藏 3★）</div>
-            <div>③ 在左上角填入你的<span style={{color:'#fbbf24'}}> 作者暱稱（必填）</span></div>
+            <div>③ 在左上角填入你的<span style={{color:'#fbbf24'}}> 作者暱稱{SUBMIT_HIDDEN?'（會寫進匯出檔與分享連結）':'（必填）'}</span></div>
+            {/* TIERLIST_SUBMIT_HIDDEN_START */}
+            {SUBMIT_HIDDEN
+              ? <div>④ 點擊「🔗 分享」產生連結給其他玩家看，或用「↓ 匯出」存成 JSON 備份</div>
+              : <>
             <div>④ 點擊「🗳️ 投票模式」鎖定 Tier 結構（S/A/B/C/D），準備提交</div>
             <div>⑤ 點擊「📤 提交排名」送出本週排名</div>
             <div>⑥ 每個模式<span style={{color:'#fb923c'}}> 每週限提交一次</span>，提交後本週不可修改</div>
             <div>⑦ 提交成功後會產生<span style={{color:'#60a5fa'}}> 分享連結</span>，可分享給其他玩家觀看</div>
             <div>⑧ 社群統計結果會定期整理並公開發布</div>
+              </>}
+            {/* TIERLIST_SUBMIT_HIDDEN_END */}
           </div>
         </div>
       )}

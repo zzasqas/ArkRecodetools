@@ -27,7 +27,11 @@ server/
 
 ## 前端操作流程
 
-### 社群使用者投票
+### 社群使用者投票 ⚠️ 已停用（2026-08-19）
+
+投票收集已停止，工具列不再顯示「🗳️ 投票模式」與「📤 提交排名」。使用者現在的流程是：排名 → 「🔗 分享」產生連結，或「↓ 匯出」存 JSON。
+
+以下為恢復後的原始流程，恢復方式見根目錄 `CLAUDE.md` 的 `TIERLIST_SUBMIT_HIDDEN` 段落：
 
 1. 開啟 `tier-list.html`，左上角填入**作者暱稱**（必填）
 2. 從底部「池子」拖曳角色到 S/A/B/C/D Tier 列
@@ -98,7 +102,8 @@ server/
 ### API 端點
 
 ```
-POST /submit
+POST /submit   ⚠️ 前端入口已停用（TIERLIST_SUBMIT_HIDDEN，2026-08-19）
+               伺服器端程式未變動，恢復方式見根目錄 CLAUDE.md
   Body: { deviceId, nickname, mode, payload: { tierMembers: { S:[...], A:[...], ... } } }
   限制：同 deviceId + mode + week 只能提交一次
   防護：64 KB JSON 上限、每 IP 每分鐘最多 5 次、Tier 合計最多 300 個角色
