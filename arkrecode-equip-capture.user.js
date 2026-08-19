@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ArkRecode 裝備自動擷取
 // @namespace    https://github.com/zzasqas/ArkRecodetools
-// @version      1.1.0
+// @version      1.1.1
 // @description  攔截遊戲登入 API，捕獲裝備資料後提供下載 JSON 與一鍵複製功能
 // @author       zzasqas
 // @match        https://game-arkre-labs.ecchi.xxx/*
@@ -11,6 +11,9 @@
 
 (function () {
   'use strict';
+
+  // unsafeWindow = 頁面真實 window；沙盒的 window 掛 hook 攔不到遊戲的請求
+  const _w = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
 
   // 只攔截登入這支 API
   const TARGET_ROUTE = 'AccountHandler.Login';
@@ -125,7 +128,7 @@
   }
 
   // ─── 攔截 XMLHttpRequest ─────────────────────────────────────
-  const XHR = XMLHttpRequest.prototype;
+  const XHR = _w.XMLHttpRequest.prototype;
   const origOpen = XHR.open;
   const origSend = XHR.send;
 
@@ -152,8 +155,8 @@
   };
 
   // ─── 攔截 fetch（部分環境用 fetch 而非 XHR）──────────────────
-  const origFetch = window.fetch;
-  window.fetch = async function (input, init) {
+  const origFetch = _w.fetch;
+  _w.fetch = async function (input, init) {
     const url     = typeof input === 'string' ? input : input?.url ?? '';
     const bodyStr = init?.body ?? '';
 
@@ -170,5 +173,5 @@
     return res;
   };
 
-  console.log('[ArkRecode Capture] v1.0.0 已載入，等待登入...');
+  console.log('[ArkRecode Capture] v1.1.1 已載入（unsafeWindow 模式），等待登入...');
 })();

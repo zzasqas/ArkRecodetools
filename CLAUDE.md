@@ -45,7 +45,7 @@
 
 ## 專案概覽
 
-**ArkRecodetools** 是《星隕計劃》（Ark Re:Code）的玩家輔助工具集，純前端架構，部署於 GitHub Pages。所有資料存於使用者瀏覽器的 `localStorage`，不依賴任何後端服務。
+**ArkRecodetools** 是《星隕計劃》（Ark Re:Code）的玩家輔助工具集。主要工具為部署於 GitHub Pages 的靜態前端，使用者資料預設留在瀏覽器；`tier-list/` 的社群投票另有一個部署於 Railway 的小型收集服務。開發文件中的系統描述必須與使用者 README 的資料流說明一致，不能把社群投票誤寫成純本機資料。
 
 ---
 
@@ -60,6 +60,8 @@ ArkRecodetools/
 ├── roster-viewer.html                  # 角色列表檢視器（v1.0.3）：元素色卡、篩選、分享連結、匯出圖片
 ├── roster-catalog.js                   # 完整角色目錄（id→名/英名/元素/職業/星），由 gen_roster_catalog.py 產生
 ├── arkrecode-roster-capture.user.js    # Tampermonkey 腳本：攔截登入 API 擷取角色清單（v1.0.3）
+├── rta-dashboard.html                  # RTA 對戰分析：本機匯入、累積、去重與可視化
+├── arkrecode-rta-capture.user.js       # Tampermonkey 腳本：匯出 RTA 對戰 JSON
 ├── chrome-extension/                   # Chrome 外掛版擷取工具（同功能，manifest v3）
 │   ├── manifest.json
 │   ├── capture.js
@@ -70,6 +72,8 @@ ArkRecodetools/
 │   └── community_gvg.json             # 社群 GvG 資料
 ├── scripts/
 │   └── gen_roster_catalog.py          # 從 chars.csv 產生 roster-catalog.js
+├── tier-list/                          # 社群 Tier List 前端與維護說明
+├── server/                             # Express 收集服務，部署於 Railway；僅接收主動提交的 Tier List 投票
 ├── README.md                           # 使用者說明文件（同時作為 index.html 的 README 面板內容）
 └── CLAUDE.md                           # 本檔案
 ```
@@ -87,12 +91,18 @@ ArkRecodetools/
 | Tailwind CSS | 樣式 | CDN |
 | 原生 JS | index.html 腳本邏輯 | inline `<script>` |
 
-### 核心限制：純前端，禁止加入後端
+### 核心限制：以靜態前端為主
 
-- **不可**引入 Node.js、Express、Python Flask/FastAPI 或任何伺服器端邏輯
+- 除既有的 `server/` Tier List 收集服務外，**不可**為其他工具新增 Node.js、Express、Python Flask/FastAPI 或伺服器端邏輯，除非需求明確批准。
 - **不可**使用需要 build 步驟的打包工具（Webpack、Vite 等），所有 JSX 在瀏覽器端由 Babel 即時轉譯
 - **不可**使用需要 `npm install` 的套件（CDN 除外）
-- 所有資料持久化必須使用 `localStorage`；唯一允許的外部連線是使用者自行設定的 Google Apps Script URL
+- 使用者資料預設以 `localStorage` 或本機匯入檔保存。例外要在 README 中明確說明：使用者自行設定的 Google Apps Script，以及使用者主動送出的社群 Tier List 投票。
+
+### 匯入資料與隱私邊界
+
+- JSON 檔、URL fragment、localStorage 舊快取和遊戲 API 回應都視為不可信資料；先做大小／結構／欄位驗證，再儲存或渲染。
+- 匯入的帳號名、玩家名、角色 ID 等文字不得直接拼進 `innerHTML`；使用 DOM 節點與 `textContent`，或在無法避免的靜態模板中完整 HTML escape。
+- README 面向前端使用者，描述「資料去哪裡、何時會離開瀏覽器、使用者如何控制」；本檔與 `tier-list/CLAUDE.md` 面向開發者，描述格式、維護責任與部署邊界。兩種文件不可互相矛盾，也不可記錄實際 Token、Cookie、Session、密碼或私有 URL。
 
 ### 內容安全政策（CSP）
 
@@ -103,6 +113,23 @@ ArkRecodetools/
 - `https://raw.githubusercontent.com`（CSV 資料載入）
 
 新增外部資源時必須同步更新 CSP meta 標籤。
+
+`roster-viewer.html` 與 `rta-dashboard.html` 的 inline script 以 CSP SHA-256 hash 白名單執行，未使用 JavaScript 的 `'unsafe-inline'`。修改這兩頁 inline `<script>` 後，必須重新計算並更新對應 CSP hash，並確認頁面沒有 HTML inline event handler（例如 `onclick=`、`onerror=`）。
+
+### Google Analytics（GA4）
+
+GA 追蹤由 `assets/analytics.js` 統一處理（Measurement ID：`G-N546VFREGT`）。
+
+**每個新頁面都必須加入下列兩項，否則 GA 不會記錄該頁流量：**
+
+1. 在 `</head>` 前加入 script 標籤：
+   - 根目錄頁面：`<script src="./assets/analytics.js"></script>`
+   - 子目錄頁面（如 `tier-list/`）：`<script src="../assets/analytics.js"></script>`
+
+2. CSP 若有設定，`script-src` 需含 `https://www.googletagmanager.com`，`connect-src` 需含 `https://www.google-analytics.com https://www.googletagmanager.com`。使用 `connect-src 'none'` 的嚴格 CSP 頁面尤其注意。
+
+**目前已加入 GA 的頁面**（2026-08-13 確認）：
+`index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`stat-twins.html`、`tier-list/tier-list.html`
 
 ---
 

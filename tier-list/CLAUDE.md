@@ -101,6 +101,9 @@ server/
 POST /submit
   Body: { deviceId, nickname, mode, payload: { tierMembers: { S:[...], A:[...], ... } } }
   限制：同 deviceId + mode + week 只能提交一次
+  防護：64 KB JSON 上限、每 IP 每分鐘最多 5 次、Tier 合計最多 300 個角色
+  回應：格式錯誤 400、重複提交 409、超過頻率 429（含 Retry-After）
+  儲存：只保留 tierMembers 與可選 charPlusMinus；未使用的 payload 欄位會忽略
 
 GET /admin/download?token=TOKEN&mode=overall&week=2026-W21
   回傳 JSON 陣列（week 和 mode 為可選篩選）

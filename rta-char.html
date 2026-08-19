@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-zDWCR6aodE0pMJwxKKeJfvm5mCHmzwQDsfNLQLeBOdA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-zDWCR6aodE0pMJwxKKeJfvm5mCHmzwQDsfNLQLeBOdA=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -58,7 +58,9 @@ table.big th[data-k]{cursor:pointer;}
 table.big th[data-k]:hover{color:#fff;}
 details summary{list-style:none;} details summary::-webkit-details-marker{display:none;}
 .sep{color:var(--dim);margin:0 4px;}
-</style></head>
+</style>
+<script src="./assets/analytics.js"></script>
+</head>
 <body><div class="wrap">
 <nav class="topnav"><span class="brand">Ark Re:Code 工具集</span>
   <a class="home" href="./rta-dashboard.html">← RTA 對戰分析</a>

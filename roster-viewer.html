@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-0zx8pDG6vTh9bT7Hk0vPAdWfn/zdZbOzxpI/f86H8WA=' https://www.googletagmanager.com file:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>角色列表檢視器 — ArkRecode</title>
 <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
 <!-- 完整角色目錄（id→名/英名/元素/職業/星），JS 全域＝免 fetch，本地 file:// 也能跑 -->
@@ -71,6 +72,7 @@ display:flex;align-items:center;justify-content:center;font-size:11px;line-heigh
 .top .help-toggle{cursor:pointer;color:var(--accent)}
 .hidden{display:none}
 </style>
+<script src="./assets/analytics.js"></script>
 </head>
 <body>
 <div class="top">
@@ -142,13 +144,40 @@ const CATALOG = (() => {
 
 let CHARS=[], INFO={}, F={el:new Set(),cls:new Set(),rar:new Set([5])}; // 預設只看五星
 
+const MAX_ROSTER_TEXT=64, MAX_ROSTER_RECORDS=1000, MAX_ROSTER_CHARS=512*1024;
+const ID_RE=/^H\d{3,5}$/;
+function cleanText(value,max=MAX_ROSTER_TEXT){ return typeof value==='string'?value.slice(0,max):''; }
+function boundedInt(value,fallback,min,max){
+  const n=Number(value); return Number.isInteger(n)&&n>=min&&n<=max?n:fallback;
+}
+function normalizeRoster(json){
+  if(typeof json!=='string'||json.length>MAX_ROSTER_CHARS) throw new Error('檔案過大（上限 512 KB）');
+  const raw=JSON.parse(json);
+  if(!raw||Array.isArray(raw)||typeof raw!=='object') throw new Error('JSON 結構不正確');
+  const list=Array.isArray(raw.owned)?raw.owned:(Array.isArray(raw.characters)?raw.characters:null);
+  if(!list) throw new Error('找不到角色列表（owned 或 characters）');
+  if(list.length>MAX_ROSTER_RECORDS) throw new Error('角色筆數過多（上限 1000 筆）');
+  let skipped=0;
+  const owned=list.map(item=>{
+    const entry=typeof item==='string'?{id:item}:item;
+    const id=entry&&typeof entry==='object'&&typeof entry.id==='string'?entry.id.trim():'';
+    if(!ID_RE.test(id)){ skipped++; return null; }
+    return {id,
+      lv:boundedInt(entry.lv,0,0,200), star:boundedInt(entry.star,0,0,6),
+      awaken:boundedInt(entry.awaken,0,0,6), n:boundedInt(entry.n,1,1,99)};
+  }).filter(Boolean);
+  if(!owned.length&&list.length) throw new Error('角色 ID 格式不正確');
+  return {owned, skipped, source:cleanText(raw.source), account:cleanText(raw.account),
+    exportedAt:cleanText(raw.exportedAt)};
+}
+
 // 星星：實星=現有星數，總格數 6（5★角色可到6★），不足補虛星☆
-function starsHTML(st, rarity){
-  st=st||0; if(!st) return '';
-  const total = rarity>=5 ? 6 : st;          // 5★底可到6格；其餘就顯示現有星數
-  const solid = Math.min(st, total);
-  const hollow = Math.max(0, total - solid);
-  return `<span class="stars">${'★'.repeat(solid)}${hollow?`<span class="star6">${'☆'.repeat(hollow)}</span>`:''}</span>`;
+function appendStars(parent,st,rarity){
+  st=st||0; if(!st) return;
+  const total=rarity>=5?6:st, solid=Math.min(st,total), hollow=Math.max(0,total-solid);
+  const stars=document.createElement('span'); stars.className='stars'; stars.textContent='★'.repeat(solid);
+  if(hollow){ const empty=document.createElement('span'); empty.className='star6'; empty.textContent='☆'.repeat(hollow); stars.appendChild(empty); }
+  parent.appendChild(stars);
 }
 function sval(c){ return c.o?c.o.star:(c.rarity||0); }
 // 元素序（暗光火水木）→ 實際星級 → id
@@ -182,59 +211,73 @@ function passes(c){
   return true;
 }
 
-// 圖標：遊戲小圖（char-icons）→ char-art → 元素色底+名字。用 data-fallback 逐步降級。
-function thumbHTML(c){
-  if(!c.name) return c.id;
-  const icon=`assets/char-icons/${encodeURIComponent(c.name)}.webp`;
-  const art=`assets/char-art/${encodeURIComponent(c.name)}.webp`;
-  return `<img src="${icon}" alt="${c.name}" data-art="${art}" data-name="${c.name}"
-    onerror="if(this.dataset.art){this.src=this.dataset.art;this.dataset.art='';}else{this.parentNode.textContent=this.dataset.name;}">`;
+// 圖標：遊戲小圖（char-icons）→ char-art → 元素色底+名字。
+function appendThumb(parent,c){
+  const thumb=document.createElement('div'); thumb.className='thumb'; parent.appendChild(thumb);
+  if(!c.name){ thumb.textContent=c.id; return; }
+  const img=document.createElement('img');
+  img.src=`assets/char-icons/${encodeURIComponent(c.name)}.webp`; img.alt=c.name;
+  img.dataset.art=`assets/char-art/${encodeURIComponent(c.name)}.webp`;
+  img.addEventListener('error',()=>{
+    if(img.dataset.art){ img.src=img.dataset.art; delete img.dataset.art; }
+    else thumb.textContent=c.name;
+  });
+  thumb.appendChild(img);
 }
-
-function cardHTML(c){
-  const st = c.owned && c.o ? c.o.star : c.rarity;   // 擁有→實際星級；未擁有→基礎星
-  const parts=[];
-  if(st) parts.push(starsHTML(st, c.rarity));
-  if(c.cls) parts.push(c.cls);
-  const spare = c.owned && c.o && c.o.count>1 ? `<span class="spare" title="多 ${c.o.count-1} 個副本">+${c.o.count-1}</span>` : '';
-  return `<div class="card el-${c.element||''} ${c.owned?'':'missing'}">${spare}
-    <div class="thumb">${thumbHTML(c)}</div>
-    <div class="cname">${c.name||c.id}</div>
-    <div class="cmeta">${parts.join(' · ')||'&nbsp;'}</div></div>`;
+function buildCard(c){
+  const card=document.createElement('div');
+  const element=ELEMENTS.includes(c.element)?c.element:'';
+  card.className=`card el-${element}${c.owned?'':' missing'}`;
+  if(c.owned&&c.o&&c.o.count>1){
+    const spare=document.createElement('span'); spare.className='spare';
+    spare.title=`多 ${c.o.count-1} 個副本`; spare.textContent=`+${c.o.count-1}`; card.appendChild(spare);
+  }
+  appendThumb(card,c);
+  const name=document.createElement('div'); name.className='cname'; name.textContent=c.name||c.id; card.appendChild(name);
+  const meta=document.createElement('div'); meta.className='cmeta';
+  const st=c.owned&&c.o?c.o.star:c.rarity;
+  if(st) appendStars(meta,st,c.rarity);
+  if(c.cls){ if(meta.childNodes.length) meta.append(' · '); meta.append(document.createTextNode(c.cls)); }
+  if(!meta.childNodes.length) meta.textContent=' '; card.appendChild(meta);
+  return card;
 }
-
 function render(){
-  const rows=CHARS.filter(passes);
-  rows.sort(cmpChar);
-  $("grid").innerHTML=rows.map(cardHTML).join("");
-  const src=INFO.account?`帳號 ${INFO.account}`:(INFO.source||"");
-  $("meta").innerHTML=`擁有 <b>${INFO.ownedCount}</b> / ${CHARS.length} 名　`
-    +`<span style="opacity:.7">${src} · 擷取於 ${INFO.exportedAt?INFO.exportedAt.slice(0,16).replace('T',' '):"-"}</span>　顯示 ${rows.length} 筆`;
+  const rows=CHARS.filter(passes); rows.sort(cmpChar);
+  $("grid").replaceChildren(...rows.map(buildCard));
+  const meta=$("meta"), src=INFO.account?`帳號 ${INFO.account}`:(INFO.source||'');
+  const count=document.createElement('b'); count.textContent=String(INFO.ownedCount||0);
+  const detail=document.createElement('span'); detail.style.opacity='.7';
+  detail.textContent=`${src} · 擷取於 ${INFO.exportedAt?INFO.exportedAt.slice(0,16).replace('T',' '):'-'}`;
+  meta.replaceChildren('擁有 ',count,` / ${CHARS.length} 名　`,detail,`　顯示 ${rows.length} 筆`);
 }
 
 function load(json){
   try{
-    const d=JSON.parse(json);
+    const d=normalizeRoster(json);
     // 聚合同一角色的多個副本：count=幾個、star/awaken/lv 取最高（主力那隻）
     const agg={};
-    (d.owned||d.characters||[]).forEach(x=>{
-      const id=(x&&x.id)||x; if(!id) return;
+    d.owned.forEach(x=>{
+      const id=x.id;
       const a=agg[id]||(agg[id]={count:0,star:0,awaken:0,lv:0});
       // 擷取檔=一筆一個實例(count++)；分享連結=已聚合(帶 n 副本數)
-      a.count += (x.n||1); a.star=Math.max(a.star,x.star||0); a.awaken=Math.max(a.awaken,x.awaken||0); a.lv=Math.max(a.lv,x.lv||0);
+      a.count += x.n; a.star=Math.max(a.star,x.star); a.awaken=Math.max(a.awaken,x.awaken); a.lv=Math.max(a.lv,x.lv);
     });
     CHARS=Object.values(CATALOG).map(c=>({...c, owned:!!agg[c.id], o:agg[c.id]}));
     // 擷取到但目錄沒有的 id（新角色未 sync）：仍列出
     Object.keys(agg).forEach(id=>{ if(!CATALOG[id]) CHARS.push({id,name:id,nameEN:'',element:'',cls:'',rarity:0,owned:true,o:agg[id]}); });
-    INFO={source:d.source||'',account:d.account,exportedAt:d.exportedAt,ownedCount:Object.keys(agg).length};
+    INFO={source:d.source,account:d.account,exportedAt:d.exportedAt,ownedCount:Object.keys(agg).length};
     $("drop").classList.add("hidden");
     $("help").classList.add("hidden");
     $("share").classList.remove("hidden");
     render();
-  }catch(e){ $("meta").textContent="讀取失敗：不是有效的擷取 JSON（"+e+"）"; }
+    if(d.skipped) toast(`已略過 ${d.skipped} 筆格式不正確的角色資料`);
+  }catch(e){ $("meta").textContent="讀取失敗："+(e&&e.message?e.message:'不是有效的擷取 JSON'); }
 }
 
-function pick(f){ const r=new FileReader(); r.onload=()=>load(r.result); r.readAsText(f,"utf-8"); }
+function pick(f){
+  if(f.size>MAX_ROSTER_CHARS){ $("meta").textContent='讀取失敗：檔案過大（上限 512 KB）'; return; }
+  const r=new FileReader(); r.onload=()=>load(r.result); r.readAsText(f,"utf-8");
+}
 
 // 目前篩選後、且擁有的角色（分享/匯出都用這個＝先篩再分享）
 function visibleOwned(){
@@ -327,17 +370,18 @@ async function exportImage(){
   cv.toBlob(b=>{
     if(!b){ alert('匯出失敗（本地 file:// 開啟時瀏覽器會擋畫布，請用線上版）'); return; }
     const a=document.createElement('a'); a.href=URL.createObjectURL(b);
-    a.download=`角色庫${INFO.account?'_'+INFO.account:''}_${list.length}隻.png`; a.click();
+    a.download=`角色庫${INFO.account?'_'+safeFilename(INFO.account):''}_${list.length}隻.png`; a.click();
     toast('已匯出圖片到「下載」資料夾');
   },'image/png');
 }
 function clip(x,s,max){ s=String(s); while(x.measureText(s).width>max&&s.length>1) s=s.slice(0,-1); return s; }
+function safeFilename(value){ return cleanText(value).replace(/[\\/:*?"<>|]/g,'_'); }
 function wrapText(x,s,cx,cy,max,lh){ const w=[...String(s)]; let line='',lines=[];
   for(const ch of w){ if(x.measureText(line+ch).width>max){lines.push(line);line=ch;} else line+=ch; }
   lines.push(line); const y0=cy-(lines.length-1)*lh/2;
   lines.forEach((l,i)=>x.fillText(l,cx,y0+i*lh)); }
-function toast(msg){ const m=$("meta"); const o=m.innerHTML; m.dataset.o=m.dataset.o||o;
-  m.innerHTML=`<b>${msg}</b>`; clearTimeout(toast._t); toast._t=setTimeout(()=>render(),2600); }
+function toast(msg){ const m=$("meta"); m.textContent=msg;
+  clearTimeout(toast._t); toast._t=setTimeout(()=>render(),2600); }
 
 $("file").onchange=e=>{ if(e.target.files[0]) pick(e.target.files[0]); };
 $("btnLink").onclick=shareLink;

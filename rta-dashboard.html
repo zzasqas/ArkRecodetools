@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-9QMfgSeQ7DymMnrRFPEMvwhedxilvNDEMw4o3x6K9qA=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-X1YmtiTQkdXT9n2eHWG4NMOnpf0v7WFcCEPuxQo1gBo=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -233,7 +233,8 @@ function normalizeLog(raw){
 }
 function normalizeLogs(list){
   if(!Array.isArray(list)) throw new Error('找不到 logs 陣列');
-  if(list.length>MAX_RTA_LOGS) throw new Error('對戰筆數過多（上限 10000 場）');
+  // 筆數上限只在匯入時擋（loadRaw 合併後檢查）。這裡不擋：loadPool 讀既有快取時若拋錯會被
+  // catch 成空池子，接著的匯入就會把整包舊資料覆蓋掉。
   let skipped=0; const logs=list.map(row=>{const log=normalizeLog(row);if(!log)skipped++;return log;}).filter(Boolean);
   return {logs,skipped};
 }

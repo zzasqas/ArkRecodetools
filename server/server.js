@@ -23,7 +23,68 @@ app.use(cors({
     cb(ok ? null : new Error('CORS blocked'), ok);
   },
 }));
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '64kb' }));
+
+// 低流量社群投票：限制短時間重複提交，避免單一來源灌入大量 JSONL。
+// Railway 會在公開請求加上 X-Real-IP；不將使用者送來的其他 forwarded header 當作識別依據。
+const SUBMIT_WINDOW_MS = 60 * 1000;
+const SUBMIT_LIMIT = 5;
+const MAX_RATE_KEYS = 10000;
+const submitBuckets = new Map();
+
+function clientIp(req) {
+  const railwayIp = req.get('x-real-ip');
+  return railwayIp && /^[0-9a-f:.]{3,64}$/i.test(railwayIp)
+    ? railwayIp
+    : (req.socket.remoteAddress || 'unknown');
+}
+
+function submitRateLimit(req, res, next) {
+  const now = Date.now();
+  const key = clientIp(req);
+  const bucket = submitBuckets.get(key);
+  if (!bucket || now - bucket.startedAt >= SUBMIT_WINDOW_MS) {
+    submitBuckets.set(key, { startedAt: now, count: 1 });
+  } else if (bucket.count >= SUBMIT_LIMIT) {
+    const retryAfter = Math.max(1, Math.ceil((SUBMIT_WINDOW_MS - (now - bucket.startedAt)) / 1000));
+    res.setHeader('Retry-After', String(retryAfter));
+    return res.status(429).json({ ok: false, error: 'rate_limited' });
+  } else {
+    bucket.count += 1;
+  }
+
+  if (submitBuckets.size > MAX_RATE_KEYS) {
+    for (const [ip, entry] of submitBuckets) {
+      if (now - entry.startedAt >= SUBMIT_WINDOW_MS) submitBuckets.delete(ip);
+    }
+    while (submitBuckets.size > MAX_RATE_KEYS) submitBuckets.delete(submitBuckets.keys().next().value);
+  }
+  next();
+}
+
+function validTierMembers(tierMembers) {
+  const entries = Object.entries(tierMembers);
+  if (!entries.length || entries.length > 12) return false;
+  const seen = new Set();
+  let total = 0;
+  for (const [tierId, names] of entries) {
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(tierId) || !Array.isArray(names) || names.length > 300) return false;
+    for (const name of names) {
+      if (typeof name !== 'string' || !name.length || name.length > 64 || seen.has(name)) return false;
+      seen.add(name); total += 1;
+      if (total > 300) return false;
+    }
+  }
+  return true;
+}
+
+function validCharPlusMinus(value) {
+  if (value === undefined) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 300) return false;
+  return Object.entries(value).every(([name, mark]) =>
+    typeof name === 'string' && name.length > 0 && name.length <= 64 && (mark === '' || mark === '+' || mark === '-')
+  );
+}
 
 // 啟動時從檔案載入已有資料到記憶體
 let submissions = [];
@@ -47,28 +108,32 @@ function getISOWeek(date = new Date()) {
 }
 
 // ── POST /submit ──────────────────────────────────────────────────────────────
-app.post('/submit', (req, res) => {
+app.post('/submit', submitRateLimit, (req, res) => {
   const { deviceId, nickname, mode, payload } = req.body || {};
 
   if (!deviceId || !mode || !payload) {
-    return res.json({ ok: false, error: 'missing_fields' });
+    return res.status(400).json({ ok: false, error: 'missing_fields' });
   }
   if (typeof deviceId !== 'string' || deviceId.length > 64) {
-    return res.json({ ok: false, error: 'invalid_deviceId' });
+    return res.status(400).json({ ok: false, error: 'invalid_deviceId' });
   }
   if (typeof mode !== 'string' || mode.length > 32 || !/^[a-z0-9_]+$/.test(mode)) {
-    return res.json({ ok: false, error: 'invalid_mode' });
+    return res.status(400).json({ ok: false, error: 'invalid_mode' });
   }
   if (typeof payload !== 'object' || Array.isArray(payload) || payload === null) {
-    return res.json({ ok: false, error: 'invalid_payload' });
+    return res.status(400).json({ ok: false, error: 'invalid_payload' });
   }
   if (!payload.tierMembers || typeof payload.tierMembers !== 'object' || Array.isArray(payload.tierMembers)) {
-    return res.json({ ok: false, error: 'invalid_payload' });
+    return res.status(400).json({ ok: false, error: 'invalid_payload' });
   }
-  const tierVals = Object.values(payload.tierMembers);
-  if (!tierVals.every(v => Array.isArray(v) && v.every(n => typeof n === 'string' && n.length <= 64))) {
-    return res.json({ ok: false, error: 'invalid_payload' });
+  if (!validTierMembers(payload.tierMembers) || !validCharPlusMinus(payload.charPlusMinus)) {
+    return res.status(400).json({ ok: false, error: 'invalid_payload' });
   }
+  if (nickname !== undefined && typeof nickname !== 'string') {
+    return res.status(400).json({ ok: false, error: 'invalid_nickname' });
+  }
+  const safePayload = { tierMembers: payload.tierMembers };
+  if (payload.charPlusMinus !== undefined) safePayload.charPlusMinus = payload.charPlusMinus;
 
   const week = getISOWeek();
 
@@ -77,7 +142,7 @@ app.post('/submit', (req, res) => {
     s => s.deviceId === deviceId && s.mode === mode && s.week === week
   );
   if (isDuplicate) {
-    return res.json({ ok: false, error: 'duplicate' });
+    return res.status(409).json({ ok: false, error: 'duplicate' });
   }
 
   const entry = {
@@ -86,7 +151,7 @@ app.post('/submit', (req, res) => {
     nickname: (nickname || '匿名').slice(0, 32),
     deviceId,
     mode,
-    payload,
+    payload: safePayload,
   };
 
   submissions.push(entry);
