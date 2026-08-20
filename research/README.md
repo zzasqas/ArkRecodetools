@@ -18,6 +18,11 @@
 | `data/rta_merged_1180games_2026-08-19.json` | S2 賽季末合併紀錄（1180 場、去重後 1090 場完整進戰；帳號A 413／帳號C 319／帳號D 252／帳號E 99）。 |
 | `data/analyze_player_rta.py` | 玩家視角分析主腳本。2026-08-19 新增三段：選位勝率（slot lift）、剋制表（counter lift）、Ban 效益（有對照組）、角色 x 牌位段、陣容取向（base spd 代理，抓不到裝備）。`--selftest` 可自我檢查。 |
 | `data/meta_overview.py` | 跨玩家／全樣本總覽：先手勝率、玩家 x 牌位段、角色詳細表 x 牌位段、ban／preban 熱度。與 analyze_player_rta.py 互補（那支是單一玩家視角）。 |
+| `data/rta_rank_top50_2026-08-20.json` | **S2 最終前 50 名榜**（`RTARankBattleHandler.QueryRankList` 抓的原始回應，含自己的最終名次）。欄位：Rank／Name／CUID／LV／公會／Win／Lose／ContinueWin／Score／LastCUID／LastBattleTime。 |
+| `data/rta_rank_seasons_S1_2026-08-20.json` | S1 歷史榜（`QuerySeasonRanksContainer`），伺服器只留前 3 名＋自己的名次。 |
+| `data/build_top50_compare.py` → `data/rta_top50_compare_2026-08-20.csv` | 前 50 名榜 × 本圈四個帳號的對戰紀錄快照比對表：最終累積值、打到他當下的快照、兩者相減得到的「期間場數／期間勝率」、以及四個帳號跟他的交手戰績。 |
+| `data/build_rank_snapshot.py` → `data/rta_rank_snapshot_top200_2026-08-19.csv` | 從對戰紀錄重建「曾排進前 200」的玩家（163 人：1-50 有 54、51-100 有 42、101-200 有 67）。排行榜 API 硬上限 50 筆，51-200 只能這樣補。 |
+| `data/build_rank_speed.py` → `data/rta_rank_speed_2026-08-20.csv` | 前 200 名 × 觀測速度（官方榜前 50 用最終名次，51-200 用對戰快照的最佳名次）。**貢獻值 <=100 一律視為「未觀測到速度裝」而非「他很慢」**，百分位只在有效母體（1153 人）裡算。速度來自 PVP 防守隊觀測，不是 RTA 實戰配裝；帳號A 用本人自報的 115 覆蓋。 |
 
 > 表中的「帳號A～E」是代號。研究檔本身在 `.gitignore`，本機檔名可能仍是真實帳號名；
 > 任何檔案要 `git add -f` 推上公開 repo 前，都必須先把真實帳號名與 CUID 換成代號。
