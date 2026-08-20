@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-zDWCR6aodE0pMJwxKKeJfvm5mCHmzwQDsfNLQLeBOdA=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-j8MrhZitry2sK7KrbAJfI7VhNLqU4B82eOeTFYYKO+E=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -145,35 +145,52 @@ function agg(aGames, srcKey, k){
   return Object.keys(tot).map(key=>({combo:names2[key],n:tot[key],w:win[key]||0,wr:pct(win[key]||0,tot[key])}));
 }
 
-// 全角色總覽：全部資料、雙方合計（純角色統計、不分敵我、不受主體/視角/排名影響）
+// 全角色總覽：雙方合計的純角色統計（不分敵我、不受上方主體/視角影響）。
+// 牌位段用「該側玩家自己的排名」切，問的是「這個分段的人都在用什麼」，不是「打贏誰」。
+const OV_BANDS=[['全部',0,9e9],['前300',1,300],['301-1000',301,1000],['1001+',1001,9e9]];
 function overallTable(){
-  const total=POOL.length;
-  const pick={},win={},slot={},ban={},pre={};
-  for(const g of POOL){
-    [[g.p1,g.ban1,g.win1],[g.p2,g.ban2,!g.win1]].forEach(([picks,bn,won])=>{
-      picks.forEach((s,i)=>{ if(s===bn)return; pick[s]=(pick[s]||0)+1; if(won)win[s]=(win[s]||0)+1; slot[s]=slot[s]||[0,0,0,0,0]; if(i<5)slot[s][i]++; });
-    });
-    if(g.ban1)ban[g.ban1]=(ban[g.ban1]||0)+1; if(g.ban2)ban[g.ban2]=(ban[g.ban2]||0)+1;
-    for(const s of g.pre1)pre[s]=(pre[s]||0)+1; for(const s of g.pre2)pre[s]=(pre[s]||0)+1;
+  let bandIdx=0,sortKey='n',dir=1,showAll=false,allRows=[],meta='';
+  function recalc(){
+    const lo=OV_BANDS[bandIdx][1],hi=OV_BANDS[bandIdx][2];
+    const pick={},win={},slot={},ban={},pre={},players={}; let sides=0;
+    for(const g of POOL){
+      [[g.p1,g.ban1,g.win1,g.rank1,g.c1,g.pre1],[g.p2,g.ban2,!g.win1,g.rank2,g.c2,g.pre2]].forEach(([picks,bn,won,rank,cuid,pres])=>{
+        if(bandIdx && !(rank>0 && rank>=lo && rank<=hi)) return;   // 全部(idx 0)不篩，其餘要有排名且落在段內
+        sides++; players[cuid]=(players[cuid]||0)+1;
+        picks.forEach((s,i)=>{ if(s===bn)return; pick[s]=(pick[s]||0)+1; if(won)win[s]=(win[s]||0)+1; slot[s]=slot[s]||[0,0,0,0,0]; if(i<5)slot[s][i]++; });
+        if(bn)ban[bn]=(ban[bn]||0)+1;
+        for(const s of pres)pre[s]=(pre[s]||0)+1;
+      });
+    }
+    const denom=Math.max(1,sides/2);   // 每場算兩側，換回「場次當量」才跟原本的使用率同義
+    allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({s,n:pick[s],use:pct(pick[s],denom),wr:pct(win[s]||0,pick[s]),slot:slot[s]||[0,0,0,0,0],banP:pct(ban[s]||0,denom),preP:pct(pre[s]||0,denom)}));
+    const counts=Object.values(players).sort((a,b)=>b-a);
+    meta=`${sides} 筆選角（≈${Math.round(sides/2)} 場當量）、${counts.length} 位玩家；最大單一玩家佔 ${sides?Math.round(counts[0]/sides*100):0}%`;
   }
-  const allRows=Object.keys(pick).filter(s=>pick[s]>=3).map(s=>({s,n:pick[s],use:pct(pick[s],total),wr:pct(win[s]||0,pick[s]),slot:slot[s]||[0,0,0,0,0],banP:pct(ban[s]||0,total),preP:pct(pre[s]||0,total)}));
-  let sortKey='n',dir=1,showAll=false;   // dir=1 → 由高到低
   const slotPct=r=>`<span class="slot">`+r.slot.map((c,i)=>{const p=pct(c,r.n);return `<i class="${p?'on':''}" title="${i+1}選 ${p}%">${p?p+'<small class="pcs">%</small>':''}</i>`;}).join('')+`</span>`;
   const det=el(`<details style="margin-top:24px" open><summary style="cursor:pointer;color:#93C5FD;font-weight:700;padding:6px 0;font-size:16px">全角色總覽（使用率 / 勝率 / 順位% / 被ban·preban）</summary></details>`);
+  const bandBar=el(`<div class="cg" style="margin:8px 0">牌位段 </div>`);
   const bar=el(`<div class="cg" style="margin:8px 0"><button id="tgAll">顯示低使用率(&lt;4%)</button></div>`);
+  const note=el(`<div class="muted" style="margin:2px 0 6px"></div>`);
   const wrap=el(`<div class="scroll" style="margin-top:4px"><table class="big"><thead><tr>
     <th>角色</th><th class="num" data-k="n">使用</th><th class="num" data-k="wr">勝率</th>
     <th>順位%（一二三四五）</th><th class="num" data-k="banP">被ban%</th><th class="num" data-k="preP">被preban%</th></tr></thead><tbody></tbody></table></div>`);
   function body(){
     const shown=allRows.filter(r=>showAll||r.use>=4).sort((a,b)=>(b[sortKey]-a[sortKey])*dir);
+    note.textContent=meta+(shown.length?'':'（此段樣本不足，沒有角色達到門檻）');
     wrap.querySelector('tbody').innerHTML=shown.map(r=>`<tr><td>${cn(r.s)}</td><td class="num">${r.n}<span class="muted"> (${r.use}%)</span></td><td class="num ${r.wr>=55?'win':r.wr<45?'lose':''}">${r.wr}%</td><td>${slotPct(r)}</td><td class="num">${r.banP}%</td><td class="num">${r.preP}%</td></tr>`).join('');
     wrap.querySelectorAll('th[data-k]').forEach(th=>th.textContent=({n:'使用',wr:'勝率',banP:'被ban%',preP:'被preban%'})[th.dataset.k]+(th.dataset.k===sortKey?(dir>0?' ▾':' ▴'):''));
   }
+  OV_BANDS.forEach((b,i)=>{
+    const btn=el(`<button class="${i===bandIdx?'active':''}">${b[0]}</button>`);
+    btn.onclick=()=>{bandIdx=i;bandBar.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('active',j===i));recalc();body();};
+    bandBar.appendChild(btn);
+  });
   wrap.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)dir*=-1;else{sortKey=k;dir=1;}body();});
   bar.querySelector('#tgAll').onclick=()=>{showAll=!showAll;bar.querySelector('#tgAll').textContent=showAll?'隱藏低使用率':'顯示低使用率(<4%)';body();};
-  body();
-  det.appendChild(bar); det.appendChild(wrap);
-  det.appendChild(el(`<div class="muted" style="margin-top:6px">全部資料 ${total} 場、雙方合計（不分敵我、不受上方主體/視角/排名影響）；預設隱藏使用率 &lt;4% 的角色。使用=次數＋占總場%、勝率=該角所在隊伍勝率、順位%=各選位佔該角出場比例、被ban/preban 以總場次為分母。點欄位標題可排序。</div>`));
+  recalc(); body();
+  det.appendChild(bandBar); det.appendChild(bar); det.appendChild(note); det.appendChild(wrap);
+  det.appendChild(el(`<div class="muted" style="margin-top:6px">雙方合計、不分敵我，不受上方主體/視角/排名影響；牌位段依「該側玩家自己的當場排名」切，所以同一場的兩邊可能落在不同段。預設隱藏使用率 &lt;4% 的角色。使用=次數＋占場次當量%、勝率=該角所在隊伍勝率、順位%=各選位佔該角出場比例、被ban 以場次當量為分母、被preban 算的是「這一段的玩家 preban 誰」。<b>看數字前先看上面那行的玩家數與最大單一玩家佔比</b>：高分段樣本常常集中在少數幾個人身上。點欄位標題可排序。</div>`));
   return det;
 }
 

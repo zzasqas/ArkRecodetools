@@ -133,7 +133,7 @@ ArkRecodetools/
 
 新增外部資源時必須同步更新 CSP meta 標籤。
 
-`roster-viewer.html` 與 `rta-dashboard.html` 的 inline script 以 CSP SHA-256 hash 白名單執行，未使用 JavaScript 的 `'unsafe-inline'`。修改這兩頁 inline `<script>` 後，必須重新計算並更新對應 CSP hash，並確認頁面沒有 HTML inline event handler（例如 `onclick=`、`onerror=`）。
+`roster-viewer.html`、`rta-dashboard.html` 與 `rta-char.html` 的 inline script 以 CSP SHA-256 hash 白名單執行，未使用 JavaScript 的 `'unsafe-inline'`。修改這三頁 inline `<script>` 後，必須重新計算並更新對應 CSP hash，並確認頁面沒有 HTML inline event handler（例如 `onclick=`、`onerror=`）。
 
 ### Google Analytics（GA4）
 
