@@ -115,4 +115,5 @@ window.CHARACTER_ALIASES = [
     { name: '絢爛夏花卡洛琳', nameEN: 'Midsummer Blossom Carolyn', id: 'H187', aliases: ['絢爛夏花卡洛琳', '婚紗卡', '婚卡', '木LLS'] },
     { name: '米德', nameEN: 'Mead', id: 'H183', aliases: ['米德', '星法'] },
     { name: '雪江', nameEN: 'Yukie', id: 'H188', aliases: ['雪江', '新血卡'] },
+    { name: '靜奈', nameEN: 'Shizuna', id: 'H605', aliases: ['靜奈', 'Shizuna'] },
 ];
