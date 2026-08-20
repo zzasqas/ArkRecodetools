@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-j8MrhZitry2sK7KrbAJfI7VhNLqU4B82eOeTFYYKO+E=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-8r5Eh0DrfBMYKmtpMntvoilxyIRXVu952+6YDwDcjQA=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 角色深度分析</title>
 <style>
@@ -68,7 +68,7 @@ details summary{list-style:none;} details summary::-webkit-details-marker{displa
   <a href="./roster-viewer.html">角色列表</a>
 </nav>
 <header><h1>RTA <span class="s">角色深度分析</span></h1>
-<div class="sub" id="sub">選一張角色，看「選了它之後，對面有誰／哪組合，勝率多少」。讀取對戰分析已匯入的本機資料。</div></header>
+<div class="sub" id="sub">選一張角色，看「選了它之後，對面有誰／哪組合，勝率多少」。讀取對戰分析已匯入的本機資料。<span id="clean"></span></div></header>
 
 <div id="app"></div>
 </div>
@@ -95,7 +95,17 @@ function parseGame(r){
   return {p1,p2,win1:r.WinCUID===r.CUID1,ban1,ban2,pre1:r.PreBan1List||[],pre2:r.PreBan2List||[],c1:r.CUID1,c2:r.CUID2,rank1:r.CUID1Rank,rank2:r.CUID2Rank};
 }
 
-const POOL=loadPool().map(parseGame).filter(Boolean);
+// 賽季末的髒資料：選角跳掉(不足5張)、沒進戰場、勝方零分(對手跑掉)。三條都是機制上看得出來的，
+// 故意選爛角色送分擋不掉——那要對手的歷史選角當基準，樣本裡多數對手只出現一兩次。
+function dirtyReason(r){
+  if((r.Role1List||[]).length<5||(r.Role2List||[]).length<5) return '選角不完整';
+  if(!r.IsEnterBattle) return '未進戰場';
+  const wd = r.WinCUID===r.CUID1 ? r.CUID1AddScore : r.CUID2AddScore;
+  if(wd===0) return '勝方零分';
+  return '';
+}
+const RAW=loadPool(), CLEAN=RAW.filter(r=>r&&!dirtyReason(r)), DIRTY=RAW.length-CLEAN.length;
+const POOL=CLEAN.map(parseGame).filter(Boolean);
 // 玩家場次（判斷主體：≥50）
 const gc={}, names={};
 for(const g of POOL){for(const c of [g.c1,g.c2])gc[c]=(gc[c]||0)+1;}
@@ -103,6 +113,24 @@ for(const r of loadPool()){for(const p of (r.PlayerInfos||[])){const pi=p.Player
 const mains=Object.keys(gc).map(Number).filter(c=>gc[c]>=50).sort((a,b)=>gc[b]-gc[a]);
 
 let SUBJECTS=new Set(), RANKFILTER=0, FILTER_EL='', PERSP='enemy', CHAR=null;   // PERSP mine=我方選A / enemy=敵方選A（預設敵方）
+
+
+// 打法集中度：常用五角佔比高、或首選幾乎固定的人（例如只練一套的帳號），
+// 會把混合統計往自己的角色池拉。標出來，看跨玩家數字時才知道誰是這種人。
+function styleTag(cuid){
+  const mine=POOL.filter(g=>g.c1===cuid||g.c2===cuid);
+  if(mine.length<20) return {mark:'',tip:''};
+  const cnt={}, first={}; let picks=0, p1n=0;
+  for(const g of mine){
+    const side=g.c1===cuid?g.p1:g.p2;
+    side.forEach(s=>{cnt[s]=(cnt[s]||0)+1;picks++;});
+    if(g.c1===cuid&&side[0]){first[side[0]]=(first[side[0]]||0)+1;p1n++;}
+  }
+  const top5=Object.values(cnt).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0)/picks;
+  const fx=p1n?Math.max(...Object.values(first))/p1n:0;
+  const tip=`常用五角佔 ${Math.round(top5*100)}%、固定首選 ${Math.round(fx*100)}%、角色池 ${Object.keys(cnt).length} 張`;
+  return (top5>=0.7||fx>=0.6) ? {mark:' <span style="color:#FBBF24">⚠</span>', tip:'單一打法：'+tip} : {mark:'',tip:tip};
+}
 
 function comboKeys(arr,k){ // unordered k-combos of array
   const out=[]; const rec=(start,acc)=>{ if(acc.length===k){out.push(acc.slice());return;} for(let i=start;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop();} }; rec(0,[]); return out;
@@ -213,6 +241,8 @@ function twoTables(title,sub,rows,minN,baseline,hiCap,loCap){
 
 function render(){
   app.innerHTML='';
+  const cl=document.getElementById('clean');
+  if(cl)cl.textContent=DIRTY?` 已排除 ${DIRTY} 場髒資料（跳game／選角不完整／勝方零分）。`:'';
   const useAll=SUBJECTS.size===0;
   // 控制列 0：視角（我方選 A / 敵方選 A）
   const ctl0=el(`<div class="ctlrow"></div>`);
@@ -228,7 +258,7 @@ function render(){
   const subG=el(`<div class="cg"></div>`);
   const allB=el(`<button class="${useAll?'active':''}">全部數據</button>`);
   allB.onclick=()=>{SUBJECTS.clear();render();}; subG.appendChild(allB);
-  mains.forEach(c=>{const b=el(`<button class="${SUBJECTS.has(c)?'active':''}">${esc(names[c]||('#'+c))} <span class="muted">${gc[c]}</span></button>`);
+  mains.forEach(c=>{const st=styleTag(c);const b=el(`<button class="${SUBJECTS.has(c)?'active':''}" title="${st.tip}">${esc(names[c]||('#'+c))} <span class="muted">${gc[c]}</span>${st.mark}</button>`);
     b.onclick=()=>{ if(SUBJECTS.has(c))SUBJECTS.delete(c); else SUBJECTS.add(c); render(); }; subG.appendChild(b);});
   ctl.appendChild(subG);
   ctl.appendChild(el(`<span class="muted" style="margin-left:12px">對手排名：</span>`));
