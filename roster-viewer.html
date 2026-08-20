@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-0zx8pDG6vTh9bT7Hk0vPAdWfn/zdZbOzxpI/f86H8WA=' https://www.googletagmanager.com file:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-4oDleR9b5g9CGVYh9PKNaW7dlrNftH5QWedBBM7u5B4=' https://www.googletagmanager.com file:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>角色列表檢視器 — ArkRecode</title>
 <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
 <!-- 完整角色目錄（id→名/英名/元素/職業/星），JS 全域＝免 fetch，本地 file:// 也能跑 -->
@@ -38,6 +38,8 @@ padding:4px 11px;font-size:13px;cursor:pointer;user-select:none;line-height:1.4}
 .share{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
 .sbtn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
 .sbtn:hover{filter:brightness(1.1)}
+.sbtn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500}
+.sbtn.ghost:hover{color:var(--txt)}
 .sharehint{font-size:12px;color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
 .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px 9px;
@@ -90,6 +92,7 @@ display:flex;align-items:center;justify-content:center;font-size:11px;line-heigh
 <div class="share hidden" id="share">
   <button class="sbtn" id="btnLink">🔗 複製分享連結</button>
   <button class="sbtn" id="btnImg">🖼️ 匯出成圖片</button>
+  <button class="sbtn ghost" id="btnClear" title="清掉這台瀏覽器記住的角色清單">🗑️ 清除快取</button>
   <span class="sharehint">分享的是「目前篩選後顯示」的角色——先用上面篩掉三星/四星等不要的，再分享。</span>
 </div>
 <div class="grid" id="grid"></div>
@@ -251,7 +254,8 @@ function render(){
   meta.replaceChildren('擁有 ',count,` / ${CHARS.length} 名　`,detail,`　顯示 ${rows.length} 筆`);
 }
 
-function load(json){
+// src: 未指定=自己匯入的檔案（會寫快取）／'cache'=本機快取／'share'=別人的分享連結（不寫快取）
+function load(json,src){
   try{
     const d=normalizeRoster(json);
     // 聚合同一角色的多個副本：count=幾個、star/awaken/lv 取最高（主力那隻）
@@ -270,13 +274,31 @@ function load(json){
     $("help").classList.add("hidden");
     $("share").classList.remove("hidden");
     render();
+    if(!src) saveCache(d);   // 別人的分享連結不覆蓋你自己記住的角色庫
     if(d.skipped) toast(`已略過 ${d.skipped} 筆格式不正確的角色資料`);
-  }catch(e){ $("meta").textContent="讀取失敗："+(e&&e.message?e.message:'不是有效的擷取 JSON'); }
+  }catch(e){
+    // 快取壞掉不該讓頁面卡住：清掉它，退回「還沒有角色資料」的初始畫面
+    if(src==='cache'){ try{ localStorage.removeItem(LS_ROSTER); }catch(_){} return; }
+    $("meta").textContent="讀取失敗："+(e&&e.message?e.message:'不是有效的擷取 JSON');
+  }
 }
 
 function pick(f){
   if(f.size>MAX_ROSTER_CHARS){ $("meta").textContent='讀取失敗：檔案過大（上限 512 KB）'; return; }
   const r=new FileReader(); r.onload=()=>load(r.result); r.readAsText(f,"utf-8");
+}
+
+// ── 快取：只存角色清單，重開自動帶回；篩選條件不存，一律回預設 ──
+const LS_ROSTER='arkrecode_roster';
+function saveCache(d){
+  // 存正規化後的精簡結構（比原始檔小很多），讀回時再跑一次 normalizeRoster 驗證
+  try{ localStorage.setItem(LS_ROSTER, JSON.stringify(
+    {source:d.source,account:d.account,exportedAt:d.exportedAt,owned:d.owned})); }
+  catch(e){ /* 空間不足就當作沒快取，不影響本次瀏覽 */ }
+}
+function clearCache(){
+  try{ localStorage.removeItem(LS_ROSTER); }catch(e){}
+  location.replace(location.pathname);
 }
 
 // 目前篩選後、且擁有的角色（分享/匯出都用這個＝先篩再分享）
@@ -386,6 +408,7 @@ function toast(msg){ const m=$("meta"); m.textContent=msg;
 $("file").onchange=e=>{ if(e.target.files[0]) pick(e.target.files[0]); };
 $("btnLink").onclick=shareLink;
 $("btnImg").onclick=exportImage;
+$("btnClear").onclick=()=>{ if(confirm('清除這台瀏覽器記住的角色清單？下次要看得重新匯入。')) clearCache(); };
 $("file2").onchange=e=>{ if(e.target.files[0]) pick(e.target.files[0]); };
 $("helpToggle").onclick=()=>$("help").classList.toggle("hidden");
 $("q").oninput=render;
@@ -394,9 +417,12 @@ document.addEventListener("dragover",e=>e.preventDefault());
 document.addEventListener("drop",e=>{e.preventDefault(); if(e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);});
 buildFilters();
 // 擷取腳本用 #data=... 帶資料進來 → 直接載入，免下載免選檔
+// 沒有 #data 才吃本機快取（分享連結永遠優先，不會被上次匯入的資料蓋掉）
 (function(){
   const m=location.hash.match(/^#data=(.+)$/);
-  if(m){ try{ load(decodeURIComponent(m[1])); history.replaceState(null,'',location.pathname); }catch(e){} }
+  if(m){ try{ load(decodeURIComponent(m[1]),'share'); history.replaceState(null,'',location.pathname); }catch(e){} return; }
+  let cached=null; try{ cached=localStorage.getItem(LS_ROSTER); }catch(e){}
+  if(cached) load(cached,'cache');
 })();
 if(!window.ROSTER_CATALOG){
   $("meta").textContent="找不到 roster-catalog.js，請確認它與 roster-viewer.html 在 ArkRecodetools 根目錄（跑 scripts/gen_roster_catalog.py 產生）。";
