@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-X1YmtiTQkdXT9n2eHWG4NMOnpf0v7WFcCEPuxQo1gBo=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-KgClipYiqWbY4//OSs5tPOcK5Nj6YJPV9XhOrtXJFkc=' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星隕計劃 · RTA 對戰分析</title>
 <style>
@@ -258,6 +258,7 @@ function gameOf(r, me){
     const d=new Date(r.Time.$date);
     return {t:`${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
       first:me1, won:r.WinCUID===me, delta:me1?r.CUID1AddScore:r.CUID2AddScore,
+      winnerDelta:r.WinCUID===r.CUID1?r.CUID1AddScore:r.CUID2AddScore,
       myRank:me1?r.CUID1Rank:r.CUID2Rank, oppRank:me1?r.CUID2Rank:r.CUID1Rank,
       myScore:mP.Score, oppScore:oP.Score,
       opp:(oP.PlayerInfo&&oP.PlayerInfo.Name)||String(oppCuid),
@@ -276,6 +277,9 @@ function buildAllGames(logs){
   for(const r of logs){ if(!r||!r.Time)continue; const k=keyOf(r); if(seen.has(k))continue; seen.add(k); rows.push(r); }
   rows.sort((a,b)=>a.Time.$date-b.Time.$date);   // 依時間升序，逐場明細 reverse 後即新→舊
   return rows.map(r=>gameOf(r,r.CUID1));
+}
+function usableGames(games){
+  return games.filter(g=>g.entered&&g.my.length===5&&g.op.length===5&&g.winnerDelta!==0);
 }
 
 // ---- 讀取 / 合併 / 去重（累積式，可多次匯入） ----
@@ -348,23 +352,23 @@ function showPicker(logs,cands){
   p.appendChild(box);
 }
 function applyMe(logs,me){
-  const games=buildGames(logs,me);
+  const all=buildGames(logs,me), games=usableGames(all), skipped=all.length-games.length;
   if(!games.length){ alert('這個帳號沒有可分析的場次'); return; }
   try{ localStorage.setItem('rta_me',me); }catch(e){}
   $('landing').style.display='none'; $('exportall').hidden=false; $('reimport').hidden=false; $('tintwrap').hidden=false;
   $('switchacc').hidden = candidatesOf(logs).length<2;
-  $('impinfo').textContent = lastImport ? `目前共 ${lastImport.total} 場｜本次 +${lastImport.added}、重複略過 ${lastImport.dup}` : `共 ${games.length} 場`;
+  $('impinfo').textContent = `有效對局 ${games.length} 場${skipped?`｜已排除 ${skipped} 場選角不完整／未進戰場／勝方零分資料`:''}`+(lastImport?`｜資料池 ${lastImport.total} 場，本次 +${lastImport.added}、重複略過 ${lastImport.dup}`:'');
   ALLMODE=false; POOL=logs; ME=me; renderAll(games); window.scrollTo(0,0);
 }
 function applyAll(logs){
   const all=buildAllGames(logs);
-  const games=all.filter(g=>g.entered);   // 排除對手未進場(walkover)：無選角、無實戰，計入會稀釋統計
+  const games=usableGames(all);
   const skipped=all.length-games.length;
   if(!games.length){ alert('沒有可分析的場次'); return; }
   ALLMODE=true; POOL=logs; ME=null;
   $('landing').style.display='none'; $('exportall').hidden=false; $('reimport').hidden=false; $('tintwrap').hidden=false;
   $('switchacc').hidden=false;
-  $('impinfo').textContent = `全部數據：${games.length} 場（所有玩家、已去重${skipped?`、已排除 ${skipped} 場對手未進場`:''}）`;
+  $('impinfo').textContent = `全部數據：${games.length} 場（所有玩家、已去重${skipped?`、已排除 ${skipped} 場選角不完整／未進戰場／勝方零分資料`:''}）`;
   renderAll(games); window.scrollTo(0,0);
 }
 
@@ -431,7 +435,7 @@ function cmpMeta(logs){
   return {total,pick:t(pick,12),pre:t(pre,8),ban:t(ban,8)};
 }
 function renderCompare(aC,bC,names,box){
-  const GA=buildGames(POOL,aC),GB=buildGames(POOL,bC);
+  const GA=usableGames(buildGames(POOL,aC)),GB=usableGames(buildGames(POOL,bC));
   if(!GA.length||!GB.length){box.innerHTML='<div class="muted">其中一方沒有可分析的場次。</div>';return;}
   const aN=esc(names[aC]||('#'+aC)),bN=esc(names[bC]||('#'+bC));
   const A=cmpStat(GA),B=cmpStat(GB),TA=cmpTiers(GA),TB=cmpTiers(GB);
@@ -441,7 +445,7 @@ function renderCompare(aC,bC,names,box){
   let h=`<h3>① 總覽 × 對手強度分層</h3><div class="scroll"><table class="tight"><thead><tr><th>指標</th><th>${aN}</th><th>${bN}</th></tr></thead><tbody>`
     +row('場數',A.n,B.n)+row('總勝率',A.wp+'%',B.wp+'%')+row('近60勝率',A.wp60+'%',B.wp60+'%')
     +row('目前排名',A.cur,B.cur)+row('最佳排名',A.best||'—',B.best||'—')+row('對手排名中位數',A.med||'—',B.med||'—')
-    +row('淨分/場',A.perg,B.perg)+row('先手勝率',A.fw+'%',B.fw+'%')+row('後手勝率',A.sw+'%',B.sw+'%')
+    +row('淨分/場',A.perg,B.perg)+row('P1 選角方勝率',A.fw+'%',B.fw+'%')+row('P2 選角方勝率',A.sw+'%',B.sw+'%')
     +tierLbls.map(l=>row('　vs '+l,cell(TA[l]),cell(TB[l]))).join('')+`</tbody></table></div>`;
   const PA=cmpPicks(GA),PB=cmpPicks(GB);
   const pl=P=>P.top.map(r=>`<tr><td>${cn(r.s)}</td><td>${r.n}</td><td class="${r.wp>=60?'win':r.wp<50?'lose':''}">${r.wp}%</td></tr>`).join('');
@@ -467,18 +471,17 @@ function renderCompare(aC,bC,names,box){
 function renderAll(G){
   app.innerHTML='';
   $('sub').textContent = ALLMODE
-    ? `全部數據（所有玩家）· ${G.length} 場 · 左＝先手方(CUID1)、右＝後手方(CUID2)；可用下方排名區間篩選`
-    : `共 ${G.length} 場 · ${G[0].t}–${G[G.length-1].t} · CUID1=先手（先出手）`;
+    ? `全部數據（所有玩家）· ${G.length} 場 · 左＝P1 選角方(CUID1)、右＝P2 選角方(CUID2)；可用下方排名區間篩選`
+    : `共 ${G.length} 場 · ${G[0].t}–${G[G.length-1].t} · P1/P2 只代表選角順序，不代表誰先行動`;
 
   const W=G.filter(g=>g.won).length,N=G.length;
   if(ALLMODE){
     app.appendChild(el(`<div class="tiles">
-    <div class="tile"><div class="v b">${N}</div><div class="k">總場數（全部玩家、已去重、已排除未進場）</div></div>
-    <div class="tile"><div class="v">${pct(W,N)}%</div><div class="k">先手方(左)勝率 ${W}–${N-W}</div></div>
-    <div class="tile"><div class="v">${pct(N-W,N)}%</div><div class="k">後手方(右)勝率 ${N-W}–${W}</div></div>
+    <div class="tile"><div class="v b">${N}</div><div class="k">有效對局（全部玩家、已去重、已排除無效資料）</div></div>
+    <div class="tile"><div class="v">${pct(W,N)}%</div><div class="k">P1 選角方(左)勝率 ${W}–${N-W}</div></div>
+    <div class="tile"><div class="v">${pct(N-W,N)}%</div><div class="k">P2 選角方(右)勝率 ${N-W}–${W}</div></div>
     </div>`));
   } else {
-  const ent=G.filter(g=>g.entered),entW=ent.filter(g=>g.won).length;
   let bw=0,bl=0,cur=0,sign=0;
   for(const g of G){const s=g.won?1:-1;cur=((s>0)===(sign>0))?cur+s:s;sign=s;bw=Math.max(bw,cur);bl=Math.min(bl,cur);}
   const net=G.reduce((a,g)=>a+g.delta,0);
@@ -487,13 +490,13 @@ function renderAll(G){
   const l30=recent(30),l60=recent(60), tcol=o=>o.n?(o.w/o.n>=owp?'var(--green)':'var(--red)'):'inherit';
   app.appendChild(el(`<div class="tiles">
   <div class="tile"><div class="v b">${pct(W,N)}%</div><div class="k">總勝率 ${W}–${N-W}</div><div class="k" style="margin-top:3px;font-size:11px" title="綠=不低於總勝率、紅=低於，判斷近期調整成效">近60 <span style="color:${tcol(l60)};font-weight:700">${pct(l60.w,l60.n)}%</span> · 近30 <span style="color:${tcol(l30)};font-weight:700">${pct(l30.w,l30.n)}%</span></div></div>
-  <div class="tile"><div class="v">${pct(entW,ent.length)}%</div><div class="k">實戰勝率 ${entW}–${ent.length-entW}</div></div>
+  <div class="tile"><div class="v">${N}</div><div class="k">有效對局</div></div>
   <div class="tile"><div class="v g">${bw}</div><div class="k">最長連勝</div></div>
   <div class="tile"><div class="v r">${-bl}</div><div class="k">最長連敗</div></div>
   <div class="tile"><div class="v ${net>=0?'g':'r'}">${net>=0?'+':''}${net}</div><div class="k">淨分</div></div>
   <div class="tile"><div class="v">${G[G.length-1].myRank}</div><div class="k">目前排名</div></div>
-  <div class="tile"><div class="v">${pct(fg.filter(g=>g.won).length,fg.length)}%</div><div class="k">先手勝率 (${fg.length}場)</div></div>
-  <div class="tile"><div class="v">${pct(sg.filter(g=>g.won).length,sg.length)}%</div><div class="k">後手勝率 (${sg.length}場)</div></div>
+  <div class="tile"><div class="v">${pct(fg.filter(g=>g.won).length,fg.length)}%</div><div class="k">P1 選角方勝率 (${fg.length}場)</div></div>
+  <div class="tile"><div class="v">${pct(sg.filter(g=>g.won).length,sg.length)}%</div><div class="k">P2 選角方勝率 (${sg.length}場)</div></div>
   </div>`));
   }
 
@@ -588,7 +591,7 @@ function renderAll(G){
       banP:pct(banned[s]||0,pick[s]), pbP:pct(preb[s]||0,NN), slot:slot[s],
       wp60:rwp(60,s), n60:pickR[60][s]||0, wp30:rwp(30,s), n30:pickR[30][s]||0
     }));
-    const wl=side==='my'?'勝率':(ALLMODE?'先手方敗率':'我方敗率');
+    const wl=side==='my'?'勝率':(ALLMODE?'P1 選角方敗率':'我方敗率');
     const pickLbl=side==='my'?'選用':(ALLMODE?'選用':'對手選用');
     let sortKey='n', sortDir=1;
     const wrap=el(`<div class="scroll"><table class="tight"><thead><tr>
@@ -622,7 +625,7 @@ function renderAll(G){
   // 對手排名區間切換：同時作用於我方(左)＋對手(右)兩表，看得出 draft 隨對手強度的轉移
   (function(){
     const ctl=el(`<div class="cg" style="margin:6px 0 2px;flex-wrap:wrap">
-      <span class="muted" style="align-self:center;margin-right:4px">${ALLMODE?'後手方排名區間：':'對手排名區間：'}</span>
+      <span class="muted" style="align-self:center;margin-right:4px">${ALLMODE?'P2 選角方排名區間：':'對手排名區間：'}</span>
       <button data-r="0" class="active">全部</button>
       <button data-r="500">≤500</button>
       <button data-r="200">≤200</button></div>`);
@@ -630,14 +633,14 @@ function renderAll(G){
     app.appendChild(ctl);app.appendChild(info);
     const pair=el(`<div class="pair"></div>`);app.appendChild(pair);
     const mySlot=el(`<div></div>`), opSlot=el(`<div></div>`);
-    sect(ALLMODE?'先手方角色':'我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban='+(ALLMODE?'後手方拆先手方':'對手拆你')+'的次數',mySlot,pair);
-    sect(ALLMODE?'後手方角色':'對手角色',ALLMODE?'「先手方敗率」=後手方帶此角時先手方輸的比例，右側小字＝近60·近30場；被ban/preban=先手方拆後手方的次數':'「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；被我ban/preban=我拆他的次數',opSlot,pair);
+    sect(ALLMODE?'P1 選角方角色':'我方角色','選用場次≥3；勝率右側小字＝近60·近30場勝率(綠高紅低)；順位=一~五選分佈；被ban/被preban='+(ALLMODE?'P2 選角方拆 P1 選角方':'對手拆你')+'的次數',mySlot,pair);
+    sect(ALLMODE?'P2 選角方角色':'對手角色',ALLMODE?'「P1 選角方敗率」=P2 選角方帶此角時 P1 選角方輸的比例，右側小字＝近60·近30場；被ban/preban=P1 選角方拆 P2 選角方的次數':'「我方敗率」=對上此角我輸的比例，右側小字＝近60·近30場；被我ban/preban=我拆他的次數',opSlot,pair);
     function render(thr){
       const games=thr?G.filter(g=>g.oppRank>0&&g.oppRank<=thr):G;
       mySlot.replaceChildren(charTable('my',games));
       opSlot.replaceChildren(charTable('opp',games));
-      const w=games.filter(g=>g.won).length, lbl=ALLMODE?'先手方勝率':'我方勝率';
-      info.textContent=thr?`只算${ALLMODE?'後手方':'對手'}排名 ≤${thr}：${games.length} 場，${lbl} ${pct(w,games.length)}%（左右兩表同步套用）`:`全部 ${games.length} 場（左右兩表同步）`;
+      const w=games.filter(g=>g.won).length, lbl=ALLMODE?'P1 選角方勝率':'我方勝率';
+      info.textContent=thr?`只算${ALLMODE?'P2 選角方':'對手'}排名 ≤${thr}：${games.length} 場，${lbl} ${pct(w,games.length)}%（左右兩表同步套用）`:`全部 ${games.length} 場（左右兩表同步）`;
     }
     ctl.querySelectorAll('button').forEach(b=>b.onclick=()=>{
       ctl.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render(+b.dataset.r);});
@@ -661,8 +664,8 @@ function renderAll(G){
       <td class="${r.wp>=60?'win':r.wp<50?'lose':''}">${r.wp}%</td>
       <td class="num ${r.net>=0?'pos':'neg'}">${r.net>=0?'+':''}${(r.net/r.n).toFixed(1)}</td>
     </tr>`).join('');
-    sect(ALLMODE?'先手方勝率 × 後手方排名分層':'對手強度分層勝率',ALLMODE?'依後手方當時排名分層，看先手方勝率是否隨後手方變強而下滑':'依對手當時排名分層；勝率若隨排名越前越低＝目前分數靠打弱區間撐起來的',
-      el(`<div class="scroll"><table class="tight"><thead><tr><th>${ALLMODE?'後手方排名':'對手排名'}</th><th class="num">場數</th><th></th><th>${ALLMODE?'先手方勝率':'勝率'}</th><th class="num">淨分/場</th></tr></thead><tbody>${body}</tbody></table></div>`));
+    sect(ALLMODE?'P1 選角方勝率 × P2 選角方排名分層':'對手強度分層勝率',ALLMODE?'依 P2 選角方當時排名分層，看 P1 選角方勝率是否隨對方變強而下滑':'依對手當時排名分層；勝率若隨排名越前越低＝目前分數靠打弱區間撐起來的',
+      el(`<div class="scroll"><table class="tight"><thead><tr><th>${ALLMODE?'P2 選角方排名':'對手排名'}</th><th class="num">場數</th><th></th><th>${ALLMODE?'P1 選角方勝率':'勝率'}</th><th class="num">淨分/場</th></tr></thead><tbody>${body}</tbody></table></div>`));
   })();
 
   // pre-ban 配對
@@ -671,8 +674,8 @@ function renderAll(G){
     for(const g of G){const pb=[...g.opb].sort();if(pb.length!==2)continue;const k=pb.join('|');(pr[k]=pr[k]||[]).push(g);}
     const rows=Object.entries(pr).filter(([,gs])=>gs.length>=2).sort((a,b)=>b[1].length-a[1].length);
     if(!rows.length) return;
-    sect(ALLMODE?'後手方 Pre-ban 配對 → 後續組成':'對手 Pre-ban 配對 → 後續組成',ALLMODE?'後手方拆先手方哪兩隻、接著端出什麼、先手方打得如何':'拆你哪兩隻、接著端出什麼、你打得如何',
-      el(`<div class="scroll"><table><thead><tr><th>${ALLMODE?'後手方 pre-ban 先手方(兩隻)':'對手 pre-ban 我方(兩隻)'}</th><th>場數</th><th>${ALLMODE?'先手方勝率':'我方勝率'}</th><th>他們常端出</th></tr></thead><tbody>${
+    sect(ALLMODE?'P2 選角方 Pre-ban 配對 → 後續組成':'對手 Pre-ban 配對 → 後續組成',ALLMODE?'P2 選角方拆 P1 選角方哪兩隻、接著端出什麼、P1 選角方打得如何':'拆你哪兩隻、接著端出什麼、你打得如何',
+      el(`<div class="scroll"><table><thead><tr><th>${ALLMODE?'P2 選角方 pre-ban P1 選角方(兩隻)':'對手 pre-ban 我方(兩隻)'}</th><th>場數</th><th>${ALLMODE?'P1 選角方勝率':'我方勝率'}</th><th>他們常端出</th></tr></thead><tbody>${
       rows.map(([k,gs])=>{const[a,b]=k.split('|');const w=gs.filter(g=>g.won).length;
         const fld={};gs.forEach(g=>[...new Set(g.op.filter(s=>s!==g.opBan))].forEach(s=>fld[s]=(fld[s]||0)+1));
         const top=Object.entries(fld).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([s,c])=>`${cn(s)}×${c}`).join('  ');
@@ -688,7 +691,7 @@ function renderAll(G){
       for(let i=0;i<f.length;i++)for(let j=i+1;j<f.length;j++){const k=f[i]+'|'+f[j];(pr[k]=pr[k]||[]).push(g);}}
     const rows=Object.entries(pr).filter(([,gs])=>gs.length>=4).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
     if(!rows.length) return;
-    sect(ALLMODE?'後手方最後上場的雙人骨架':'對手最後上場的雙人骨架',ALLMODE?'共現≥4（已扣掉被先手方ban的那隻）；%＝後手方有此雙人時先手方勝率':'共現≥4（已扣掉被我ban的那隻）；%＝對面有此雙人時我方勝率',
+    sect(ALLMODE?'P2 選角方最後上場的雙人骨架':'對手最後上場的雙人骨架',ALLMODE?'共現≥4（已扣掉被 P1 選角方 ban 的那隻）；%＝P2 選角方有此雙人時 P1 選角方勝率':'共現≥4（已扣掉被我ban的那隻）；%＝對面有此雙人時我方勝率',
       el(`<div class="chips" style="font-size:18px;gap:8px">`+rows.map(([k,gs])=>{const[a,b]=k.split('|');
         const w=gs.filter(g=>g.won).length, p=pct(w,gs.length);
         return `<span class="chip" style="font-size:18px;padding:5px 13px">${cn(a)} + ${cn(b)} <b style="color:#93C5FD">×${gs.length}</b><span style="color:#5b6879;font-size:.7em;margin:0 10px;vertical-align:2px">|</span><b class="${p<45?'lose':p>=60?'win':''}">${p}%</b></span>`;}).join('')+`</div>`));
@@ -704,24 +707,24 @@ function renderAll(G){
       for(const o of Object.keys(opp)){const[c,w]=opp[o];if(c<5)continue;const cw=w/c;if(cw<=base-0.2)out.push({my,o,c,cw,base,drop:base-cw});}}
     out.sort((a,b)=>b.drop-a.drop);
     if(!out.length) return;
-    sect('疑似剋制對',ALLMODE?'先手方某角在「後手方有 X」時勝率 vs 平時，落差≥20pp（已排除低樣本）':'我方某角在「對面有 X」時勝率 vs 平時，落差≥20pp（已排除低樣本）',
-      el(`<div class="scroll"><table><thead><tr><th>${ALLMODE?'先手方帶':'我方帶'}</th><th>${ALLMODE?'後手方有此角':'對面有此角'}</th><th>共現</th><th>此時勝率</th><th>該角平時勝率</th><th>落差</th></tr></thead><tbody>${
+    sect('疑似剋制對',ALLMODE?'P1 選角方某角在「P2 選角方有 X」時勝率 vs 平時，落差≥20pp（已排除低樣本）':'我方某角在「對面有 X」時勝率 vs 平時，落差≥20pp（已排除低樣本）',
+      el(`<div class="scroll"><table><thead><tr><th>${ALLMODE?'P1 選角方帶':'我方帶'}</th><th>${ALLMODE?'P2 選角方有此角':'對面有此角'}</th><th>共現</th><th>此時勝率</th><th>該角平時勝率</th><th>落差</th></tr></thead><tbody>${
       out.slice(0,18).map(r=>`<tr><td>${cn(r.my)}</td><td>${cn(r.o)}</td><td>${r.c}</td><td class="lose">${Math.round(r.cw*100)}%</td><td>${Math.round(r.base*100)}%</td><td class="neg">-${Math.round(r.drop*100)}pp</td></tr>`).join('')
       }</tbody></table></div>`));
   })();
 
-  // 一速爭奪
+  // 一速角色結構；只看選角，不代表實際首動
   (function(){
     let both=0,mo=0,oo=0;const oppFast=[],oppNo=[];
     for(const g of G){const mf=g.my.some(s=>FAST.has(s)),of=g.op.some(s=>FAST.has(s));
       if(mf&&of)both++;else if(mf)mo++;else if(of)oo++;(of?oppFast:oppNo).push(g.won);}
-    sect('一速爭奪','帶「快速開場/退條手」與否對勝率的影響',el(`<div><div class="tiles">
-     <div class="tile"><div class="v r">${pct(oppFast.filter(Boolean).length,oppFast.length)}%</div><div class="k">${ALLMODE?'後手方帶一速手時先手方勝率':'對面帶一速手時我勝率'} (${oppFast.length}場)</div></div>
-     <div class="tile"><div class="v g">${pct(oppNo.filter(Boolean).length,oppNo.length)}%</div><div class="k">${ALLMODE?'後手方沒一速手':'對面沒一速手'} (${oppNo.length}場)</div></div>
+    sect('一速角色結構','只看雙方有沒有選一速角色；不含 RTA 配裝，不能判定誰實際先動',el(`<div><div class="tiles">
+     <div class="tile"><div class="v r">${pct(oppFast.filter(Boolean).length,oppFast.length)}%</div><div class="k">${ALLMODE?'P2 選角方帶一速角色時 P1 選角方勝率':'對面帶一速角色時我勝率'} (${oppFast.length}場)</div></div>
+     <div class="tile"><div class="v g">${pct(oppNo.filter(Boolean).length,oppNo.length)}%</div><div class="k">${ALLMODE?'P2 選角方沒一速角色':'對面沒一速角色'} (${oppNo.length}場)</div></div>
      <div class="tile"><div class="v">${both}</div><div class="k">雙方都帶</div></div>
-     <div class="tile"><div class="v">${oo}</div><div class="k">${ALLMODE?'只有後手方帶':'只有對面帶'}</div></div>
-     <div class="tile"><div class="v">${mo}</div><div class="k">${ALLMODE?'只有先手方帶':'只有我帶'}</div></div>
-    </div><div class="muted">一速手＝${[...FAST].map(cn).join('、')}</div></div>`));
+     <div class="tile"><div class="v">${oo}</div><div class="k">${ALLMODE?'只有 P2 選角方帶':'只有對面帶'}</div></div>
+     <div class="tile"><div class="v">${mo}</div><div class="k">${ALLMODE?'只有 P1 選角方帶':'只有我帶'}</div></div>
+    </div><div class="muted">一速角色＝${[...FAST].map(cn).join('、')}</div></div>`));
   })();
 
   // 逐場明細
@@ -729,40 +732,40 @@ function renderAll(G){
     const wrap=el(`<div></div>`);
     const bar=el(`<div class="filters">
       <button data-f="all" class="active">全部</button><button data-f="win">只看勝</button><button data-f="lose">只看敗</button>
-      ${ALLMODE?'':'<button data-f="first">先手</button><button data-f="second">後手</button>'}
+      ${ALLMODE?'':'<button data-f="first">P1 選角方</button><button data-f="second">P2 選角方</button>'}
       <input id="q" placeholder="${ALLMODE?'搜尋玩家名…':'搜尋對手名…'}" style="flex:1;min-width:120px"></div>`);
     const box=el(`<div class="scroll"></div>`);
     wrap.appendChild(bar);wrap.appendChild(box);
     let filt='all',q='';
     const roster=(list,ban)=>list.map((s,i)=>`<span class="${s===ban?'banned':'c cn el-'+(EL[s]||'none')}"><span class="nmx">${esc(nm(s))}</span><span class="idx">${i+1}</span></span>`).join('  ');
     const pbList=arr=>(arr||[]).map(nm).filter(Boolean).join('、')||'—';
-    const pbTitle=g=>esc(`賽前 Pre-ban\n${ALLMODE?'先手方':'我'}：${pbList(g.mpb)}\n──────────\n${ALLMODE?'後手方':'敵'}：${pbList(g.opb)}`);
+    const pbTitle=g=>esc(`賽前 Pre-ban\n${ALLMODE?'P1 選角方':'我'}：${pbList(g.mpb)}\n──────────\n${ALLMODE?'P2 選角方':'敵'}：${pbList(g.opb)}`);
     // 全部數據：判斷「主體玩家」（撈資料者，≥50 場）；名字欄主體在前(暗)、實際對手用白字
     const gc={}; if(ALLMODE)for(const r of POOL){gc[r.CUID1]=(gc[r.CUID1]||0)+1;gc[r.CUID2]=(gc[r.CUID2]||0)+1;}
     const isMain=c=>gc[c]>=50;
     const oppName=g=>{ if(!ALLMODE) return `<span class="who">${esc(g.opp)}</span>`;
-      // 固定左＝先手(CUID1)、右＝後手(CUID2)；主體(≥50場)暗、其餘白；兩邊都主體則都暗
+      // 固定左＝P1 選角方(CUID1)、右＝P2 選角方(CUID2)；主體(≥50場)暗、其餘白；兩邊都主體則都暗
       const nmClr=c=>isMain(c)?'var(--muted)':'#fff';
-      return `<span class="tag first">先</span><span style="color:${nmClr(g.myCuid)}">${esc(g.myName)}</span>`
-        +` <span style="color:var(--dim)">｜</span> <span class="tag second">後</span><span style="color:${nmClr(g.oppCuid)}">${esc(g.opp)}</span>`; };
+      return `<span class="tag first">P1</span><span style="color:${nmClr(g.myCuid)}">${esc(g.myName)}</span>`
+        +` <span style="color:var(--dim)">｜</span> <span class="tag second">P2</span><span style="color:${nmClr(g.oppCuid)}">${esc(g.opp)}</span>`; };
     function render(){
       const rows=G.slice().reverse().filter(g=>{
         if(filt==='win'&&!g.won)return false;if(filt==='lose'&&g.won)return false;
         if(filt==='first'&&!g.first)return false;if(filt==='second'&&g.first)return false;
         if(q&&!((g.myName||'')+' '+g.opp).toLowerCase().includes(q.toLowerCase()))return false;return true;});
-      box.innerHTML=`<table><thead><tr><th>時間</th>${ALLMODE?'':'<th>手</th>'}<th>結果</th><th>分</th><th>${ALLMODE?'先手排名':'我排名'}</th><th>${ALLMODE?'玩家（先｜後）':'對手'}</th><th>${ALLMODE?'後手排名/積分/連勝':'對手排名/積分/連勝'}</th><th>${ALLMODE?'先手方陣容(順)':'我方陣容(順)'}</th><th>${ALLMODE?'後手方陣容(順)':'對手陣容(順)'}</th></tr></thead><tbody>${
-        rows.map(g=>`<tr><td>${g.t}</td>${ALLMODE?'':`<td><span class="tag ${g.first?'first':'second'}">${g.first?'先':'後'}</span></td>`}
-          <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}${g.entered?'':'*'}</td>
+      box.innerHTML=`<table><thead><tr><th>時間</th>${ALLMODE?'':'<th>選角方</th>'}<th>結果</th><th>分</th><th>${ALLMODE?'P1 排名':'我排名'}</th><th>${ALLMODE?'玩家（P1｜P2）':'對手'}</th><th>${ALLMODE?'P2 排名/積分/連勝':'對手排名/積分/連勝'}</th><th>${ALLMODE?'P1 選角方陣容(順)':'我方陣容(順)'}</th><th>${ALLMODE?'P2 選角方陣容(順)':'對手陣容(順)'}</th></tr></thead><tbody>${
+        rows.map(g=>`<tr><td>${g.t}</td>${ALLMODE?'':`<td><span class="tag ${g.first?'first':'second'}">${g.first?'P1':'P2'}</span></td>`}
+          <td class="${g.won?'win':'lose'}">${g.won?'勝':'敗'}</td>
           <td class="${g.delta>=0?'pos':'neg'}">${g.delta>=0?'+':''}${g.delta}</td>
           <td>${g.myRank}</td><td class="oppn" title="${pbTitle(g)}">${oppName(g)}</td>
           <td class="muted">${g.oppRank} / ${g.oppScore??'?'} / 連${g.oppCW??'?'}</td>
           <td class="roster">${roster(g.my,g.myBan)}</td><td class="roster">${roster(g.op,g.opBan)}</td></tr>`).join('')
-        }</tbody></table><div class="muted">共 ${rows.length} 場。${ALLMODE?'勝敗與分數為先手方(左)視角；':'結果後的 * =未實戰(閃避)。'}陣容數字=選取順位；紅刪除線=draft 被 ban；<b>${ALLMODE?'玩家名':'對手名'} hover 看雙方賽前 pre-ban</b>。</div>`;
+        }</tbody></table><div class="muted">共 ${rows.length} 場。${ALLMODE?'勝敗與分數為 P1 選角方(左)視角；':''}陣容數字=選取順位；紅刪除線=draft 被 ban；<b>${ALLMODE?'玩家名':'對手名'} hover 看雙方賽前 pre-ban</b>。</div>`;
     }
     bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{filt=b.dataset.f;bar.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render();});
     bar.querySelector('#q').oninput=e=>{q=e.target.value;render();};
     render();
-    sect('逐場明細',ALLMODE?'固定左＝先手、右＝後手；可篩選勝/敗、搜尋玩家名':'可篩選先後手/勝敗、搜尋對手',wrap);
+    sect('逐場明細',ALLMODE?'固定左＝P1 選角方、右＝P2 選角方；可篩選勝/敗、搜尋玩家名':'可篩選 P1/P2 選角方、勝敗與對手',wrap);
   })();
 
   // 進階功能：跨玩家比較（可收合，全在本機）；全部數據模式沒有「你」可比，跳過

@@ -79,7 +79,7 @@ ArkRecodetools/
 ├── roster-viewer.html                  # 角色列表檢視器（v1.0.4）：元素色卡、篩選、分享連結、匯出圖片、本機快取
 ├── roster-catalog.js                   # 完整角色目錄（id→名/英名/元素/職業/星），由 gen_roster_catalog.py 產生
 ├── arkrecode-roster-capture.user.js    # Tampermonkey 腳本：攔截登入 API 擷取角色清單（v1.0.3）
-├── rta-dashboard.html                  # RTA 對戰分析：本機匯入、累積、去重與可視化
+├── rta-dashboard.html                  # RTA 對戰分析：本機匯入、累積、去重；P1/P2 僅指選角方，排除不完整／未進場／勝方零分紀錄
 ├── arkrecode-rta-capture.user.js       # Tampermonkey 腳本：匯出 RTA 對戰 JSON
 ├── chrome-extension/                   # Chrome 外掛版擷取工具（同功能，manifest v3）
 │   ├── manifest.json
