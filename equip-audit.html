@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="裝備健檢 - ArkRecode Tools">
+<meta property="og:description" content="Ark Re:Code 裝備庫體檢：六軸雷達、速度／抗性組隊模擬、套裝概覽、缺口表">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="./assets/brand.css">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' https://www.googletagmanager.com 'unsafe-inline';
+               connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com;
+               style-src 'self' 'unsafe-inline';">
+<title>裝備健檢 v1.0.0 - ArkRecode Tools</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#0B1120;color:#E2E8F0;
+  font:16px/1.6 -apple-system,"Segoe UI","Microsoft JhengHei",sans-serif}
+a{color:#93C5FD}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:18px 0 4px}
+h2{font-size:19px;margin:0 0 12px;color:#93C5FD}
+.sub{color:#64748B;font-size:14px;margin:6px 0 0}
+.card{background:#0F1628;border:1px solid #1E293B;border-radius:14px;
+  padding:20px;margin-bottom:16px}
+.flex{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:7px 9px;border-bottom:1px solid #1E293B;text-align:left;white-space:nowrap}
+th{color:#64748B;font-weight:600;font-size:14px}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+small{color:#475569}
+.scroll{overflow-x:auto}
+.gap{color:#F87171;font-weight:700} .thin{color:#FBBF24;font-weight:700}
+.ok{color:#64748B} .na{color:#475569}
+tr.r-gap{background:#7F1D1D22} tr.r-thin{background:#78350F22} tr.r-na{opacity:.45}
+b.hot{color:#F87171} b.warm{color:#FBBF24}
+.bar{display:block;height:4px;margin-top:3px;border-radius:2px;background:#6366F1;
+  min-width:2px;margin-left:auto}
+.empty{text-align:center;padding:50px 20px;color:#64748B}
+.btn{display:inline-block;margin-top:14px;padding:9px 18px;border-radius:10px;
+  background:#1E3A5F;color:#93C5FD;text-decoration:none;border:1px solid #3B82F644}
+.note{background:#78350F22;border:1px solid #78350F;border-radius:10px;
+  padding:12px 14px;color:#FBBF24;font-size:14px;margin-bottom:16px}
+.axis-li{display:flex;justify-content:space-between;gap:16px;padding:3px 0;
+  border-bottom:1px solid #1E293B;font-size:15px}
+</style>
+<script src="./assets/analytics.js"></script>
+</head>
+<body>
+<script src="./assets/header.js"></script>
+<div class="wrap" id="app"><div class="empty">載入中…</div></div>
+
+<script>
+// ============================================================
+// 裝備健檢 — 直接讀配裝計算器匯入後留在 localStorage 的那批裝備，
+// 使用者不必再匯入一次。判定規則與 sniffer 的 scripts/audit_equips.py 同一套，
+// 詳見該 repo 的 docs/裝備體檢設計.md。
+//
+// ⚠ localStorage 存的是「中文 key」（配裝器 parseEquipJSON 已套用 SET_MAP/PROP_MAP），
+//   所以這裡所有詞條／套裝名稱都用中文比對，不能照抄 Python 版的英文 key。
+// ============================================================
+const LS_KEY="arkrecode_equips", LS_META="arkrecode_equips_meta";
+
+const SLOTS=["武器","頭盔","鎧甲","項鍊","戒指","鞋子"];
+const LEFT=["武器","頭盔","鎧甲"], RIGHT=["項鍊","戒指","鞋子"];
+const TIERS=[["大畢業",62],["小畢業",57],["及格",47],["入門",37]];
+
+// 適配分：只看四條副詞條，量的是 roll 運氣，不看主屬性也不看套裝。
+// 校準過的：每次 roll 約 6 分、滿值 8 分，白值詞條（小攻/小生/小防）打 6~4 折，
+// 所以 +15（＝9 次 roll）的平均落在 54 附近，門檻才會訂在 37/47/57/62。
+function helperScore(subs){
+  let t=0;
+  for(const k in subs){
+    const v=subs[k];
+    if(k==="速度")t+=v*2;
+    else if(k==="爆率")t+=v*160;
+    else if(k==="爆傷")t+=v*114;
+    else if(k==="攻擊")t+=v/10;       // 小攻（白值）
+    else if(k==="防禦")t+=v/6;        // 小防
+    else if(k==="生命")t+=v/50;       // 小生
+    else t+=v*100;                    // 大攻%/大生%/大防%/命中/抗性
+  }
+  return t;
+}
+function tierOf(s){ for(const[n,t]of TIERS) if(s>=t) return n; return "待提升"; }
+
+// 六軸。門檻型的三軸都是「對應套裝一階、其他套裝再高一階」
+const TH={ "高速":["速度","速度",11,12], "一速":["速度","速度",14,15],
+           "抗性":["抗性","抗性",0.13,0.14] };
+function axScaled(i,ax){ const[p,st,on,off]=TH[ax];
+  return (i.subs[p]||0) >= (i.set===st?on:off); }
+
+// 輸出：對應 sniffer 的 pure_atk（含 SET_ARCHETYPES 套裝閘門）。
+// 三道關卡：① 套裝支援純攻擊 ② 套裝招牌屬性有到（暴擊套要爆率、爆傷套要暴傷、攻擊套要大攻）
+// ③ 副詞條乾淨度：該部位可能出現的攻擊向詞條要中滿（鎧甲不可能有攻擊，池子只有 3 種）
+// ④ 右三件主屬性若明顯是生存向，代表主屬性投資點浪費了，不算。
+const ATK_SETS=new Set(["攻擊","暴擊","爆傷","速度","貫穿","暴怒","抗性"]);
+const ATK_POOL=["攻擊%","攻擊","爆率","爆傷","速度"];
+const SLOT_ATK_EXCLUDE={"鎧甲":new Set(["攻擊%","攻擊"])};
+const SURVIVAL_MAIN=new Set(["生命%","生命","防禦%","防禦"]);
+const SIGNATURE={"暴擊":{"爆率":0.04,"爆傷":0},"爆傷":{"爆傷":0.04,"爆率":0},"攻擊":{"攻擊%":0.05}};
+function meetsSignature(i){
+  const sig=SIGNATURE[i.set]; if(!sig)return true;
+  for(const prop in sig){
+    if(i.mt===prop)continue;                       // 主屬性本身就是招牌，效用更好
+    if(!(prop in i.subs)||i.subs[prop]<sig[prop])return false;
+  }
+  return true;
+}
+function axOutput(i){
+  if(!ATK_SETS.has(i.set))return false;
+  if(!meetsSignature(i))return false;
+  if(RIGHT.includes(i.slot)&&SURVIVAL_MAIN.has(i.mt))return false;
+  const excl=SLOT_ATK_EXCLUDE[i.slot]||new Set();
+  const pool=ATK_POOL.filter(p=>!excl.has(p));
+  const hit=Object.keys(i.subs).filter(k=>pool.includes(k)).length;
+  return hit>=Math.min(4,pool.length);
+}
+// 底速半肉：沒有速度 + 有大詞條 + 有暴率或暴傷 + 素質夠好
+const BIG=new Set(["生命%","攻擊%","防禦%"]), CRIT=new Set(["爆率","爆傷"]);
+const HALFTANK_MIN=52;   // 適配分門檻
+function axHalftank(i){
+  const ks=Object.keys(i.subs);
+  return !("速度" in i.subs) && ks.some(k=>BIG.has(k))
+      && ks.some(k=>CRIT.has(k)) && i.helper>=HALFTANK_MIN;
+}
+// 肉裝：四條副詞條全部落在 生命/防禦（大小都算）、速度、抗性
+const TANK=new Set(["生命%","生命","防禦%","防禦","速度","抗性"]);
+function axTank(i){
+  const ks=Object.keys(i.subs);
+  return ks.length>=4 && ks.every(k=>TANK.has(k));
+}
+const AXES=[["輸出",axOutput],["底速半肉",axHalftank],["肉裝",axTank],
+            ["抗性",i=>axScaled(i,"抗性")],["高速",i=>axScaled(i,"高速")],
+            ["一速",i=>axScaled(i,"一速")]];
+
+// 套裝效果（來源：equip-planner-py 的 set_data.py SET_EFFECTS）
+const SET_SPEED={"速度":0.16,"復仇":0.12};   // 4 件觸發，只乘基礎速
+const RESIST_SET="抗性", RESIST_PER_PAIR=0.20; // 2 件套可疊，每 2 件 +20%
+const BASE_SPEED=123, AWAKEN_SPEED=6;        // 兔女郎愛莉卡
+const IGNORED_SETS=new Set(["命中","夾擊"]);  // 不列入製作考慮
+
+const pieceStat=(i,k)=>(i.subs[k]||0)+(i.mt===k?(i.mv||0):0);
+const gearSpeed=ps=>ps.reduce((a,p)=>a+pieceStat(p,"速度"),0);
+function charSpeed(ps){
+  const c={}; ps.forEach(p=>c[p.set]=(c[p.set]||0)+1);
+  let pct=0; for(const s in SET_SPEED) if((c[s]||0)>=4) pct+=SET_SPEED[s];
+  return Math.floor(BASE_SPEED*(1+pct)+AWAKEN_SPEED+gearSpeed(ps));
+}
+const gearResist=ps=>ps.reduce((a,p)=>a+pieceStat(p,"抗性"),0);
+function unitResist(ps){
+  const c={}; ps.forEach(p=>c[p.set]=(c[p.set]||0)+1);
+  return gearResist(ps)+Math.floor((c[RESIST_SET]||0)/2)*RESIST_PER_PAIR;
+}
+
+function combos(arr,k){
+  const out=[],cur=[];
+  (function rec(s){ if(cur.length===k){out.push(cur.slice());return;}
+    for(let i=s;i<arr.length;i++){cur.push(arr[i]);rec(i+1);cur.pop();} })(0);
+  return out;
+}
+// 每部位取「該詞條貢獻最高」再算套裝效果；不做完整最佳化（套裝加成遠大於單件差距）
+function bestUnit(pool,valueFn,forceSet,pieces){
+  const by={}; SLOTS.forEach(s=>by[s]=[]);
+  pool.forEach(i=>{ if(by[i.slot]) by[i.slot].push(i); });
+  if(SLOTS.some(s=>!by[s].length)) return null;
+  const pick=(cand)=>cand.reduce((a,b)=>valueFn([b])>valueFn([a])?b:a);
+  if(!forceSet){ const ps=SLOTS.map(s=>pick(by[s])); return {val:valueFn(ps),picks:ps}; }
+  let best=null;
+  for(const combo of combos(SLOTS,pieces)){
+    const ps=[]; let ok=true;
+    for(const s of SLOTS){
+      const cand=combo.includes(s)?by[s].filter(i=>i.set===forceSet):by[s];
+      if(!cand.length){ok=false;break;}
+      ps.push(pick(cand));
+    }
+    if(!ok)continue;
+    const v=valueFn(ps);
+    if(!best||v>best.val) best={val:v,picks:ps};
+  }
+  return best;
+}
+function greedyRanks(items,valueFn,forceSet,pieces,ranks){
+  let pool=items.slice(); const out=[];
+  for(let r=0;r<ranks;r++){
+    const b=bestUnit(pool,valueFn,forceSet,pieces);
+    if(!b)break;
+    out.push(b);
+    const used=new Set(b.picks.map(p=>p._i));
+    pool=pool.filter(i=>!used.has(i._i));
+  }
+  return out;
+}
+
+function scoreStats(g){
+  if(!g.length)return null;
+  const s=g.map(i=>i.helper).sort((a,b)=>a-b);
+  const best=g.reduce((a,b)=>b.helper>a.helper?b:a);
+  const m=s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2;
+  return {avg:s.reduce((a,b)=>a+b,0)/s.length,med:m,max:best.helper,maxSet:best.set};
+}
+
+// 缺口表：攻擊向主屬看「三條目標詞條都在」，生存向主屬看「肉裝或底速半肉」
+const TRI_BY_MAIN={
+  "爆傷":["爆率","攻擊%","速度"], "爆率":["爆傷","攻擊%","速度"],
+  "速度":["爆率","爆傷","攻擊%"], "攻擊%":["爆率","爆傷","速度"],
+  "攻擊":["爆率","爆傷","攻擊%"], "命中":["爆率","攻擊%","速度"],
+};
+const SURVIVAL_MAINS=new Set(["生命%","生命","防禦%","防禦","抗性"]);
+function gapTarget(main){
+  if(SURVIVAL_MAINS.has(main))
+    return {label:"肉裝／底速半肉",hit:i=>axTank(i)||axHalftank(i)};
+  const tri=(TRI_BY_MAIN[main]||[]).filter(t=>t!==main);
+  if(!tri.length)return {label:null,hit:null};
+  return {label:tri.join("+"),hit:i=>tri.every(t=>t in i.subs)};
+}
+function gapVerdict(r){
+  if(IGNORED_SETS.has(r.set))return["na","命中／追擊套不列入製作考慮"];
+  if(!r.label)return["na","這個主屬還沒定義成品標準"];
+  if(r.done===0)return["gap","成品 0 件 —— 這格是空的，製作能一次補上"];
+  if(r.done<=3)return["thin","只有 "+r.done+" 件成品，偏薄"];
+  if(r.bestHelper>=62)return["ok",r.done+" 件成品、已有大畢業，製作優先度低"];
+  return["ok",r.done+" 件成品，但最好的還沒到大畢業"];
+}
+
+// ---------- 載入 ----------
+function load(){
+  let raw=null,meta=null;
+  try{ raw=JSON.parse(localStorage.getItem(LS_KEY)||"null");
+       meta=JSON.parse(localStorage.getItem(LS_META)||"null"); }catch(e){}
+  if(!Array.isArray(raw)||!raw.length)return null;
+  const items=raw.map((i,n)=>{
+    const subs=i.subs||{};
+    return {_i:n,slot:i.slot,set:i.set,lv:i.lv,cls:i.cls,mt:i.mt,mv:i.mv||0,
+            subs,helper:helperScore(subs)};
+  }).filter(i=>SLOTS.includes(i.slot));
+  return {items,meta,hasCls:items.some(i=>i.cls!=null)};
+}
+
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const hot=(v,warn,bad)=>{const c=v<=bad?"hot":(v<=warn?"warm":"");
+  return c?'<b class="'+c+'">'+v+"</b>":String(v);};
+
+function radarSVG(axes,size){
+  size=size||400;
+  const names=AXES.map(a=>a[0]), vals=names.map(n=>axes[n]);
+  const peak=Math.max(1,...vals), cx=size/2, cy=size/2, r=size/2-62;
+  let g="",lab="",pts=[];
+  [0.25,0.5,0.75,1].forEach(ring=>{
+    const rp=[];
+    for(let k=0;k<6;k++){const a=Math.PI/2-k*Math.PI/3;
+      rp.push((cx+r*ring*Math.cos(a)).toFixed(1)+","+(cy-r*ring*Math.sin(a)).toFixed(1));}
+    g+='<polygon points="'+rp.join(" ")+'" fill="none" stroke="#1E293B"/>';
+  });
+  names.forEach((n,k)=>{
+    const a=Math.PI/2-k*Math.PI/3, ratio=vals[k]/peak;
+    pts.push((cx+r*ratio*Math.cos(a)).toFixed(1)+","+(cy-r*ratio*Math.sin(a)).toFixed(1));
+    const lx=cx+(r+30)*Math.cos(a), ly=cy-(r+30)*Math.sin(a);
+    const anch=Math.abs(Math.cos(a))<0.3?"middle":(Math.cos(a)>0?"start":"end");
+    lab+='<text x="'+lx.toFixed(0)+'" y="'+ly.toFixed(0)+'" text-anchor="'+anch+
+         '" dominant-baseline="middle" font-size="13" fill="#94A3B8">'+n+" "+vals[k]+"</text>";
+    g+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(a)).toFixed(1)+
+       '" y2="'+(cy-r*Math.sin(a)).toFixed(1)+'" stroke="#1E293B"/>';
+  });
+  return '<svg style="overflow:visible" viewBox="0 0 '+size+" "+size+'" width="'+size+'" height="'+size+'">'+g+
+    '<polygon points="'+pts.join(" ")+'" fill="#6366F1" fill-opacity=".35" '+
+    'stroke="#818CF8" stroke-width="2"/>'+lab+"</svg>";
+}
+
+function render(){
+  const app=document.getElementById("app");
+  const data=load();
+  if(!data){
+    app.innerHTML='<h1>裝備健檢</h1><div class="card"><div class="empty">'+
+      "還沒有裝備資料。<br>請先到配裝計算器匯入你的 Equipment JSON，回來這頁就會自動讀到。"+
+      '<br><a class="btn" href="./equip-optimizer.html">前往配裝計算器匯入</a></div></div>';
+    return;
+  }
+  const {items,meta,hasCls}=data;
+  // 助手分門檻與 archetype 都是照傳說校準的 -> 只吃傳說；
+  // 組隊模擬與套裝概覽吃傳說+紫（紫裝 +15 的主屬性值跟傳說一樣，速度鞋同樣 40）
+  const p15all=items.filter(i=>i.lv===15);
+  const p15=hasCls?p15all.filter(i=>i.cls===4):p15all;
+  const epic=p15all.length-p15.length;
+
+  const axes={}; AXES.forEach(([n,f])=>axes[n]=p15.filter(f).length);
+  const tiers={}; TIERS.forEach(([n])=>tiers[n]=0);
+  p15.forEach(i=>{const t=tierOf(i.helper); if(t in tiers)tiers[t]++;});
+
+  const spd=greedyRanks(p15all,charSpeed,"速度",4,5);
+  const spdFree=greedyRanks(p15all,charSpeed,null,4,5);
+  const res=greedyRanks(p15all,unitResist,RESIST_SET,4,3);
+
+  // 套裝概覽
+  const bySet={}; p15all.forEach(i=>(bySet[i.set]=bySet[i.set]||[]).push(i));
+  const SET_PIECES={"生命":2,"防禦":2,"命中":2,"抗性":2,"暴擊":2,"貫穿":2,"免疫":2,"夾擊":2,"飛流":2};
+  const quota=Object.keys(bySet).map(set=>{
+    const g=bySet[set], cnt={}; SLOTS.forEach(s=>cnt[s]=0);
+    g.forEach(i=>cnt[i.slot]++);
+    const pieces=SET_PIECES[set]||4;
+    let units=0;
+    for(let k=1;k<=Math.floor(g.length/pieces)+1;k++){
+      let cap=0; SLOTS.forEach(s=>cap+=Math.min(cnt[s],k));
+      if(cap>=pieces*k)units=k; else break;
+    }
+    const thin=SLOTS.reduce((a,b)=>cnt[b]<cnt[a]?b:a);
+    return {set,n:g.length,pieces,units,cnt,thin,thinN:cnt[thin],
+            stats:scoreStats(g),ignored:IGNORED_SETS.has(set)};
+  }).sort((a,b)=>b.n-a.n).filter(r=>r.n>=8);
+  const peakN=Math.max(1,...quota.map(r=>r.n));
+
+  function gapRows(slots,axisIsSet){
+    const grp={};
+    p15.forEach(i=>{ if(!slots.includes(i.slot))return;
+      const key=i.slot+"|"+(axisIsSet?i.set:i.mt);
+      (grp[key]=grp[key]||[]).push(i); });
+    return Object.keys(grp).map(k=>{
+      const [slot,ax]=k.split("|"), g=grp[k];
+      const t=axisIsSet
+        ? {label:"輸出／肉裝／底速半肉",hit:i=>axOutput(i)||axTank(i)||axHalftank(i)}
+        : gapTarget(ax);
+      const done=t.hit?g.filter(t.hit):[];
+      const r={slot,ax,set:axisIsSet?ax:null,n:g.length,label:t.label,
+               done:done.length,stats:scoreStats(done),
+               bestHelper:done.length?Math.max(...done.map(i=>i.helper)):0};
+      [r.level,r.verdict]=gapVerdict(r);
+      return r;
+    }).filter(r=>r.n>=3).sort((a,b)=>a.slot===b.slot?b.n-a.n:slots.indexOf(a.slot)-slots.indexOf(b.slot));
+  }
+  const rightRows=gapRows(RIGHT,false), leftRows=gapRows(LEFT,true);
+
+  const gapTable=(rows,axLabel)=>
+    '<div class="scroll"><table><tr><th>部位</th><th>'+axLabel+'</th><th>件數</th><th>成品</th>'+
+    "<th>成品平均</th><th>成品中位</th><th>成品最佳</th><th>判讀</th></tr>"+
+    rows.map(r=>{const s=r.stats;
+      return '<tr class="r-'+r.level+'"><td>'+r.slot+"</td><td>"+esc(r.ax)+"</td>"+
+        '<td class="n">'+r.n+'</td><td class="n">'+(r.label?hot(r.done,3,0):"—")+"</td>"+
+        '<td class="n">'+(s?s.avg.toFixed(1):"—")+'</td><td class="n">'+(s?s.med.toFixed(1):"—")+"</td>"+
+        '<td class="n">'+(s?s.max.toFixed(1)+" <small>"+esc(s.maxSet)+"</small>":"—")+"</td>"+
+        '<td class="'+r.level+'">'+esc(r.verdict)+"</td></tr>";
+    }).join("")+"</table></div>";
+
+  const buildRow=(b,i,arr,free)=>
+    "<tr><td>第"+(i+1)+"快</td>"+
+    '<td class="n">'+gearSpeed(b.picks)+'</td><td class="n"><b>'+b.val+"</b></td>"+
+    '<td class="n">'+(free[i]?free[i].val:0)+"</td><td>"+
+    b.picks.map(p=>p.slot+esc(p.set)+(p.cls===3?"紫":"")+"+"+pieceStat(p,"速度")).join(" · ")+
+    "</td></tr>";
+
+  app.innerHTML=
+    "<h1>裝備健檢</h1>"+
+    '<p class="sub">+15 傳說 '+p15.length+" 件"+(hasCls?"、+15 紫 "+epic+" 件":"")+
+    " · 適配分分級："+TIERS.map(([n])=>n+" <b>"+tiers[n]+"</b>").join("　")+
+    (meta?" · 資料匯入於 "+new Date(meta.ts).toLocaleString():"")+"</p>"+
+
+    (hasCls?"":'<div class="note">這批快取是舊版配裝器匯入的，沒有裝備品質欄位，'+
+      "所以無法分開傳說與紫裝（目前全部當傳說算）。到配裝計算器<b>重新匯入一次</b> JSON 就會正常。</div>")+
+
+    '<div class="card flex">'+radarSVG(axes)+
+      "<div><h2>六軸（+15 件數）</h2>"+
+      AXES.map(([n])=>'<div class="axis-li"><span>'+n+"</span><b>"+axes[n]+"</b></div>").join("")+
+      '<p class="sub">輸出＝攻擊向套裝且四條副詞條全是攻擊向；底速半肉＝無速度＋大詞條＋暴率或暴傷＋素質夠；'+
+      "肉裝＝四條全落在生命/防禦/速度/抗性；抗性 13%/14%、高速 11/12、一速 14/15"+
+      "（前面的門檻給對應套裝，後面給其他套裝）。</p></div></div>"+
+
+    '<div class="card"><h2>速度組隊模擬</h2><div class="scroll"><table>'+
+      "<tr><th>名次</th><th>裝備速度</th><th>角色速度</th><th>不湊套裝</th><th>組成</th></tr>"+
+      (spd.length?spd.map((b,i)=>buildRow(b,i,spd,spdFree)).join("")
+        :"<tr><td colspan=5>組不出完整六件速度套隊</td></tr>")+
+      '</table></div><p class="sub"><b>裝備速度</b>＝副屬速度＋速度鞋主屬，純粹是裝備的貢獻。'+
+      "<b>角色速度</b>＝floor(基礎速 ×(1+套裝速度%)＋覺醒＋裝備速度)，套裝的速度% 只乘基礎速。"+
+      "<b>基準角是兔女郎愛莉卡</b>（基礎速 "+BASE_SPEED+"、6 覺 +"+AWAKEN_SPEED+"）——"+
+      "換一隻角色這個數字就會變，跨角色比較請自己換算。"+
+      "六部位各一件、強制 4 件速度套，組完一隻就把那六件拿掉再組下一隻；紫裝一起算。</p></div>"+
+
+    '<div class="card"><h2>抗性組隊模擬</h2><div class="scroll"><table>'+
+      "<tr><th>名次</th><th>裝備抗性</th><th>總抗性</th><th>抗性套</th><th>組成</th></tr>"+
+      (res.length?res.map((b,i)=>{
+        const c=b.picks.filter(p=>p.set===RESIST_SET).length;
+        return "<tr><td>第"+(i+1)+'高</td><td class="n">'+(gearResist(b.picks)*100).toFixed(0)+
+          '%</td><td class="n"><b>'+(b.val*100).toFixed(0)+'%</b></td><td class="n">'+c+" 件</td><td>"+
+          b.picks.map(p=>p.slot+esc(p.set)+"+"+(pieceStat(p,"抗性")*100).toFixed(0)).join(" · ")+
+          "</td></tr>";}).join("")
+        :"<tr><td colspan=5>組不出來</td></tr>")+
+      '</table></div><p class="sub">抗性跟速度一樣是競賽型詞條——看的是能推到多高，不是手上有幾件。'+
+      "抗性套每 2 件 +20% 可疊到 6 件（+60%），抗性戒指主屬另外給 60%。"+
+      "<b>只算裝備與套裝，未計角色的天生抗性</b>。</p></div>"+
+
+    '<div class="card"><h2>套裝概覽</h2><div class="scroll"><table>'+
+      "<tr><th>套裝</th><th>件數</th><th>套</th><th>units</th><th>平均</th><th>中位</th>"+
+      SLOTS.map(s=>"<th>"+s+"</th>").join("")+"<th>瓶頸</th></tr>"+
+      quota.map(r=>'<tr class="'+(r.ignored?"r-na":"")+'"><td>'+esc(r.set)+
+        (r.ignored?" <small>×不考慮</small>":"")+"</td>"+
+        '<td class="n">'+r.n+'<span class="bar" style="width:'+(r.n/peakN*100).toFixed(0)+'%"></span></td>'+
+        '<td class="n">'+r.pieces+'</td><td class="n">'+r.units+"</td>"+
+        '<td class="n">'+r.stats.avg.toFixed(1)+'</td><td class="n">'+r.stats.med.toFixed(1)+"</td>"+
+        SLOTS.map(s=>'<td class="n">'+hot(r.cnt[s],4,2)+"</td>").join("")+
+        "<td>"+r.thin+" "+hot(r.thinN,4,2)+"</td></tr>").join("")+
+      '</table></div><p class="sub">一次比較所有套裝的<b>量</b>（件數與長條）跟<b>質</b>'+
+      "（該套裝所有 +15 的適配分平均與中位）。量多但平均低＝撿得多但沒一件像樣；"+
+      "量少但平均高＝值得補齊的體系。units＝最多能同時湊出幾組完整套；"+
+      "4 件套只吃 6 個部位中的 4 個，所以會比瓶頸部位寬鬆，實際配裝常指定某部位"+
+      "（速度隊一定要速度鞋），那時瓶頸欄才是真上限。</p></div>"+
+
+    '<div class="card"><h2>右三件缺口表</h2>'+gapTable(rightRows,"主屬")+
+      '<p class="sub">右三件的主屬性可以刷，所以「要選哪個主屬」才是軸。'+
+      "判讀看的是<b>成品數</b>而不是件數——某個主屬有 40 件、但沒一件達到成品標準，"+
+      "等於一件成品都沒有，那才是製作該補的位置。分數欄<b>只統計成品</b>。</p></div>"+
+
+    '<div class="card"><h2>左三件缺口表</h2>'+gapTable(leftRows,"套裝")+
+      '<p class="sub">左三件的主屬性固定（武器小攻／頭盔小生／鎧甲小防），要選的是套裝，'+
+      "所以軸換成套裝。成品標準＝符合 輸出／肉裝／底速半肉 任一軸。"+
+      "<b>有大畢業不等於不需要</b>——裝備不能在角色之間共享，多養一隻就要多一套，"+
+      "這兩張表排的只是製作的優先順序。</p></div>"+
+
+    '<div class="card"><p class="sub">適配分只看四條副詞條，不看主屬性也不看套裝，'+
+      "所以「主屬性本身就是價值」的件（速度鞋）會被低估，判斷時要自己補回來。"+
+      '<br><a href="./equip-optimizer.html">← 回配裝計算器</a></p></div>';
+}
+render();
+</script>
+</body>
+</html>

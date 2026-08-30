@@ -134,7 +134,7 @@ function parseEquipJSON(raw,savedSlotMap={}){
     const sid=i.StaticID||"",pfx=sid.slice(0,-1),last=sid.slice(-1);
     const me=i.MainProp?.PropertyType||"",mt=PROP_MAP[me]||me,mv=i.MainProp?.Value||0;
     const subs={};(i.SubProps?.SourceValues||[]).forEach(s=>{const st=PROP_MAP[s.PropertyType]||s.PropertyType;subs[st]=(subs[st]||0)+s.Value;});
-    const base={oid:i._id?.$oid||("m"+Math.random().toString(36).slice(2)),sid,set:SET_MAP[i.Set]||i.Set,lv:i.LV,mt,mv,subs};
+    const base={oid:i._id?.$oid||("m"+Math.random().toString(36).slice(2)),sid,set:SET_MAP[i.Set]||i.Set,lv:i.LV,cls:i.ClassLV,mt,mv,subs};
     let slot;
     if(SPECIAL_PFX_SLOT[pfx]?.[me])slot=SPECIAL_PFX_SLOT[pfx][me];       // 第一層：特殊例外前綴
     else if("123456".includes(last))slot=SMAP[+last];                      // 第二層：末位數字普遍規則
@@ -1359,6 +1359,7 @@ function App(){
                     {icon:"📊",zh:"對戰記錄器",en:"Battle Recorder",href:"./battle-recorder.html"},
                     {icon:"👤",zh:"角色資料庫",en:"Character DB",href:"./character-db.html"},
                     {icon:"⚙️",zh:"配裝計算器",en:"Equip Optimizer",href:"./equip-optimizer.html",active:true},
+                    {icon:"🩺",zh:"裝備健檢",en:"Equip Audit",href:"./equip-audit.html"},
                   ].map(item=>(
                     <a key={item.href} href={item.href}
                       onClick={e=>{if(item.active){e.preventDefault();setNavOpen(false);}}}
@@ -1405,6 +1406,8 @@ function App(){
             <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>{try{handleEquipFile(JSON.parse(r.result));}catch(err){alert("JSON解析錯誤: "+err.message)}};r.readAsText(f);}e.target.value="";}}/>
           </label>
           {equips.length>0&&<button onClick={()=>{setEquips([]);setEquipCacheMeta(null);try{localStorage.removeItem("arkrecode_equips");localStorage.removeItem("arkrecode_equips_meta");}catch(e){ console.warn('[arkrecode]', e); }}} className="flex items-center gap-1 bg-red-900/30 hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-800/50 text-red-400 transition-colors">🗑️ 清除</button>}
+          {equips.length>0&&<a href="./equip-audit.html" title="用這批裝備做庫存體檢"
+            className="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 py-1 rounded-lg border border-slate-700/50 text-slate-300 transition-colors no-underline">🩺 裝備健檢</a>}
           <div className="text-slate-500 text-[14px] border border-slate-800 px-2 py-1 rounded-lg flex items-center gap-1">
             <span style={{color:"#93C5FD"}}>{chars.length}</span> 角 · <span style={{color:"#4ADE80"}}>{equips.length}</span> 裝
             {equipCacheMeta&&<span className="text-[13px] cursor-default" style={{color:"#475569"}} title={"快取："+equips.length+"件，"+new Date(equipCacheMeta.ts).toLocaleString()}>💾</span>}
