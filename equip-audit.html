@@ -38,6 +38,19 @@ tr.r-gap{background:#7F1D1D22} tr.r-thin{background:#78350F22} tr.r-na{opacity:.
 b.hot{color:#F87171} b.warm{color:#FBBF24}
 .bar{display:block;height:4px;margin-top:3px;border-radius:2px;background:#6366F1;
   min-width:2px;margin-left:auto}
+.bar.q{background:#38BDF8}
+a.back{display:inline-block;margin-top:16px;color:#64748B;font-size:14px;text-decoration:none}
+a.back:hover{color:#93C5FD}
+.toggle{display:inline-flex;align-items:center;gap:7px;margin:0 0 12px;
+  color:#94A3B8;font-size:14px;cursor:pointer;user-select:none}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:#93C5FD}
+th.sorted{color:#93C5FD}
+table.quota td.slot{font-variant-numeric:tabular-nums}
+.h0{background:#14532D55} .h1{background:#1E293B} .h2{background:#78350F66}
+.h3{background:#7F1D1D88;color:#FCA5A5;font-weight:700}
+td.thin-cell{outline:1px solid #93C5FD;outline-offset:-2px}
+.lg{display:inline-block;padding:0 6px;border-radius:4px;margin:0 1px}
 .empty{text-align:center;padding:50px 20px;color:#64748B}
 .btn{display:inline-block;margin-top:14px;padding:9px 18px;border-radius:10px;
   background:#1E3A5F;color:#93C5FD;text-decoration:none;border:1px solid #3B82F644}
@@ -309,7 +322,7 @@ function render(){
     return {set,n:g.length,pieces,units,cnt,thin,thinN:cnt[thin],
             stats:scoreStats(g),ignored:IGNORED_SETS.has(set)};
   }).sort((a,b)=>b.n-a.n).filter(r=>r.n>=8);
-  const peakN=Math.max(1,...quota.map(r=>r.n));
+  QUOTA=quota;
 
   function gapRows(slots,axisIsSet){
     const grp={};
@@ -350,6 +363,7 @@ function render(){
     "</td></tr>";
 
   app.innerHTML=
+    '<a class="back" href="./equip-optimizer.html">← 回配裝計算器</a>'+
     "<h1>裝備健檢</h1>"+
     '<p class="sub">+15 傳說 '+p15.length+" 件"+(hasCls?"、+15 紫 "+epic+" 件":"")+
     " · 適配分分級："+TIERS.map(([n])=>n+" <b>"+tiers[n]+"</b>").join("　")+
@@ -388,21 +402,7 @@ function render(){
       "抗性套每 2 件 +20% 可疊到 6 件（+60%），抗性戒指主屬另外給 60%。"+
       "<b>只算裝備與套裝，未計角色的天生抗性</b>。</p></div>"+
 
-    '<div class="card"><h2>套裝概覽</h2><div class="scroll"><table>'+
-      "<tr><th>套裝</th><th>件數</th><th>套</th><th>units</th><th>平均</th><th>中位</th>"+
-      SLOTS.map(s=>"<th>"+s+"</th>").join("")+"<th>瓶頸</th></tr>"+
-      quota.map(r=>'<tr class="'+(r.ignored?"r-na":"")+'"><td>'+esc(r.set)+
-        (r.ignored?" <small>×不考慮</small>":"")+"</td>"+
-        '<td class="n">'+r.n+'<span class="bar" style="width:'+(r.n/peakN*100).toFixed(0)+'%"></span></td>'+
-        '<td class="n">'+r.pieces+'</td><td class="n">'+r.units+"</td>"+
-        '<td class="n">'+r.stats.avg.toFixed(1)+'</td><td class="n">'+r.stats.med.toFixed(1)+"</td>"+
-        SLOTS.map(s=>'<td class="n">'+hot(r.cnt[s],4,2)+"</td>").join("")+
-        "<td>"+r.thin+" "+hot(r.thinN,4,2)+"</td></tr>").join("")+
-      '</table></div><p class="sub">一次比較所有套裝的<b>量</b>（件數與長條）跟<b>質</b>'+
-      "（該套裝所有 +15 的適配分平均與中位）。量多但平均低＝撿得多但沒一件像樣；"+
-      "量少但平均高＝值得補齊的體系。units＝最多能同時湊出幾組完整套；"+
-      "4 件套只吃 6 個部位中的 4 個，所以會比瓶頸部位寬鬆，實際配裝常指定某部位"+
-      "（速度隊一定要速度鞋），那時瓶頸欄才是真上限。</p></div>"+
+    '<div class="card" id="quotaCard"></div>'+
 
     '<div class="card"><h2>右三件缺口表</h2>'+gapTable(rightRows,"主屬")+
       '<p class="sub">右三件的主屬性可以刷，所以「要選哪個主屬」才是軸。'+
@@ -418,6 +418,68 @@ function render(){
     '<div class="card"><p class="sub">適配分只看四條副詞條，不看主屬性也不看套裝，'+
       "所以「主屬性本身就是價值」的件（速度鞋）會被低估，判斷時要自己補回來。"+
       '<br><a href="./equip-optimizer.html">← 回配裝計算器</a></p></div>';
+  mountQuota();
+}
+
+// ---------- 套裝概覽（可排序、可篩選）----------
+// 量（件數長條）與質（適配分平均，跨套裝相對縮放）並排，六個部位用熱度格，
+// 一眼看得出哪個套裝「量夠質不夠」、哪個部位是瓶頸。
+let QUOTA=[], qSort={key:"n",dir:-1}, qHideIgnored=false;
+
+function slotCell(n,isThin){
+  const cls=n<=2?"h3":n<=4?"h2":n<=7?"h1":"h0";
+  return '<td class="n slot '+cls+(isThin?" thin-cell":"")+'">'+n+"</td>";
+}
+function renderQuota(){
+  const rows=QUOTA.filter(r=>!(qHideIgnored&&r.ignored));
+  const peakN=Math.max(1,...rows.map(r=>r.n));
+  const avgs=rows.map(r=>r.stats.avg), lo=Math.min(...avgs), hi=Math.max(...avgs);
+  const pct=v=>hi>lo?((v-lo)/(hi-lo)*100):50;   // 平均分區間很窄，跨套裝相對縮放才看得出差別
+  const get=r=>({set:r.set,n:r.n,pieces:r.pieces,units:r.units,
+                 avg:r.stats.avg,med:r.stats.med,thin:r.thinN}[qSort.key]);
+  rows.sort((a,b)=>{const x=get(a),y=get(b);
+    return (typeof x==="string"?x.localeCompare(y):x-y)*qSort.dir;});
+  const th=(key,label,title)=>'<th class="sortable'+(qSort.key===key?" sorted":"")+
+    '" data-k="'+key+'"'+(title?' title="'+title+'"':"")+'>'+label+
+    (qSort.key===key?(qSort.dir<0?" ▾":" ▴"):"")+"</th>";
+  return '<h2>套裝概覽</h2>'+
+    '<label class="toggle"><input type="checkbox" id="qHide"'+(qHideIgnored?" checked":"")+
+    "> 只看會考慮製作的套裝</label>"+
+    '<div class="scroll"><table class="quota">'+
+    "<tr>"+th("set","套裝")+th("n","件數","這個套裝手上有幾件 +15")+
+    th("pieces","套","幾件觸發套裝效果")+th("units","units","最多能同時湊出幾組")+
+    th("avg","平均","該套裝所有 +15 的適配分平均")+th("med","中位")+
+    SLOTS.map(x=>'<th class="n">'+x+"</th>").join("")+th("thin","瓶頸")+"</tr>"+
+    rows.map(r=>'<tr class="'+(r.ignored?"r-na":"")+'"><td>'+esc(r.set)+
+      (r.ignored?' <small>×</small>':"")+"</td>"+
+      '<td class="n">'+r.n+'<span class="bar" style="width:'+(r.n/peakN*100).toFixed(0)+'%"></span></td>'+
+      '<td class="n">'+r.pieces+'</td><td class="n">'+r.units+"</td>"+
+      '<td class="n">'+r.stats.avg.toFixed(1)+
+        '<span class="bar q" style="width:'+pct(r.stats.avg).toFixed(0)+'%"></span></td>'+
+      '<td class="n">'+r.stats.med.toFixed(1)+"</td>"+
+      SLOTS.map(x=>slotCell(r.cnt[x],x===r.thin)).join("")+
+      '<td class="n">'+esc(r.thin)+" "+r.thinN+"</td></tr>").join("")+
+    "</table></div>"+
+    '<p class="sub">點欄位標題可排序。<b>件數</b>後面的紫條是量，'+
+    "<b>平均</b>後面的藍條是質（分數區間很窄，所以是跨套裝相對縮放，不是從 0 起算）。"+
+    "量多但平均低＝撿得多但沒一件像樣；量少但平均高＝值得補齊的體系。"+
+    "六個部位用底色標存量（<span class=\"lg h3\">≤2</span> "+
+    "<span class=\"lg h2\">≤4</span> <span class=\"lg h1\">≤7</span> "+
+    "<span class=\"lg h0\">8+</span>），外框那格是瓶頸部位。"+
+    "units＝最多能同時湊出幾組完整套；4 件套只吃 6 個部位中的 4 個，所以會比瓶頸寬鬆，"+
+    "實際配裝常指定某部位（速度隊一定要速度鞋），那時<b>瓶頸欄才是真上限</b>。</p>";
+}
+function mountQuota(){
+  const card=document.getElementById("quotaCard");
+  if(!card)return;
+  card.innerHTML=renderQuota();
+  card.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    if(qSort.key===k)qSort.dir*=-1; else qSort={key:k,dir:k==="set"?1:-1};
+    mountQuota();
+  });
+  const cb=card.querySelector("#qHide");
+  if(cb)cb.onchange=()=>{qHideIgnored=cb.checked;mountQuota();};
 }
 render();
 </script>
