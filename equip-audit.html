@@ -51,6 +51,9 @@ table.quota td.slot{font-variant-numeric:tabular-nums}
 .h3{background:#7F1D1D88;color:#FCA5A5;font-weight:700}
 td.thin-cell{outline:1px solid #93C5FD;outline-offset:-2px}
 .lg{display:inline-block;padding:0 6px;border-radius:4px;margin:0 1px}
+pre.formula{background:#0B1120;border:1px solid #1E293B;border-radius:8px;
+  padding:12px 14px;font-size:14px;color:#93C5FD;overflow-x:auto;margin:10px 0;
+  font-family:ui-monospace,Consolas,monospace}
 .empty{text-align:center;padding:50px 20px;color:#64748B}
 .btn{display:inline-block;margin-top:14px;padding:9px 18px;border-radius:10px;
   background:#1E3A5F;color:#93C5FD;text-decoration:none;border:1px solid #3B82F644}
@@ -101,7 +104,7 @@ function tierOf(s){ for(const[n,t]of TIERS) if(s>=t) return n; return "待提升
 
 // 六軸。門檻型的三軸都是「對應套裝一階、其他套裝再高一階」
 const TH={ "高速":["速度","速度",11,12], "一速":["速度","速度",14,15],
-           "抗性":["抗性","抗性",0.13,0.14] };
+           "抗性":["抗性","抗性",0.18,0.19] };
 function axScaled(i,ax){ const[p,st,on,off]=TH[ax];
   return (i.subs[p]||0) >= (i.set===st?on:off); }
 
@@ -376,7 +379,7 @@ function render(){
       "<div><h2>六軸（+15 件數）</h2>"+
       AXES.map(([n])=>'<div class="axis-li"><span>'+n+"</span><b>"+axes[n]+"</b></div>").join("")+
       '<p class="sub">輸出＝攻擊向套裝且四條副詞條全是攻擊向；底速半肉＝無速度＋大詞條＋暴率或暴傷＋素質夠；'+
-      "肉裝＝四條全落在生命/防禦/速度/抗性；抗性 13%/14%、高速 11/12、一速 14/15"+
+      "肉裝＝四條全落在生命/防禦/速度/抗性；抗性 18%/19%、高速 11/12、一速 14/15"+
       "（前面的門檻給對應套裝，後面給其他套裝）。</p></div></div>"+
 
     '<div class="card"><h2>速度組隊模擬</h2><div class="scroll"><table>'+
@@ -415,8 +418,34 @@ function render(){
       "<b>有大畢業不等於不需要</b>——裝備不能在角色之間共享，多養一隻就要多一套，"+
       "這兩張表排的只是製作的優先順序。</p></div>"+
 
-    '<div class="card"><p class="sub">適配分只看四條副詞條，不看主屬性也不看套裝，'+
-      "所以「主屬性本身就是價值」的件（速度鞋）會被低估，判斷時要自己補回來。"+
+    '<div class="card"><h2>分數與分級怎麼算</h2>'+
+      '<p class="sub">四條副詞條各自換算後相加，就是<b>適配分</b>：</p>'+
+      '<pre class="formula">速度 × 2      暴率 × 160     暴傷 × 114\n'+
+      '其他所有 %詞條 × 100\n'+
+      '小攻 ÷ 10     小防 ÷ 6       小生 ÷ 50</pre>'+
+      '<p class="sub">這組係數是校準過的 —— 把掉落機率代進去，'+
+      '<b>每一次 roll 平均都值 6 分、滿值 8 分</b>，白值詞條（小攻／小生／小防）'+
+      '刻意打 6~4 折（實際效用比較差）：</p>'+
+      '<div class="scroll"><table><tr><th>詞條</th><th>平均一次 roll</th><th>滿值</th></tr>'+
+      [["速度 / 暴率 / 暴傷 / 所有 %詞條","6.00","8.00"],["小防","5.18","5.83"],
+       ["小攻","3.90","4.60"],["小生","3.58","4.04"]]
+        .map(r=>"<tr><td>"+r[0]+'</td><td class="n">'+r[1]+'</td><td class="n">'+r[2]+"</td></tr>").join("")+
+      "</table></div>"+
+      '<p class="sub">一件 +15 裝備總共吃 <b>9 次 roll</b>（4 次初始 + 5 次強化追加，'+
+      '隨機落在那 4 條上），所以平均會落在 9×6＝<b>54</b> 分附近。分級就是照這個基準訂的：</p>'+
+      '<div class="scroll"><table><tr><th>分級</th><th>適配分</th><th>意思</th></tr>'+
+      [["大畢業","≥ 62","九次 roll 平均 6.9 分，約 86% 滿值"],
+       ["小畢業","≥ 57","明顯優於平均"],
+       ["及格","≥ 47","堪用"],
+       ["入門","≥ 37","比平均差一截"],
+       ["待提升","&lt; 37","不值得再投強化材料"]]
+        .map(r=>"<tr><td><b>"+r[0]+'</b></td><td class="n">'+r[1]+"</td><td>"+r[2]+"</td></tr>").join("")+
+      "</table></div>"+
+      '<p class="sub">缺口表的「成品」不是看分數，是看<b>詞條結構對不對</b> —— '+
+      '攻擊向主屬要三條目標詞條都在，生存向主屬要符合肉裝或底速半肉。'+
+      '分數只用來回答「這格最好的那件夠不夠好」。</p>'+
+      '<p class="sub">⚠ 適配分只看四條副詞條，<b>不看主屬性也不看套裝</b>，'+
+      '所以「主屬性本身就是價值」的件（速度鞋主屬給 40 速）會被低估，判斷時要自己補回來。'+
       '<br><a href="./equip-optimizer.html">← 回配裝計算器</a></p></div>';
   mountQuota();
 }
