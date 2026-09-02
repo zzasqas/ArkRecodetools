@@ -15,7 +15,7 @@ window.CHARACTER_ALIASES = [
     { name: '聖誕的蜜拉貝兒', nameEN: 'Christmas Mirabelle', id: 'H146', aliases: ['聖誕的蜜拉貝兒', '闆娘', '火聖誕', '版娘', '板娘'] },
     { name: '赤鬼伯伯', nameEN: 'Akaoni', id: 'H121', aliases: ['赤鬼伯伯', '赤鬼'] },
     { name: 'Aoi Hinamori', nameEN: 'Aoi Hinamori', id: 'H119', aliases: ['Aoi Hinamori', 'AOI', 'aoi', 'Aoi'] },
-    { name: '新春的蜜娜', nameEN: 'Springtime Mina', id: 'H148', aliases: ['新春的蜜娜', '蜜娜', '炸彈'] },
+    { name: '新春的蜜娜', nameEN: 'Springtime Mina', id: 'H148', aliases: ['新春的蜜娜', '炸彈'] },
     { name: '新春的莎莉絲特', nameEN: 'Springtime Celeste', id: 'H123', aliases: ['新春的莎莉絲特', '新春'] },
     { name: '喬依絲', nameEN: 'Joyce', id: 'H029', aliases: ['喬依絲', '小火奶'] },
     { name: '奈蘭希爾', nameEN: 'Naranthir', id: 'H005', aliases: ['奈蘭希爾'] },
@@ -116,4 +116,6 @@ window.CHARACTER_ALIASES = [
     { name: '米德', nameEN: 'Mead', id: 'H183', aliases: ['米德', '星法'] },
     { name: '雪江', nameEN: 'Yukie', id: 'H188', aliases: ['雪江', '新血卡'] },
     { name: '靜奈', nameEN: 'Shizuna', id: 'H605', aliases: ['靜奈', 'Shizuna'] },
+    { name: '蜜娜', nameEN: 'Mina', id: 'H804', aliases: ['蜜娜', '密娜'] },
+    { name: '露西芙爾', nameEN: 'Luciphael', id: 'H185', aliases: ['露西芙爾', '暗醫生', '暗小總理'] },
 ];
