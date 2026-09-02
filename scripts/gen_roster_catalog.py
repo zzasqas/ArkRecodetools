@@ -10,13 +10,26 @@ gen_roster_catalog.py — 產生 roster-catalog.js 給 roster-viewer.html 用
 用法：python scripts/gen_roster_catalog.py
 """
 import json
+import os
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 WIKI = ROOT / "assets" / "char-wiki-data.json"
-CHARS = Path(r"C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer"
-             r"\arkrecode_gvg_sniffer\data\characters.json")
 OUT = ROOT / "roster-catalog.js"
+
+# sniffer 是私有專案，路徑不寫進這個公開 repo。
+# 優先讀環境變數 ARK_SNIFFER_DIR，否則讀本機 local/_paths.py（在 .gitignore 裡）。
+_env = os.getenv("ARK_SNIFFER_DIR")
+if _env:
+    CHARS = Path(_env) / "data" / "characters.json"
+else:
+    sys.path.insert(0, str(ROOT / "local"))
+    try:
+        from _paths import CHARACTERS_JSON as CHARS       # type: ignore
+    except ImportError:
+        sys.exit("找不到 sniffer 路徑：請設環境變數 ARK_SNIFFER_DIR，"
+                 "或建立 local/_paths.py")
 
 ATTR_ZH = {"Flame": "火", "Water": "水", "Nature": "木", "Light": "光", "Dark": "暗"}
 CLS_ZH = {"Warrior": "戰士", "Caster": "術師", "Sniper": "狙擊",

@@ -35,3 +35,6 @@ research/
 Thumbs.db
 local/*.html
 local/*.bat
+
+# 代管服務規劃（含營運方式、定價、帳號對照）——只在本機看，不進公開 repo
+DAIKAN_PROMO_SPEC.md

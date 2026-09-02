@@ -285,7 +285,7 @@ character-db.html **不會**自動讀 chars.csv，所有角色資料（nameCN/EN
 
 **2026-06-10 起，`assets/char-name-data.js` 是兩個專案共用的角色識別母檔**
 （中文名 / nameEN / StaticID / 暱稱，103 條目皆已補齊 id）。
-sniffer（`C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer`）
+sniffer（私有 repo，本機路徑見 `local/_paths.py`，以下用 `<SNIFFER_DIR>` 代表）
 的 ROLE 對照表與 Discord bot 暱稱解析，都從本檔經同步腳本產生的
 `data/characters.json` 自動載入，**sniffer 端不再手改任何角色檔案**。
 
@@ -304,7 +304,7 @@ sniffer（`C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sni
 #    H1xx~H2xx = 主線；H6xx = vtuber/聯動；H8xx = 熊熊系列
 
 # 2. 在 sniffer repo 執行同步腳本（可先 --dry-run 預覽）
-cd "C:\Users\zzasq\OneDrive\Documents\arkrecode sniffer\arkrecode_gvg_sniffer"
+cd "<SNIFFER_DIR>"          # 本機實際路徑見 local/_paths.py
 python scripts/sync_from_arkrecode.py
 
 # 3. 兩個 repo 各自 commit & push（sniffer push 會觸發 Railway redeploy）
