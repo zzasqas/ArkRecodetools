@@ -76,7 +76,7 @@
 <div class="wrap">
   <a class="home" href="./index.html">← ArkRecode 工具首頁</a>
   <h1>封鎖名單 · 封神榜</h1>
-  <div class="sub">資料來源：官方公告名單 × 遊戲 API 玩家名片｜產生時間 2026-09-02 15:14｜公開版（速度／儲值為區間）</div>
+  <div class="sub">資料來源：官方公告名單 × 遊戲 API 玩家名片｜產生時間 2026-09-03 08:01｜公開版（速度／儲值為區間）</div>
 
   <div class="cards"><div class="card"><div class="card-label">名單總數</div><div class="card-value">519</div><div class="card-note">筆（去重後）</div></div><div class="card"><div class="card-label">仍在鎖定</div><div class="card-value">519</div><div class="card-note">已解封 0</div></div><div class="card"><div class="card-label">早上 08–12 點被砍</div><div class="card-value">56%</div><div class="card-note">289 筆，高峰 11:00</div></div><div class="card"><div class="card-label">無公會</div><div class="card-value">36%</div><div class="card-note">185 筆／共 216 個公會</div></div><div class="card"><div class="card-label">同名帳號</div><div class="card-value">40</div><div class="card-note">個叫「米契尔」</div></div><div class="card"><div class="card-label">簡體字暱稱／團名</div><div class="card-value">382</div><div class="card-note">筆（74%）</div></div><div class="card"><div class="card-label">滿等 LV70</div><div class="card-value">296</div><div class="card-note">筆（57%）</div></div><div class="card"><div class="card-label">速度前 30% 以上</div><div class="card-value">39</div><div class="card-note">筆</div></div><div class="card"><div class="card-label">登入時間對不上</div><div class="card-value">18</div><div class="card-note">公告後仍登入 0｜久未上線 18</div></div></div>
 
@@ -101,7 +101,7 @@
   </div>
   <div id="more" class="more"></div>
 
-  <footer><b>資料查詢時間：2026-09-02 15:14</b>（狀態欄反映的是這個時間點）<br><b>速度推測</b>＝依競技場防守隊的裝備推估的速度水準，只標到「前 30%」為止，其餘不顯示，本來就是估的，不是精確值。<br><b>最後登入</b>標紅＝登入時間晚於公告封鎖日；標灰＝封鎖日前兩天以上就沒上線。<br><b>資料來源</b>：封鎖名單為官方公告，其餘欄位取自遊戲內公開的玩家名片。名單會隨官方後續公告更新。</footer>
+  <footer><b>資料查詢時間：2026-09-03 08:01</b>（狀態欄反映的是這個時間點）<br><b>速度推測</b>＝依競技場防守隊的裝備推估的速度水準，只標到「前 30%」為止，其餘不顯示，本來就是估的，不是精確值。<br><b>最後登入</b>標紅＝登入時間晚於公告封鎖日；標灰＝封鎖日前兩天以上就沒上線。<br><b>資料來源</b>：封鎖名單為官方公告，其餘欄位取自遊戲內公開的玩家名片。名單會隨官方後續公告更新。</footer>
 </div>
 
 <script>
@@ -186,7 +186,7 @@ const guildList = [...guildOpts].sort((a, b) => b[1] - a[1] || collator.compare(
 document.getElementById('gf').insertAdjacentHTML('beforeend',
   guildList.map(([g, c]) => `<option value="${esc(g)}">${esc(g)} (${c})</option>`).join(''));
 
-// ponytail: 一次只畫 PAGE 列，捲到底再補。2802 列 x 13 欄一次進 DOM，
+// ponytail: 一次只畫 PAGE 列，捲到底再補。整份資料一次進 DOM 的話，
 // 排序、搜尋、捲動都會卡在瀏覽器重排；篩選/排序仍然算完整資料集，只是不全部畫出來。
 const PAGE = 100;
 let rowsCache = [], shown = 0;
