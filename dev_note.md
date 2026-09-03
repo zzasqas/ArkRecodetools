@@ -137,7 +137,6 @@ Object.keys(localStorage).filter(k => k.startsWith('arkrecode')).forEach(k => lo
 
 ### 中期
 - [ ] TAG 系統頁面：角色培養深度分析
-- [ ] dangerouslySetInnerHTML 替換為 React 元件渲染（XSS 防護）
 - [ ] 移除 Babel Standalone，改用 Vite 編譯部署
 
 ### 長期
@@ -154,3 +153,4 @@ Object.keys(localStorage).filter(k => k.startsWith('arkrecode')).forEach(k => lo
 | 推薦配裝讀不到 | localStorage 過度快取 | v1.3.6 改為每次 fetch |
 | 角色切換設定消失 | `lockRes` 未使用 `res.charName` | 已修正，使用 charName |
 | 候選池爆炸 | MAX_POOL_CAP 未設上限 | 硬上限 28，快速模式 14 |
+| 副屬性名可能夾帶 HTML | `PROP_MAP[PropertyType] \|\| PropertyType`，匯入 JSON 若帶未收錄的 type，原字串直通 `dangerouslySetInnerHTML` | 已修，輸出點加 `escH()`（2026-09-02） |

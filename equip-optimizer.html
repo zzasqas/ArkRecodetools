@@ -2729,6 +2729,9 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
     if(mt==="速度")return"+"+mv;
     return Math.floor(mv);
   };
+  // 副屬性名可能來自匯入 JSON 裡未收錄的 PropertyType（原字串直通），
+  // 而下面 subsH 走 dangerouslySetInnerHTML，所以輸出前一律 escape。
+  const escH=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const fmtSubV=(k,v)=>["爆率","爆傷","命中","抗性","攻擊%","防禦%","生命%"].includes(k)?Math.round(v*100)+"%":Math.floor(v)+"";
 
   const list=useMemo(()=>{
@@ -2811,7 +2814,7 @@ function ManualPicker({slot,equips,selSlots,savedSlots,eqF,setEqF,onSelect,onDes
             const isS=sk&&k===sk;const isF=eqF.subs.includes(k);
             const col=isS?"#FBBF24":isF?"#93C5FD":"#475569";
             const fw=isS||isF?600:400;
-            return'<span style="color:'+col+";font-weight:"+fw+'">'+k+" "+fmtSubV(k,v)+"</span>";
+            return'<span style="color:'+col+";font-weight:"+fw+'">'+escH(k)+" "+fmtSubV(k,v)+"</span>";
           }).join('<span style="color:#1E293B"> · </span>');
           const savedBadge=isSaved?'<span style="font-size:10px;padding:1px 5px;border-radius:999px;background:#16A34A22;color:#4ADE80;border:1px solid #16A34A44;margin-left:4px">已儲存</span>':"";
           return(
