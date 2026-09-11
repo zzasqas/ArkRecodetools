@@ -4,7 +4,7 @@ gen_roster_catalog.py — 產生 roster-catalog.js 給 roster-viewer.html 用
 
 合併兩個來源成一份「完整 id→角色」目錄（roster-viewer 靠 <script> 載，免 fetch、本地也能跑）：
   - assets/char-wiki-data.json（本 repo）：id → nameEN / attribute(元素) / cls(職業) / rarity(星)，236 全有
-  - sniffer 的 data/characters.json：id → 中文名（189，補中文名；缺的用 nameEN）
+  - 本機角色對照表 characters.json：id → 中文名（189，補中文名；缺的用 nameEN）
 
 新角色出現時，跟著兩週更新流程跑一次即可（gen_chars_data.py 旁邊順手跑）。
 用法：python scripts/gen_roster_catalog.py
@@ -18,9 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 WIKI = ROOT / "assets" / "char-wiki-data.json"
 OUT = ROOT / "roster-catalog.js"
 
-# sniffer 是私有專案，路徑不寫進這個公開 repo。
-# 優先讀環境變數 ARK_SNIFFER_DIR，否則讀本機 local/_paths.py（在 .gitignore 裡）。
-_env = os.getenv("ARK_SNIFFER_DIR")
+# 第二個來源在本機的另一個專案，路徑不寫進這個公開 repo。
+# 優先讀環境變數 ARK_CHARS_DIR，否則讀本機 local/_paths.py（在 .gitignore 裡）。
+_env = os.getenv("ARK_CHARS_DIR")
 if _env:
     CHARS = Path(_env) / "data" / "characters.json"
 else:
@@ -28,7 +28,7 @@ else:
     try:
         from _paths import CHARACTERS_JSON as CHARS       # type: ignore
     except ImportError:
-        sys.exit("找不到 sniffer 路徑：請設環境變數 ARK_SNIFFER_DIR，"
+        sys.exit("找不到角色對照表路徑：請設環境變數 ARK_CHARS_DIR，"
                  "或建立 local/_paths.py")
 
 ATTR_ZH = {"Flame": "火", "Water": "水", "Nature": "木", "Light": "光", "Dark": "暗"}
@@ -61,7 +61,7 @@ def main():
     zh = sum(1 for v in catalog.values() if v["name"] != v["nameEN"])
     OUT.write_text(
         f"// 自動由 scripts/gen_roster_catalog.py 產生，勿手改\n"
-        f"// {len(catalog)} 角色（{zh} 有中文名）；合併 char-wiki-data.json + sniffer characters.json\n"
+        f"// {len(catalog)} 角色（{zh} 有中文名）；合併 char-wiki-data.json + 本機角色對照表\n"
         f"window.ROSTER_CATALOG = {body};\n",
         encoding="utf-8")
     print(f"已產生 {OUT}：{len(catalog)} 角色，{zh} 有中文名")

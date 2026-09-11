@@ -71,8 +71,7 @@ pre.formula{background:#0B1120;border:1px solid #1E293B;border-radius:8px;
 <script>
 // ============================================================
 // 裝備健檢 — 直接讀配裝計算器匯入後留在 localStorage 的那批裝備，
-// 使用者不必再匯入一次。判定規則與 sniffer 的 scripts/audit_equips.py 同一套，
-// 詳見該 repo 的 docs/裝備體檢設計.md。
+// 使用者不必再匯入一次。判定規則與離線分析腳本的 Python 版同一套。
 //
 // ⚠ localStorage 存的是「中文 key」（配裝器 parseEquipJSON 已套用 SET_MAP/PROP_MAP），
 //   所以這裡所有詞條／套裝名稱都用中文比對，不能照抄 Python 版的英文 key。
@@ -108,7 +107,7 @@ const TH={ "高速":["速度","速度",11,12], "一速":["速度","速度",14,15
 function axScaled(i,ax){ const[p,st,on,off]=TH[ax];
   return (i.subs[p]||0) >= (i.set===st?on:off); }
 
-// 輸出：對應 sniffer 的 pure_atk（含 SET_ARCHETYPES 套裝閘門）。
+// 輸出：純攻擊評分（含套裝原型閘門）。
 // 三道關卡：① 套裝支援純攻擊 ② 套裝招牌屬性有到（暴擊套要爆率、爆傷套要暴傷、攻擊套要大攻）
 // ③ 副詞條乾淨度：該部位可能出現的攻擊向詞條要中滿（鎧甲不可能有攻擊，池子只有 3 種）
 // ④ 右三件主屬性若明顯是生存向，代表主屬性投資點浪費了，不算。

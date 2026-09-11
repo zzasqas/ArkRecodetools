@@ -17,14 +17,8 @@ equip-planner-py/
 server/node_modules/
 server/submissions.jsonl
 
-# local/ 開發工具與分析產出（不上雲端）
-local/*.png
-local/*.py
-local/*.txt
-local/rta_*.json
-local/row_name_map.json
-local/tier-list-plan.md
-local/星隕角色圖標/
+# local/ 開發工具與分析產出（整個資料夾都不上雲端）
+local/
 
 # research/ 攻略研究與筆記（純文字，改動頻繁，不需要每次 commit）
 # 要把某份分享出去時：git add -f research/<檔名>
@@ -38,3 +32,16 @@ local/*.bat
 
 # 代管服務規劃（含營運方式、定價、帳號對照）——只在本機看，不進公開 repo
 DAIKAN_PROMO_SPEC.md
+
+# 本機專用開發補充（含上游私有專案名稱、路徑、腳本）
+CLAUDE.local.md
+
+# research/ 裡刻意不公開的（gitignore 對已追蹤檔案無效，所以要先 git rm --cached）
+research/RTA_攻略_2026-07.md
+
+# 提交前檢查的專案專屬黑名單（含要隱藏的字，本身不能公開）
+local/blocklist.txt
+
+# 暫存與個人檔
+char-temp/
+*.pdf

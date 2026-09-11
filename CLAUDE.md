@@ -150,8 +150,9 @@ GA 追蹤由 `assets/analytics.js` 統一處理（Measurement ID：`G-N546VFREGT
 **目前已加入 GA 的頁面**（2026-08-13 確認）：
 `index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`stat-twins.html`、`tier-list/tier-list.html`、`banned-list.html`
 
-> ⚠️ **`banned-list.html` 不要手改**——它是 sniffer 專案產生的（`arkrecode_gvg_sniffer/scripts/export_banned_html.py --public`），
-> 每次官方公告新名單就整份重產覆蓋，手改會被蓋掉。GA 由產生器自動寫進去。
+> ⚠️ **`banned-list.html` 不要手改**——它是由上游工具專案的匯出腳本整份產生的，
+> 每次官方公告新名單就重產覆蓋，手改會被蓋掉。GA 由產生器自動寫進去。
+> 產生指令見 `CLAUDE.local.md`。
 > 這頁**刻意不從 `index.html` 連過去**（靠社群自行流傳），所以不用加工具卡片。
 
 ---
@@ -281,41 +282,17 @@ character-db.html **不會**自動讀 chars.csv，所有角色資料（nameCN/EN
 
 ---
 
-### 跨專案同步（ArkRecodetools ↔ arkrecode_gvg_sniffer）
+### 跨專案同步
 
-**2026-06-10 起，`assets/char-name-data.js` 是兩個專案共用的角色識別母檔**
-（中文名 / nameEN / StaticID / 暱稱，103 條目皆已補齊 id）。
-sniffer（私有 repo，本機路徑見 `local/_paths.py`，以下用 `<SNIFFER_DIR>` 代表）
-的 ROLE 對照表與 Discord bot 暱稱解析，都從本檔經同步腳本產生的
-`data/characters.json` 自動載入，**sniffer 端不再手改任何角色檔案**。
+`assets/char-name-data.js` 不只本 repo 在用，另一個**私有工具專案**也以它為角色識別母檔
+（中文名 / nameEN / StaticID / 暱稱）。因此：
 
-| sniffer 檔案 | 對應 ArkRecodetools 檔案 | 關係 |
-|-------------|------------------------|------|
-| `data/characters.json` | `assets/char-name-data.js` | 由 sync 腳本產生（只增不刪），sniffer 唯一角色來源 |
-| `utils/helper.py` ROLE / `discord_bot/data/aliases.py` | （自動）| 從 characters.json 載入，無需手改 |
-| `discord_bot/data/build_recom.csv` | `build_recom.csv` | 格式相同，可直接複製 |
+- 新增角色時 **`id`（StaticID）必填**，否則下游同步腳本認不出角色。
+  ID 查詢：<https://arkrecodewiki.miraheze.org/wiki/Members/Infotable>
+  （H1xx~H2xx = 主線；H6xx = vtuber/聯動；H8xx = 熊熊系列）
+- 本 repo 這邊改完就算完成，下游同步是另一個 repo 的事。
 
-**新角色同步到 sniffer 的步驟（每兩週活動更新時）：**
-
-```bash
-# 1. 在本 repo 更新 char-name-data.js（依照正常新增角色 SOP）
-#    ⚠️ 必填 id（StaticID，如 'H614'），sniffer 靠它識別角色
-#    ID 查詢：https://arkrecodewiki.miraheze.org/wiki/Members/Infotable
-#    H1xx~H2xx = 主線；H6xx = vtuber/聯動；H8xx = 熊熊系列
-
-# 2. 在 sniffer repo 執行同步腳本（可先 --dry-run 預覽）
-cd "<SNIFFER_DIR>"          # 本機實際路徑見 local/_paths.py
-python scripts/sync_from_arkrecode.py
-
-# 3. 兩個 repo 各自 commit & push（sniffer push 會觸發 Railway redeploy）
-```
-
-> 腳本位於 sniffer private repo（`scripts/sync_from_arkrecode.py`）。
-> 完整的兩週更新 Checklist（含 PICKUP、/upload_chars）見 sniffer 的 CLAUDE.md。
-
-**canonical 差異規則：** sniffer 的 `aliases.py` 手工條目永遠優先於 json，
-既有的刻意差異（`彩伽` vs `河北彩伽`、`妮諾楷西` vs `妮諾凱西` 等）不受同步影響，
-不需要人工處理。新增條目若 name 與 sniffer 慣用名不同，會自動收進 aliases。
+> 同步腳本名稱、路徑與完整 checklist 一律寫在 `CLAUDE.local.md`（不進版控）。
 
 ### 各欄位的單一來源
 
@@ -339,7 +316,7 @@ python scripts/sync_from_arkrecode.py
 
 | 步驟 | 檔案 | 必要 | 說明 |
 |------|------|------|------|
-| 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 與 `id`（StaticID）皆必填**：nameEN 缺漏 battle-recorder 英文模式會顯示中文；id 缺漏 sniffer 同步腳本無法識別角色（ID 查 [wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)）。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
+| 1 | `assets/char-name-data.js` | ✅ 必須 | 加入 `{ name: '本名', nameEN: '英文名', id: 'H???', aliases: ['本名', '暱稱1', ...] }`。**`nameEN` 與 `id`（StaticID）皆必填**：nameEN 缺漏 battle-recorder 英文模式會顯示中文；id 缺漏下游同步腳本無法識別角色（ID 查 [wiki](https://arkrecodewiki.miraheze.org/wiki/Members/Infotable)）。更新後建議調高 battle-recorder 載入該檔的 `?v=` 版號 |
 | 2 | `chars.csv`（根目錄） | ✅ 必須 | 在同屬性區塊末行加入數值，**⚠️ 同步更新第一行版本標頭 `version:YYYYMMDD`**（忘記改版本號 → equip-optimizer 瀏覽器快取不更新 → 新角色完全不出現）。**插入務必用 Edit 工具**（Grep 找到同屬性最後一行→Edit 追加），不要用 PowerShell 陣列操作（trailing newline 會產生重複行）。 |
 | 3 | `tier-list/chars-data.js` | ✅ 必須 | 跑 `python scripts/gen_chars_data.py`，從 `chars.csv` 自動重新生成（**腳本存在，不要手動編輯**） |
 | 4 | `character-db.html` CHARACTER_DATA | ✅ 必須 | 陣列末尾加入 `{ id, nameCN, nameEN, aliases, attribute, job, rarity }`。attribute 用英文（fire/water/nature/light/dark），job 用英文（warrior/defender/vanguard/caster/sniper/medic）。**注意：遊戲內「刺客」= vanguard** |
@@ -347,7 +324,7 @@ python scripts/sync_from_arkrecode.py
 | 6 | `index.html` / `README.md` | ✅ 必須 | 工具卡片版本標籤與更新紀錄同步升版 |
 | 7 | `build_recom.csv` | 🔶 建議 | 有推薦配裝時加入 |
 | 8 | `assets/official-tierlist.json` | 🔶 視情況 | 排好 tier 後用「★ 官方匯出」更新 |
-| 9 | **sniffer 同步** | ✅ 必須 | 在 sniffer repo 跑 `python scripts/sync_from_arkrecode.py`，再兩個 repo commit & push（詳見上方「跨專案同步」） |
+| 9 | **下游同步** | ✅ 必須 | 步驟見 `CLAUDE.local.md`（不進版控） |
 
 > battle-recorder、guild-battle 只讀 char-name-data.js，步驟 1 完成後自動生效，不需額外動作。
 
@@ -459,7 +436,7 @@ git add -f research/RTA_選角速查.md
 
 - **RTA（真人 4v4 選角/Ban）**：強度表（`rta_*.json`）＋選角邏輯（`RTA_攻略`）＋可分享速查（`RTA_選角速查`）
 - **角色 × E7 對照**：`assets/char-wiki-data.json`（版控內）；重爬用 `scripts/sync_wiki_e7.py`
-- **GVG 防守配隊**：見 sniffer repo，有 Wilson 下界 + 佔比篩選邏輯
+- **GVG 防守配隊**：分析在另一個私有專案，有 Wilson 下界 + 佔比篩選邏輯
 
 ### RTA 選角十二職能分類（研究筆記用的統一術語）
 

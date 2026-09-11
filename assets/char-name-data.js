@@ -3,7 +3,7 @@
 // guild-battle.html、battle-recorder.html、character-db.html 可共用此檔
 // 新角色請加在最後；正式名稱 name 為比對基準，請勿隨意更動既有角色的 name
 // ⚠️ 每筆只放 name / nameEN / id / aliases 四個欄位。多塞欄位（例如 releaseDate）會讓
-//    sniffer 的 scripts/sync_from_arkrecode.py 整筆比對不到而漏掉角色。上市日期查 assets/char-wiki-data.json
+//    下游同步腳本整筆比對不到而漏掉角色。上市日期查 assets/char-wiki-data.json
 window.CHARACTER_ALIASES = [
     { name: '安泰西亞', nameEN: 'Anastasia', id: 'H118', aliases: ['安泰西亞', '火貓', '安泰', '眼罩'] },
     { name: '朱音', nameEN: 'Akane', id: 'H145', aliases: ['朱音', '朱茵'] },
