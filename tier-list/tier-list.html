@@ -439,7 +439,7 @@ function TierRow({ tier, getMemberChars, onEndRef, containerRefs,
   }
 
   const controls = locked ? null : (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+    <div data-html2canvas-ignore style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       gap:2,padding:'2px 0'}}>
       <button className="tier-ctrl-btn" title="設定描述" onClick={()=>setShowDesc(true)}>📝</button>
       {canDelete&&(
@@ -457,7 +457,7 @@ function TierRow({ tier, getMemberChars, onEndRef, containerRefs,
       {showDesc&&<DescPopover tierId={tier.id} value={tier.desc} onSave={onSetDesc} onClose={()=>setShowDesc(false)}/>}
       {/* 左側標籤 */}
       <div style={{width:102,flexShrink:0,display:'flex',background:tier.color}}>
-        <span className="tier-drag-handle" style={{display:'flex',alignItems:'center',color:tier.textColor,padding:'0 2px'}}>⠿</span>
+        <span className="tier-drag-handle" data-html2canvas-ignore style={{display:'flex',alignItems:'center',color:tier.textColor,padding:'0 2px'}}>⠿</span>
         <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:locked?'default':'pointer'}}
           onClick={()=>{ if(!locked){ setEditing(true); setEditVal(tier.name); } }}>
           {editing
@@ -517,7 +517,7 @@ function TierSection({ tiersConfig, tierMembers, charMap, onEndRef, containerRef
   }, []);
 
   return (
-    <div ref={sectionRef}>
+    <div ref={sectionRef} id="tier-capture">
       {tiersConfig.map(tier => {
         const getMemberChars = id => (tierMembers[id]||[]).map(n=>charMap[n]).filter(Boolean);
         return (
@@ -531,7 +531,7 @@ function TierSection({ tiersConfig, tierMembers, charMap, onEndRef, containerRef
           </div>
         );
       })}
-      {!locked&&<button onClick={onAddTier}
+      {!locked&&<button data-html2canvas-ignore onClick={onAddTier}
         style={{width:'100%',marginTop:2,padding:'6px',fontSize:12,
           background:'transparent',border:'1px dashed #334155',borderRadius:6,
           color:'#475569',cursor:'pointer'}}>
@@ -989,6 +989,25 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
+  // 截圖只拍 #tier-capture（各 Tier 列）；把手、📝🗑、新增列按鈕用 data-html2canvas-ignore 排除
+  async function exportImage() {
+    try {
+      if (!window.html2canvas) await new Promise((ok, fail) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.onload = ok; s.onerror = () => fail(new Error('html2canvas 載入失敗'));
+        document.head.appendChild(s);
+      });
+      const canvas = await window.html2canvas(document.getElementById('tier-capture'),
+        { backgroundColor: '#0f172a', scale: 2, useCORS: true });
+      const a = document.createElement('a');
+      const name = modes.find(m => m.id === currentModeId)?.name || 'tierlist';
+      a.download = `tierlist-${name}-${new Date().toISOString().slice(0, 10)}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    } catch (e) { alert('截圖失敗：' + e.message); }
+  }
+
   function exportOfficial() {
     const modeData = {};
     modes.forEach(m => {
@@ -1189,6 +1208,7 @@ function App() {
               <button onClick={exportJSON} style={btnStyle()}>↓ 匯出</button>
               <button onClick={()=>importFileRef.current?.click()} style={btnStyle()}>↑ 匯入</button>
               <button onClick={copyShareLink} style={btnStyle()}>🔗 分享</button>
+              <button onClick={exportImage} title="下載目前排好的 Tier 圖片（PNG）" style={btnStyle()}>🖼️ 截圖</button>
               <button onClick={exportOfficial} title="下載 official-tierlist.json 放到 assets/ 資料夾" style={{...btnStyle(),color:'#fbbf24',borderColor:'#78350f',background:'rgba(120,53,15,0.25)'}}>★ 官方匯出</button>
               <input ref={importFileRef} type="file" accept=".json" style={{display:'none'}}
                 onChange={e=>{ if(e.target.files[0]) { importJSON(e.target.files[0]); e.target.value=''; } }}/>
