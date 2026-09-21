@@ -209,7 +209,7 @@ function saveModeData(modeId, tiersConfig, tierMembers, charNotes, charPlusMinus
   }));
 }
 
-function iconPath(n) { return `../local/星隕角色圖標/${n}.png`; }
+function iconPath(n) { return `../assets/char-icons/${n}.webp`; }
 function artPath(n)  { return `../assets/char-art/${n}.webp`; }
 function getNamesFromEl(el) { return Array.from(el.children).map(c=>c.dataset.name).filter(Boolean); }
 
