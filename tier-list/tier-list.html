@@ -209,6 +209,13 @@ function saveModeData(modeId, tiersConfig, tierMembers, charNotes, charPlusMinus
   }));
 }
 
+// Tier 標籤字級：中文字算 1 個字寬、英數約 0.62，塞進約 64px 的標籤區；中文上限 22、英數上限 26
+function tierLabelSize(name) {
+  const chars=[...(name||'')];
+  const cjk=chars.some(c=>c.charCodeAt(0)>0x2e80);
+  const em=chars.reduce((s,c)=>s+(c.charCodeAt(0)>0x2e80?1:0.62),0)||1;
+  return Math.max(12, Math.min(cjk?22:26, Math.floor(64/em)));
+}
 function iconPath(n) { return `../assets/char-icons/${n}.webp`; }
 function artPath(n)  { return `../assets/char-art/${n}.webp`; }
 function getNamesFromEl(el) { return Array.from(el.children).map(c=>c.dataset.name).filter(Boolean); }
@@ -449,7 +456,7 @@ function TierRow({ tier, getMemberChars, onEndRef, containerRefs,
       borderRadius:6,overflow:'hidden',border:'1px solid #1e293b'}}>
       {showDesc&&<DescPopover tierId={tier.id} value={tier.desc} onSave={onSetDesc} onClose={()=>setShowDesc(false)}/>}
       {/* 左側標籤 */}
-      <div style={{width:90,flexShrink:0,display:'flex',background:tier.color}}>
+      <div style={{width:102,flexShrink:0,display:'flex',background:tier.color}}>
         <span className="tier-drag-handle" style={{display:'flex',alignItems:'center',color:tier.textColor,padding:'0 2px'}}>⠿</span>
         <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:locked?'default':'pointer'}}
           onClick={()=>{ if(!locked){ setEditing(true); setEditVal(tier.name); } }}>
@@ -458,8 +465,9 @@ function TierRow({ tier, getMemberChars, onEndRef, containerRefs,
                 onBlur={commitRename}
                 onKeyDown={e=>{if(e.key==='Enter')commitRename();if(e.key==='Escape')setEditing(false);}}
                 style={{background:'transparent',border:'none',outline:'1px solid rgba(255,255,255,0.4)',
-                  color:tier.textColor,fontSize:22,fontWeight:900,width:50,textAlign:'center',borderRadius:3}}/>
-            : <span style={{fontSize:26,fontWeight:900,color:tier.textColor,letterSpacing:-1}}>{tier.name}</span>
+                  color:tier.textColor,fontSize:18,fontWeight:900,width:62,textAlign:'center',borderRadius:3}}/>
+            : <span style={{fontSize:tierLabelSize(tier.name),fontWeight:900,color:tier.textColor,letterSpacing:-1,
+                whiteSpace:'nowrap'}}>{tier.name}</span>
           }
         </div>
         {controls}
