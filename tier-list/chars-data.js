@@ -1,4 +1,4 @@
-// 自動從 chars.csv 轉換，版本：20260917
+// 自動從 chars.csv 轉換，版本：20260924
 // 欄位：name, star, element, role, totalSpd, totalAtk, totalDef, totalHp, critRate, critDmg
 window.CHARS_DATA = [
   {name:"奈蘭希爾",star:5,element:"火",role:"狙擊",totalSpd:124,totalAtk:1284,totalDef:536,totalHp:4976,critRate:15.0,critDmg:150.0},
@@ -193,4 +193,5 @@ window.CHARS_DATA = [
   {name:"蜜娜",star:5,element:"火",role:"戰士",totalSpd:112,totalAtk:1208,totalDef:617,totalHp:6488,critRate:15.0,critDmg:150.0},
   {name:"露西芙爾",star:5,element:"暗",role:"醫療",totalSpd:100,totalAtk:621,totalDef:776,totalHp:6034,critRate:15.0,critDmg:150.0},
   {name:"沐夏吉賽爾",star:5,element:"木",role:"重裝",totalSpd:98,totalAtk:776,totalDef:758,totalHp:7149,critRate:15.0,critDmg:150.0},
+  {name:"蜜拉卡",star:5,element:"光",role:"重裝",totalSpd:99,totalAtk:885,totalDef:734,totalHp:6664,critRate:15.0,critDmg:150.0},
 ];

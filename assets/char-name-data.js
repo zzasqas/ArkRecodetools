@@ -119,4 +119,5 @@ window.CHARACTER_ALIASES = [
     { name: '蜜娜', nameEN: 'Mina', id: 'H804', aliases: ['蜜娜', '密娜'] },
     { name: '露西芙爾', nameEN: 'Luciphael', id: 'H185', aliases: ['露西芙爾', '暗醫生', '暗小總理'] },
     { name: '沐夏吉賽爾', nameEN: 'Summer Breeze Giselle', id: 'H193', aliases: ['沐夏吉賽爾', '夏吉賽爾', '木夏吉賽爾', '木盾'] },
+    { name: '蜜拉卡', nameEN: 'Mirach', id: 'H190', aliases: ['蜜拉卡', '大光盾', '光盾'] },
 ];
