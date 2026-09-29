@@ -389,16 +389,18 @@ function render(){
   const tag=p=>!diff||!p.oid?"":diff.added.has(p.oid)?' <b class="up">NEW</b>':
                                 diff.upgraded.has(p.oid)?' <b class="up">↑</b>':"";
   const prevGap={}; if(B)B.rightAll.concat(B.leftAll).forEach(r=>prevGap[r.slot+"|"+r.ax]=r);
+  // 六軸與組隊模擬固定顯示差值；缺口表的差值格子多、容易亂，由開關決定
+  const G=B&&gapDiffOn;
 
   const gapTable=(rows,axLabel)=>
     '<div class="scroll"><table><tr><th>部位</th><th>'+axLabel+'</th><th>件數</th><th>成品</th>'+
     "<th>成品平均</th><th>成品中位</th><th>成品最佳</th><th>判讀</th></tr>"+
     rows.map(r=>{const s=r.stats;
-      const pg=B?prevGap[r.slot+"|"+r.ax]:null, pDone=pg?pg.done:0;
-      const filled=B&&r.label&&pDone===0&&r.done>0;
+      const pg=G?prevGap[r.slot+"|"+r.ax]:null, pDone=pg?pg.done:0;
+      const filled=G&&r.label&&pDone===0&&r.done>0;
       return '<tr class="r-'+r.level+'"><td>'+r.slot+"</td><td>"+esc(r.ax)+"</td>"+
-        '<td class="n">'+r.n+(B?dNum(r.n-(pg?pg.n:0)):"")+'</td><td class="n">'+
-        (r.label?hot(r.done,3,0)+(B?dNum(r.done-pDone):""):"—")+"</td>"+
+        '<td class="n">'+r.n+(G?dNum(r.n-(pg?pg.n:0)):"")+'</td><td class="n">'+
+        (r.label?hot(r.done,3,0)+(G?dNum(r.done-pDone):""):"—")+"</td>"+
         '<td class="n">'+(s?s.avg.toFixed(1):"—")+'</td><td class="n">'+(s?s.med.toFixed(1):"—")+"</td>"+
         '<td class="n">'+(s?s.max.toFixed(1)+" <small>"+esc(s.maxSet)+"</small>":"—")+"</td>"+
         '<td class="'+r.level+'">'+(filled?'<b class="up">✅ 已補洞</b> ':"")+esc(r.verdict)+"</td></tr>";
@@ -420,7 +422,9 @@ function render(){
           '<div class="axis-li"><span>強化（等級或副詞條有變）</span><b class="up">'+diff.upgraded.size+" 件</b></div>"+
           '<div class="axis-li"><span>消失（餵掉／賣掉）</span><b>'+diff.gone+" 件</b></div>"
          :'<p class="sub">上次那批是舊版配裝器匯入的，沒有裝備 ID，只能比總量，不能標出哪幾件是新的。</p>')+
-    '<p class="sub">下面雷達圖的<b>虛線</b>是上次、實線是現在；各表數字後面的 '+
+    '<label class="toggle" style="margin:12px 0 0"><input type="checkbox" id="gapDiff"'+
+    (gapDiffOn?" checked":"")+"> 缺口表也標出跟上次的差（含「✅ 已補洞」）</label>"+
+    '<p class="sub">下面雷達圖的<b>虛線</b>是上次、實線是現在；數字後面的 '+
     '<b class="up">+N</b>／<b class="dn">−N</b> 是跟上次的差；'+
     '組隊模擬裡標 <b class="up">NEW</b> 的是這次才出現的裝備、<b class="up">↑</b> 是這段期間強化過的。'+
     "每次在配裝計算器匯入，基準就會往前推成「匯入前的那一批」。</p></div>";
@@ -512,7 +516,14 @@ function render(){
       '所以「主屬性本身就是價值」的件（速度鞋主屬給 40 速）會被低估，判斷時要自己補回來。'+
       '<br><a href="./equip-optimizer.html">← 回配裝計算器</a></p></div>';
   mountQuota();
+  const gd=document.getElementById("gapDiff");
+  if(gd)gd.onchange=()=>{gapDiffOn=gd.checked;
+    try{localStorage.setItem(GAP_DIFF_KEY,gapDiffOn?"1":"0");}catch(e){}
+    const y=scrollY; render(); scrollTo(0,y);};
 }
+// 缺口表差值開關：預設關，記住使用者的選擇
+const GAP_DIFF_KEY="arkrecode_audit_gapdiff";
+let gapDiffOn=false; try{gapDiffOn=localStorage.getItem(GAP_DIFF_KEY)==="1";}catch(e){}
 
 // ---------- 套裝概覽（可排序、可篩選）----------
 // 量（件數長條）與質（適配分平均，跨套裝相對縮放）並排，六個部位用熱度格，
