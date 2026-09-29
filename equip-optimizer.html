@@ -710,7 +710,17 @@ function App(){
   // ★ 裝備匯入工具
   const finalizeImport=useCallback((items)=>{
     setEquips(items);
-    try{const m={ts:Date.now(),count:items.length};localStorage.setItem("arkrecode_equips",JSON.stringify(items));localStorage.setItem("arkrecode_equips_meta",JSON.stringify(m));setEquipCacheMeta(m);}catch(e){ console.warn('[arkrecode]', e); }
+    // 覆蓋前把舊的一批搬到 _prev，給裝備健檢做「跟上次比」。
+    // 主資料優先：空間不夠時丟掉 _prev 再存一次，對比功能寧可沒有也不能讓新裝備存不進去。
+    const P="arkrecode_equips_prev",PM="arkrecode_equips_prev_meta";
+    const dropPrev=()=>{try{localStorage.removeItem(P);localStorage.removeItem(PM);}catch(_){}};
+    let old=null,oldMeta=null;
+    try{old=localStorage.getItem("arkrecode_equips");oldMeta=localStorage.getItem("arkrecode_equips_meta");}catch(e){}
+    const m={ts:Date.now(),count:items.length};
+    const saveMain=()=>{localStorage.setItem("arkrecode_equips",JSON.stringify(items));localStorage.setItem("arkrecode_equips_meta",JSON.stringify(m));};
+    try{saveMain();}catch(e){dropPrev();try{saveMain();}catch(e2){ console.warn('[arkrecode]', e2); }}
+    setEquipCacheMeta(m);
+    if(old){try{localStorage.setItem(P,old);localStorage.setItem(PM,oldMeta||"null");}catch(e){dropPrev();console.warn('[arkrecode] 空間不足，略過上次裝備快照', e);}}
   },[]);
   const handleEquipFile=useCallback((raw)=>{
     const savedMap=getSlotMap();
@@ -1289,7 +1299,7 @@ function App(){
   // ★ 清除本地快取
   const clearLocalCache=(includeEquips)=>{
     const keys=["arkrecode_locked_plans","arkrecode_super_locked","arkrecode_chars_version"];
-    if(includeEquips)keys.push("arkrecode_equips","arkrecode_equips_meta","arkrecode_build_recom_data");
+    if(includeEquips)keys.push("arkrecode_equips","arkrecode_equips_meta","arkrecode_equips_prev","arkrecode_equips_prev_meta","arkrecode_build_recom_data");
     else keys.push("arkrecode_build_recom_data");
     keys.forEach(k=>{try{localStorage.removeItem(k);}catch(e){ console.warn('[arkrecode]', e); }});
     setLocked({});setSuperLocked(new Set());

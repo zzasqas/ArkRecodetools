@@ -13,7 +13,7 @@
                script-src 'self' https://www.googletagmanager.com 'unsafe-inline';
                connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com;
                style-src 'self' 'unsafe-inline';">
-<title>裝備健檢 v1.0.0 - ArkRecode Tools</title>
+<title>裝備健檢 v1.1.0 - ArkRecode Tools</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:#0B1120;color:#E2E8F0;
@@ -36,6 +36,8 @@ small{color:#475569}
 .ok{color:#64748B} .na{color:#475569}
 tr.r-gap{background:#7F1D1D22} tr.r-thin{background:#78350F22} tr.r-na{opacity:.45}
 b.hot{color:#F87171} b.warm{color:#FBBF24}
+b.up{color:#4ADE80} b.dn{color:#F87171}
+.cmp{border-color:#166534}
 .bar{display:block;height:4px;margin-top:3px;border-radius:2px;background:#6366F1;
   min-width:2px;margin-left:auto}
 .bar.q{background:#38BDF8}
@@ -241,28 +243,45 @@ function gapVerdict(r){
 }
 
 // ---------- 載入 ----------
-function load(){
+function load(key,metaKey){
   let raw=null,meta=null;
-  try{ raw=JSON.parse(localStorage.getItem(LS_KEY)||"null");
-       meta=JSON.parse(localStorage.getItem(LS_META)||"null"); }catch(e){}
+  try{ raw=JSON.parse(localStorage.getItem(key)||"null");
+       meta=JSON.parse(localStorage.getItem(metaKey)||"null"); }catch(e){}
   if(!Array.isArray(raw)||!raw.length)return null;
-  const items=raw.map((i,n)=>{
-    const subs=i.subs||{};
-    return {_i:n,slot:i.slot,set:i.set,lv:i.lv,cls:i.cls,mt:i.mt,mv:i.mv||0,
-            subs,helper:helperScore(subs)};
+  const items=raw.filter(i=>i&&typeof i==="object").map((i,n)=>{
+    const subs=(i.subs&&typeof i.subs==="object")?i.subs:{};
+    return {_i:n,oid:typeof i.oid==="string"?i.oid:null,slot:i.slot,set:i.set,lv:i.lv,cls:i.cls,
+            mt:i.mt,mv:i.mv||0,subs,helper:helperScore(subs)};
   }).filter(i=>SLOTS.includes(i.slot));
   return {items,meta,hasCls:items.some(i=>i.cls!=null)};
+}
+
+// 跟上次匯入比：用遊戲給的裝備 ID 分出新增／強化／消失。
+// 手動新增的件 ID 是 "m" 開頭的亂數，每次都不一樣，不列入比對。
+function diffItems(cur,prev){
+  const key=i=>i.oid&&!i.oid.startsWith("m")?i.oid:null;
+  const pm=new Map(); prev.forEach(i=>{const k=key(i); if(k)pm.set(k,i);});
+  if(!pm.size)return null;                       // 舊快取沒有 ID（很舊的配裝器版本），只能比總量
+  const added=new Set(), upgraded=new Set(), seen=new Set();
+  cur.forEach(i=>{const k=key(i); if(!k)return; seen.add(k);
+    const p=pm.get(k);
+    if(!p)added.add(k);
+    else if(p.lv!==i.lv||JSON.stringify(p.subs)!==JSON.stringify(i.subs))upgraded.add(k);
+  });
+  let gone=0; pm.forEach((_,k)=>{if(!seen.has(k))gone++;});
+  return {added,upgraded,gone};
 }
 
 const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const hot=(v,warn,bad)=>{const c=v<=bad?"hot":(v<=warn?"warm":"");
   return c?'<b class="'+c+'">'+v+"</b>":String(v);};
 
-function radarSVG(axes,size){
+function radarSVG(axes,size,prevAxes){
   size=size||400;
   const names=AXES.map(a=>a[0]), vals=names.map(n=>axes[n]);
-  const peak=Math.max(1,...vals), cx=size/2, cy=size/2, r=size/2-62;
-  let g="",lab="",pts=[];
+  const pvals=prevAxes?names.map(n=>prevAxes[n]):[];
+  const peak=Math.max(1,...vals,...pvals), cx=size/2, cy=size/2, r=size/2-62;
+  let g="",lab="",pts=[],ppts=[];
   [0.25,0.5,0.75,1].forEach(ring=>{
     const rp=[];
     for(let k=0;k<6;k++){const a=Math.PI/2-k*Math.PI/3;
@@ -272,28 +291,28 @@ function radarSVG(axes,size){
   names.forEach((n,k)=>{
     const a=Math.PI/2-k*Math.PI/3, ratio=vals[k]/peak;
     pts.push((cx+r*ratio*Math.cos(a)).toFixed(1)+","+(cy-r*ratio*Math.sin(a)).toFixed(1));
+    if(prevAxes){const pr=pvals[k]/peak;
+      ppts.push((cx+r*pr*Math.cos(a)).toFixed(1)+","+(cy-r*pr*Math.sin(a)).toFixed(1));}
     const lx=cx+(r+30)*Math.cos(a), ly=cy-(r+30)*Math.sin(a);
     const anch=Math.abs(Math.cos(a))<0.3?"middle":(Math.cos(a)>0?"start":"end");
     lab+='<text x="'+lx.toFixed(0)+'" y="'+ly.toFixed(0)+'" text-anchor="'+anch+
-         '" dominant-baseline="middle" font-size="13" fill="#94A3B8">'+n+" "+vals[k]+"</text>";
+         '" dominant-baseline="middle" font-size="13" fill="#94A3B8">'+n+" "+vals[k]+
+         (prevAxes?deltaSvg(vals[k]-pvals[k]):"")+"</text>";
     g+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(a)).toFixed(1)+
        '" y2="'+(cy-r*Math.sin(a)).toFixed(1)+'" stroke="#1E293B"/>';
   });
   return '<svg style="overflow:visible" viewBox="0 0 '+size+" "+size+'" width="'+size+'" height="'+size+'">'+g+
+    (prevAxes?'<polygon points="'+ppts.join(" ")+'" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5 4"/>':"")+
     '<polygon points="'+pts.join(" ")+'" fill="#6366F1" fill-opacity=".35" '+
     'stroke="#818CF8" stroke-width="2"/>'+lab+"</svg>";
 }
 
-function render(){
-  const app=document.getElementById("app");
-  const data=load();
-  if(!data){
-    app.innerHTML='<h1>裝備健檢</h1><div class="card"><div class="empty">'+
-      "還沒有裝備資料。<br>請先到配裝計算器匯入你的 Equipment JSON，回來這頁就會自動讀到。"+
-      '<br><a class="btn" href="./equip-optimizer.html">前往配裝計算器匯入</a></div></div>';
-    return;
-  }
-  const {items,meta,hasCls}=data;
+const dNum=(d,fmt)=>d>0?' <b class="up">+'+(fmt?fmt(d):d)+"</b>":d<0?' <b class="dn">'+(fmt?fmt(d):d)+"</b>":"";
+const deltaSvg=d=>d>0?'<tspan fill="#4ADE80"> +'+d+"</tspan>":d<0?'<tspan fill="#F87171"> '+d+"</tspan>":"";
+
+// 所有統計都從這裡出來，現在這批與上次那批各跑一次再相減
+function analyze(data){
+  const {items,hasCls}=data;
   // 助手分門檻與 archetype 都是照傳說校準的 -> 只吃傳說；
   // 組隊模擬與套裝概覽吃傳說+紫（紫裝 +15 的主屬性值跟傳說一樣，速度鞋同樣 40）
   const p15all=items.filter(i=>i.lv===15);
@@ -324,7 +343,6 @@ function render(){
     return {set,n:g.length,pieces,units,cnt,thin,thinN:cnt[thin],
             stats:scoreStats(g),ignored:IGNORED_SETS.has(set)};
   }).sort((a,b)=>b.n-a.n).filter(r=>r.n>=8);
-  QUOTA=quota;
 
   function gapRows(slots,axisIsSet){
     const grp={};
@@ -342,27 +360,70 @@ function render(){
                bestHelper:done.length?Math.max(...done.map(i=>i.helper)):0};
       [r.level,r.verdict]=gapVerdict(r);
       return r;
-    }).filter(r=>r.n>=3).sort((a,b)=>a.slot===b.slot?b.n-a.n:slots.indexOf(a.slot)-slots.indexOf(b.slot));
+    }).sort((a,b)=>a.slot===b.slot?b.n-a.n:slots.indexOf(a.slot)-slots.indexOf(b.slot));
   }
-  const rightRows=gapRows(RIGHT,false), leftRows=gapRows(LEFT,true);
+  // 缺口表只顯示 ≥3 件的格子；對比時要用完整的，上次不到 3 件的格子也要知道成品數
+  const rightAll=gapRows(RIGHT,false), leftAll=gapRows(LEFT,true);
+  return {p15,p15all,epic,axes,tiers,spd,spdFree,res,quota,rightAll,leftAll,
+          rightRows:rightAll.filter(r=>r.n>=3), leftRows:leftAll.filter(r=>r.n>=3)};
+}
+
+function render(){
+  const app=document.getElementById("app");
+  const data=load(LS_KEY,LS_META);
+  if(!data){
+    app.innerHTML='<h1>裝備健檢</h1><div class="card"><div class="empty">'+
+      "還沒有裝備資料。<br>請先到配裝計算器匯入你的 Equipment JSON，回來這頁就會自動讀到。"+
+      '<br><a class="btn" href="./equip-optimizer.html">前往配裝計算器匯入</a></div></div>';
+    return;
+  }
+  const {meta,hasCls}=data;
+  const A=analyze(data);
+  const {p15,epic,axes,tiers,spd,spdFree,res,rightRows,leftRows}=A;
+  QUOTA=A.quota;
+
+  // ---------- 跟上次匯入比 ----------
+  const prevData=load("arkrecode_equips_prev","arkrecode_equips_prev_meta");
+  const B=prevData?analyze(prevData):null;
+  const diff=prevData?diffItems(data.items,prevData.items):null;
+  const tag=p=>!diff||!p.oid?"":diff.added.has(p.oid)?' <b class="up">NEW</b>':
+                                diff.upgraded.has(p.oid)?' <b class="up">↑</b>':"";
+  const prevGap={}; if(B)B.rightAll.concat(B.leftAll).forEach(r=>prevGap[r.slot+"|"+r.ax]=r);
 
   const gapTable=(rows,axLabel)=>
     '<div class="scroll"><table><tr><th>部位</th><th>'+axLabel+'</th><th>件數</th><th>成品</th>'+
     "<th>成品平均</th><th>成品中位</th><th>成品最佳</th><th>判讀</th></tr>"+
     rows.map(r=>{const s=r.stats;
+      const pg=B?prevGap[r.slot+"|"+r.ax]:null, pDone=pg?pg.done:0;
+      const filled=B&&r.label&&pDone===0&&r.done>0;
       return '<tr class="r-'+r.level+'"><td>'+r.slot+"</td><td>"+esc(r.ax)+"</td>"+
-        '<td class="n">'+r.n+'</td><td class="n">'+(r.label?hot(r.done,3,0):"—")+"</td>"+
+        '<td class="n">'+r.n+(B?dNum(r.n-(pg?pg.n:0)):"")+'</td><td class="n">'+
+        (r.label?hot(r.done,3,0)+(B?dNum(r.done-pDone):""):"—")+"</td>"+
         '<td class="n">'+(s?s.avg.toFixed(1):"—")+'</td><td class="n">'+(s?s.med.toFixed(1):"—")+"</td>"+
         '<td class="n">'+(s?s.max.toFixed(1)+" <small>"+esc(s.maxSet)+"</small>":"—")+"</td>"+
-        '<td class="'+r.level+'">'+esc(r.verdict)+"</td></tr>";
+        '<td class="'+r.level+'">'+(filled?'<b class="up">✅ 已補洞</b> ':"")+esc(r.verdict)+"</td></tr>";
     }).join("")+"</table></div>";
 
   const buildRow=(b,i,arr,free)=>
     "<tr><td>第"+(i+1)+"快</td>"+
-    '<td class="n">'+gearSpeed(b.picks)+'</td><td class="n"><b>'+b.val+"</b></td>"+
+    '<td class="n">'+gearSpeed(b.picks)+'</td><td class="n"><b>'+b.val+"</b>"+
+    (B?dNum(b.val-(B.spd[i]?B.spd[i].val:0)):"")+"</td>"+
     '<td class="n">'+(free[i]?free[i].val:0)+"</td><td>"+
-    b.picks.map(p=>p.slot+esc(p.set)+(p.cls===3?"紫":"")+"+"+pieceStat(p,"速度")).join(" · ")+
+    b.picks.map(p=>p.slot+esc(p.set)+(p.cls===3?"紫":"")+"+"+pieceStat(p,"速度")+tag(p)).join(" · ")+
     "</td></tr>";
+
+  const cmpCard=!prevData?"":
+    '<div class="card cmp"><h2>跟上次匯入比</h2><p class="sub" style="margin-top:0">基準：'+
+    (prevData.meta?new Date(prevData.meta.ts).toLocaleString():"上一次匯入")+
+    "（"+prevData.items.length+" 件）→ 現在（"+data.items.length+" 件）</p>"+
+    (diff?'<div class="axis-li"><span>新增</span><b class="up">'+diff.added.size+" 件</b></div>"+
+          '<div class="axis-li"><span>強化（等級或副詞條有變）</span><b class="up">'+diff.upgraded.size+" 件</b></div>"+
+          '<div class="axis-li"><span>消失（餵掉／賣掉）</span><b>'+diff.gone+" 件</b></div>"
+         :'<p class="sub">上次那批是舊版配裝器匯入的，沒有裝備 ID，只能比總量，不能標出哪幾件是新的。</p>')+
+    '<p class="sub">下面雷達圖的<b>虛線</b>是上次、實線是現在；各表數字後面的 '+
+    '<b class="up">+N</b>／<b class="dn">−N</b> 是跟上次的差；'+
+    '組隊模擬裡標 <b class="up">NEW</b> 的是這次才出現的裝備、<b class="up">↑</b> 是這段期間強化過的。'+
+    "每次在配裝計算器匯入，基準就會往前推成「匯入前的那一批」。</p></div>";
 
   app.innerHTML=
     '<a class="back" href="./equip-optimizer.html">← 回配裝計算器</a>'+
@@ -374,9 +435,11 @@ function render(){
     (hasCls?"":'<div class="note">這批快取是舊版配裝器匯入的，沒有裝備品質欄位，'+
       "所以無法分開傳說與紫裝（目前全部當傳說算）。到配裝計算器<b>重新匯入一次</b> JSON 就會正常。</div>")+
 
-    '<div class="card flex">'+radarSVG(axes)+
+    cmpCard+
+    '<div class="card flex">'+radarSVG(axes,400,B?B.axes:null)+
       "<div><h2>六軸（+15 件數）</h2>"+
-      AXES.map(([n])=>'<div class="axis-li"><span>'+n+"</span><b>"+axes[n]+"</b></div>").join("")+
+      AXES.map(([n])=>'<div class="axis-li"><span>'+n+"</span><span><b>"+axes[n]+"</b>"+
+        (B?dNum(axes[n]-B.axes[n]):"")+"</span></div>").join("")+
       '<p class="sub">輸出＝攻擊向套裝且四條副詞條全是攻擊向；底速半肉＝無速度＋大詞條＋暴率或暴傷＋素質夠；'+
       "肉裝＝四條全落在生命/防禦/速度/抗性；抗性 18%/19%、高速 11/12、一速 14/15"+
       "（前面的門檻給對應套裝，後面給其他套裝）。</p></div></div>"+
@@ -396,8 +459,10 @@ function render(){
       (res.length?res.map((b,i)=>{
         const c=b.picks.filter(p=>p.set===RESIST_SET).length;
         return "<tr><td>第"+(i+1)+'高</td><td class="n">'+(gearResist(b.picks)*100).toFixed(0)+
-          '%</td><td class="n"><b>'+(b.val*100).toFixed(0)+'%</b></td><td class="n">'+c+" 件</td><td>"+
-          b.picks.map(p=>p.slot+esc(p.set)+"+"+(pieceStat(p,"抗性")*100).toFixed(0)).join(" · ")+
+          '%</td><td class="n"><b>'+(b.val*100).toFixed(0)+"%</b>"+
+          (B?dNum(Math.round(b.val*100)-Math.round((B.res[i]?B.res[i].val:0)*100),d=>d+"%"):"")+
+          '</td><td class="n">'+c+" 件</td><td>"+
+          b.picks.map(p=>p.slot+esc(p.set)+"+"+(pieceStat(p,"抗性")*100).toFixed(0)+tag(p)).join(" · ")+
           "</td></tr>";}).join("")
         :"<tr><td colspan=5>組不出來</td></tr>")+
       '</table></div><p class="sub">抗性跟速度一樣是競賽型詞條——看的是能推到多高，不是手上有幾件。'+
