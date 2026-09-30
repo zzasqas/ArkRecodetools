@@ -120,5 +120,5 @@ window.CHARACTER_ALIASES = [
     { name: '露西芙爾', nameEN: 'Luciphael', id: 'H185', aliases: ['露西芙爾', '暗醫生', '暗小總理'] },
     { name: '沐夏吉賽爾', nameEN: 'Summer Breeze Giselle', id: 'H193', aliases: ['沐夏吉賽爾', '夏吉賽爾', '木夏吉賽爾', '木盾'] },
     { name: '蜜拉卡', nameEN: 'Mirach', id: 'H190', aliases: ['蜜拉卡', '大光盾', '光盾'] },
-    { name: '超音速西爾維納', nameEN: 'Supersonic Silvina', id: 'H189', aliases: ['超音速西爾維納', '西爾維納', '水先鋒'] }, // 暫定中文名，等官方公告確認
+    { name: '極速的西爾維納', nameEN: 'Supersonic Silvina', id: 'H189', aliases: ['極速的西爾維納', '西爾維納', '水腿', '賽車手'] },
 ];
