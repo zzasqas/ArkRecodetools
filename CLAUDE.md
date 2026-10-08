@@ -148,7 +148,7 @@ GA 追蹤由 `assets/analytics.js` 統一處理（Measurement ID：`G-N546VFREGT
 2. CSP 若有設定，`script-src` 需含 `https://www.googletagmanager.com`，`connect-src` 需含 `https://www.google-analytics.com https://www.googletagmanager.com`。使用 `connect-src 'none'` 的嚴格 CSP 頁面尤其注意。
 
 **目前已加入 GA 的頁面**（2026-08-13 確認）：
-`index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`stat-twins.html`、`tier-list/tier-list.html`、`banned-list.html`
+`index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`mechanics.html`、`stat-twins.html`、`tier-list/tier-list.html`、`banned-list.html`
 
 > ⚠️ **`banned-list.html` 不要手改**——它是由上游工具專案的匯出腳本整份產生的，
 > 每次官方公告新名單就重產覆蓋，手改會被蓋掉。GA 由產生器自動寫進去。

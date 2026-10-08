@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>機制查表 — ArkRecode</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --panel2: #f0f2f5; --line: #e2e5ea; --text: #1c2230; --muted: #6b7385; --accent: #3b6fe0;
+  --c0: #23935a; --c1: #d0453f; --c2: #6f7787; --c3: #2a84d2; --c4: #8256cf; --c5: #dd7418; --c6: #c23a78; --c7: #13958a; --c8: #4f5f7a; --c9: #b08209;
+  --fire: #e5533d; --water: #3b82f6; --wood: #22a35a; --light: #d7a40e; --dark: #8b5cf6;
+  --buff: #23935a; --debuff: #d0453f; --mark: #7d68b8; --burn: #e0701a;
+  --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 2px 8px rgba(20, 30, 50, .05);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151b; --panel: #1a1e26; --panel2: #222733; --line: #2d3340; --text: #e6e9ef; --muted: #8e97a8; --accent: #6f9bff;
+  --c0: #46c584; --c1: #ff6b63; --c2: #9aa2b2; --c3: #5aa9f0; --c4: #a988f0; --c5: #f39a4a; --c6: #ec6aa4; --c7: #3cc3b5; --c8: #8b9bb8; --c9: #e0b43c;
+  --buff: #46c584; --debuff: #ff6b63; --mark: #a995e6; --burn: #f39a4a; --shadow: none;
+} }
+:root[data-theme="dark"] {
+  --bg: #12151b; --panel: #1a1e26; --panel2: #222733; --line: #2d3340; --text: #e6e9ef; --muted: #8e97a8; --accent: #6f9bff;
+  --c0: #46c584; --c1: #ff6b63; --c2: #9aa2b2; --c3: #5aa9f0; --c4: #a988f0; --c5: #f39a4a; --c6: #ec6aa4; --c7: #3cc3b5; --c8: #8b9bb8; --c9: #e0b43c;
+  --buff: #46c584; --debuff: #ff6b63; --mark: #a995e6; --burn: #f39a4a; --shadow: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 system-ui, "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+button, input, select { font: inherit; color: inherit; }
+header { display: flex; align-items: baseline; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { margin: 0; font-size: 18px; }
+header .sub { color: var(--muted); font-size: 12px; }
+header .back { color: var(--muted); font-size: 13px; text-decoration: none; }
+header .back:hover { color: var(--text); }
+header .sp { flex: 1; }
+.iconbtn { border: 1px solid var(--line); background: var(--panel2); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.wrap { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+aside { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow: auto; padding-right: 4px; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.search { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); }
+.lbl { font-size: 12px; color: var(--muted); margin: 10px 0 6px; display: flex; align-items: center; gap: 6px; }
+.lbl:first-child { margin-top: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; color: var(--muted); }
+.seg button.on { background: var(--accent); color: #fff; }
+.pill { border: 1px solid var(--line); background: var(--panel2); border-radius: 999px; padding: 2px 10px; cursor: pointer; font-size: 13px; }
+.pill.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.eldot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cat { margin-top: 12px; }
+.cat h3 { margin: 0 0 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.cat h3::before { content: ""; width: 4px; height: 14px; border-radius: 2px; background: var(--cc); }
+.cat h3 .n { color: var(--muted); font-weight: 400; font-size: 12px; }
+.cat.fold .row { display: none; }
+.chip { --cc: var(--c2); display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 1px 8px; font-size: 12.5px; line-height: 20px;
+  color: var(--cc); background: color-mix(in srgb, var(--cc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--cc) 28%, transparent); cursor: pointer; white-space: nowrap; }
+.chip:hover { border-color: var(--cc); }
+.chip.on { background: var(--cc); color: #fff; border-color: var(--cc); }
+.chip.zero { opacity: .38; }
+.chip .k { font-size: 11px; opacity: .75; }
+.chip.burnt::before { content: "🔥"; font-size: 11px; }
+.chip.st { --cc: var(--mark); font-size: 12px; padding: 0 7px; }
+.chip.st.buff { --cc: var(--buff); } .chip.st.debuff { --cc: var(--debuff); }
+.selbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 26px; }
+.selbar .x { margin-left: 2px; }
+.clear { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0 4px; font-size: 12px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.tabs button { border: 0; background: none; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 600; }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.tabs .cnt { font-weight: 400; font-size: 12px; margin-left: 4px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.card .hd { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.av { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--elc, var(--line)); background: var(--panel2); display: grid; place-items: center; overflow: hidden; flex: none; font-weight: 700; color: var(--elc); }
+.av img { width: 100%; height: 100%; object-fit: cover; }
+.hd .name { font-weight: 700; }
+.hd .meta { font-size: 12px; color: var(--muted); }
+.badge { font-size: 11px; border-radius: 4px; padding: 0 6px; background: var(--panel2); color: var(--muted); border: 1px solid var(--line); }
+.sk { padding: 8px 12px; border-bottom: 1px dashed var(--line); }
+.sk:last-child { border-bottom: 0; }
+.sk .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.slot { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 6px; background: var(--text); color: var(--panel); }
+.slot.p { background: transparent; color: var(--text); border: 1px solid var(--text); }
+.sk .nm { font-weight: 600; }
+.ty { font-size: 11.5px; color: var(--muted); cursor: pointer; }
+.ty + .ty::before { content: "・"; }
+.ty.on { color: var(--accent); font-weight: 700; }
+.sk .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.more { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; margin-left: auto; }
+.desc { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--panel2); font-size: 13px; }
+.desc p { margin: 2px 0; }
+.desc .h, .desc .e, .desc .d { color: var(--muted); font-size: 12px; }
+.desc .b { color: var(--burn); }
+.desc .x { color: var(--muted); font-style: italic; font-size: 12px; }
+.t-n { font-weight: 700; } .t-g { color: var(--buff); font-weight: 600; } .t-x { color: var(--debuff); font-weight: 600; }
+.t-m { color: var(--mark); font-weight: 600; } .t-k { font-weight: 700; } .t-b { color: var(--burn); font-weight: 700; }
+.ab { padding: 8px 12px; font-size: 13px; }
+.ab .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.empty { color: var(--muted); padding: 40px; text-align: center; }
+.pager { text-align: center; margin: 16px 0; }
+.pager button { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 16px; cursor: pointer; }
+.togg { display: none; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: 1fr; padding: 12px 16px; }
+  aside { position: static; max-height: none; }
+  aside.closed .collapsible { display: none; }
+  .togg { display: inline-block; }
+  .grid { grid-template-columns: 1fr; }
+  header { padding: 12px 16px; }
+}
+</style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://www.googletagmanager.com file:; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; connect-src https://www.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<script src="./assets/analytics.js"></script>
+</head>
+<body>
+<header><h1>機制查表</h1><a class="back" href="./index.html">← 回工具首頁</a><span class="sub" id="sub"></span><span class="sp"></span><button class="iconbtn togg" id="togg">篩選</button><button class="iconbtn" id="theme" title="切換深色／淺色">◐</button></header>
+<div class="wrap">
+  <aside id="aside">
+    <div class="box">
+      <input class="search" id="q" placeholder="搜尋角色、技能、狀態、說明文字…">
+      <div class="lbl">已選條件 <button class="clear" id="clear">清除</button></div>
+      <div class="selbar" id="selbar"></div>
+      <div class="lbl">多個條件要</div>
+      <div class="seg" id="scope"><button data-v="skill">出現在同一招</button><button data-v="unit">同一角色有就好</button></div>
+    </div>
+    <div class="box collapsible">
+      <div class="lbl">屬性</div><div class="row" id="els"></div>
+      <div class="lbl">職業</div><div class="row" id="clss"></div>
+      <div class="lbl">星數</div><div class="row" id="stars"></div>
+      <div class="lbl"><label><input type="checkbox" id="common"> 只看常用角色（RTA 出現過的 4、5 星）</label></div>
+    </div>
+    <div class="box collapsible" id="cats"></div>
+  </aside>
+  <main>
+    <div class="tabs" id="tabs"></div>
+    <p class="hint" id="hint"></p>
+    <div class="grid" id="list"></div>
+    <div class="pager" id="pager"></div>
+  </main>
+</div>
+<script src="./data/mechanics.js"></script>
+<script src="./assets/mechanics.js"></script>
+</body>
+</html>

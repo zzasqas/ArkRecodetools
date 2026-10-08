@@ -249,31 +249,6 @@ body.lang-en span[data-lang="en"]{display:inline;}
     </div>
     <div class="tools-grid">
 
-      <!-- 公會戰紀錄器 -->
-      <a class="tool-card" href="./guild-battle.html">
-        <div class="tool-card-accent" style="background:linear-gradient(90deg,#F59E0B,#FCD34D);"></div>
-        <div class="tool-card-body">
-          <div class="tool-card-header">
-            <div class="tool-card-icon">🏰</div>
-            <div class="tool-card-name" data-lang="zh">公會戰紀錄器</div>
-            <div class="tool-card-name" data-lang="en">Guild Battle Recorder</div>
-          </div>
-          <div class="tool-card-desc">
-            <span data-lang="zh">把公會戰遇到的對手陣容一筆筆記下來，整合速度推算，之後配隊、擋刀都有依據，還能一鍵複製成文字貼到公會群組一起討論。</span>
-            <span data-lang="en">Keep a running log of the GvG opponent lineups you face, with built-in speed estimation — so you draft and defend with data, then copy to share with your guild.</span>
-          </div>
-          <div class="tool-card-notes">
-            <span data-lang="zh">📍 中塔、主堡兩塔同時記錄。</span>
-            <span data-lang="en">📍 Records mid-tower and stronghold at once.</span>
-          </div>
-        </div>
-        <div class="tool-card-footer">
-          <span class="tool-arrow" data-lang="zh">前往 →</span>
-          <span class="tool-arrow" data-lang="en">Open →</span>
-          <span class="tool-meta">v1.0.2</span>
-        </div>
-      </a>
-
       <!-- 對戰紀錄器 -->
       <a class="tool-card" href="./battle-recorder.html">
         <div class="tool-card-accent" style="background:linear-gradient(90deg,#3B82F6,#60A5FA);"></div>
@@ -288,8 +263,8 @@ body.lang-en span[data-lang="en"]{display:inline;}
             <span data-lang="en">Log every battle and find it by history or nickname, with tips on how to play each matchup. Connect a Google Sheet to auto-track your win rate over time.</span>
           </div>
           <div class="tool-card-notes">
-            <span data-lang="zh">📍 速度計算器已內建在同一頁。</span>
-            <span data-lang="en">📍 Speed calculator built into the page.</span>
+            <span data-lang="zh">📍 速度計算器已內建在同一頁。<br>🏰 公會戰紀錄器也從這裡進：中塔、主堡對手陣容分開記，一鍵複製貼公會群組。</span>
+            <span data-lang="en">📍 Speed calculator built into the page.<br>🏰 Guild Battle Recorder is linked inside: log GvG tower lineups and copy them to your guild.</span>
           </div>
         </div>
         <div class="tool-card-footer">
@@ -321,6 +296,31 @@ body.lang-en span[data-lang="en"]{display:inline;}
           <span class="tool-arrow" data-lang="zh">前往 →</span>
           <span class="tool-arrow" data-lang="en">Open →</span>
           <span class="tool-meta">v1.5.0</span>
+        </div>
+      </a>
+
+      <!-- 機制查表 -->
+      <a class="tool-card" href="./mechanics.html">
+        <div class="tool-card-accent" style="background:linear-gradient(90deg,#14B8A6,#5EEAD4);"></div>
+        <div class="tool-card-body">
+          <div class="tool-card-header">
+            <div class="tool-card-icon">🔎</div>
+            <div class="tool-card-name" data-lang="zh">機制查表</div>
+            <div class="tool-card-name" data-lang="en">Mechanics Lookup</div>
+          </div>
+          <div class="tool-card-desc">
+            <span data-lang="zh">想找「能拉隊友條的非攻擊技能」「會解除增益的羈絆」？點標籤就列出所有符合的角色技能、羈絆與套裝，可多重條件交叉篩選，附完整技能說明。</span>
+            <span data-lang="en">Find every skill, bond, and set with a given mechanic — pull allies' gauge, dispel buffs, counterattack… Combine tags to narrow down. (Chinese only for now.)</span>
+          </div>
+          <div class="tool-card-notes">
+            <span data-lang="zh">📍 目前只有中文。</span>
+            <span data-lang="en">📍 Chinese only for now.</span>
+          </div>
+        </div>
+        <div class="tool-card-footer">
+          <span class="tool-arrow" data-lang="zh">開啟查表 →</span>
+          <span class="tool-arrow" data-lang="en">Open Lookup →</span>
+          <span class="tool-meta">v1.0.0</span>
         </div>
       </a>
 
@@ -498,6 +498,8 @@ body.lang-en span[data-lang="en"]{display:inline;}
         <div class="guide-block-title" data-lang="zh">🏰 公會戰紀錄器</div>
         <div class="guide-block-title" data-lang="en">🏰 Guild Battle Recorder</div>
         <ul class="guide-list">
+          <li data-lang="zh">入口在對戰紀錄器頁面裡（首頁不再單獨放卡片）</li>
+          <li data-lang="en">Open it from inside the Battle Recorder page (no separate homepage card)</li>
           <li data-lang="zh">記錄每塔位的對手防守陣容、我方進攻陣容與勝負結果</li>
           <li data-lang="zh">輸入對手陣容可查詢社群反制推薦（資料截至 2026/5/13）</li>
           <li data-lang="zh">速度推算：輸入行動值自動換算速度；>101 直接視為速度值</li>
@@ -508,6 +510,21 @@ body.lang-en span[data-lang="en"]{display:inline;}
           <li data-lang="en">Speed estimation: enter action value to convert to speed; values >101 treated directly as speed</li>
           <li data-lang="en">One-click share text generation for guild members</li>
           <li data-lang="en">Optional Google Sheet sync via your own Apps Script URL</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="guide-block-title" data-lang="zh">🔎 機制查表</div>
+        <div class="guide-block-title" data-lang="en">🔎 Mechanics Lookup</div>
+        <ul class="guide-list">
+          <li data-lang="zh">點左側標籤（拉條、解除增益、反擊…）列出符合的角色技能、羈絆與套裝</li>
+          <li data-lang="zh">選多個標籤可切換「出現在同一招」或「同一角色有就好」</li>
+          <li data-lang="zh">可再用屬性、職業、星數與關鍵字縮小範圍</li>
+          <li data-lang="zh">頁面上方會標示資料最後更新日期，之後才上市的新角色可能還沒收錄</li>
+          <li data-lang="en">Click a tag (gauge push, dispel, counterattack…) to list matching skills, bonds, and sets</li>
+          <li data-lang="en">With several tags, choose "same skill" or "same character"</li>
+          <li data-lang="en">Narrow down further by element, class, star, or keyword</li>
+          <li data-lang="en">The page shows the data's last-updated date; newer characters may not be included yet (Chinese only)</li>
         </ul>
       </div>
 
@@ -539,8 +556,8 @@ body.lang-en span[data-lang="en"]{display:inline;}
       <span data-lang="zh"><strong>Ark Re:Code 工具集</strong> · 星隕計劃 (Ark Re:Code)</span>
       <span data-lang="en"><strong>Ark Re:Code Toolkit</strong> · Ark Re:Code (星隕計劃)</span>
       <div class="footer-version">
-        <span data-lang="zh">公會戰 v1.0.2 · 對戰紀錄器 v2.9.3 · 角色資料庫 v1.5.0 · 配裝計算器 v1.6.2 · 角色列表檢視器 v1.0.4 · </span>
-        <span data-lang="en">Guild Battle v1.0.2 · Battle Recorder v2.9.3 · Char DB v1.5.0 · Optimizer v1.6.2 · Roster Viewer v1.0.4 · </span>
+        <span data-lang="zh">公會戰 v1.0.2 · 對戰紀錄器 v2.9.3 · 角色資料庫 v1.5.0 · 機制查表 v1.0.0 · 配裝計算器 v1.6.2 · 角色列表檢視器 v1.0.4 · </span>
+        <span data-lang="en">Guild Battle v1.0.2 · Battle Recorder v2.9.3 · Char DB v1.5.0 · Mechanics v1.0.0 · Optimizer v1.6.2 · Roster Viewer v1.0.4 · </span>
         <a href="https://github.com/zzasqas/ArkRecodetools" target="_blank" style="color:var(--muted);text-decoration:none;">GitHub ↗</a>
       </div>
     </div>
