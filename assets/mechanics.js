@@ -3,11 +3,14 @@ const D = window.MECHANICS;
 const EL = { fire: ['火', 'var(--fire)'], water: ['水', 'var(--water)'], wood: ['木', 'var(--wood)'], light: ['光', 'var(--light)'], dark: ['暗', 'var(--dark)'] };
 const USED = new Set([...D.skills.flatMap((s) => [...s.t, ...s.b]), ...D.bonds.flatMap((e) => e.t), ...D.sets.flatMap((e) => e.t)]);
 const CATC = Object.fromEntries(D.cats.map(([c], i) => [c, `var(--c${i})`]));
+const KIDS = {}; // 小類 → 底下的實際狀態名稱（第三層），只收技能／羈絆／套裝真的用到的
+for (const n of new Set([...D.skills, ...D.bonds, ...D.sets].flatMap((r) => r.st))) if (D.stc?.[n]) (KIDS[D.stc[n]] ??= []).push(n);
+for (const a of Object.values(KIDS)) a.sort((x, y) => x.localeCompare(y, 'zh-Hant'));
 const STK = {}; // 狀態名 → buff／debuff／mark（從標籤推：該招有哪個大類）
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem('lookup.' + k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem('lookup.' + k, JSON.stringify(v)); } catch {} };
-const S = { sel: new Set(), q: '', scope: load('scope', 'skill'), tab: 'unit', els: new Set(), cls: new Set(), stars: new Set(), common: load('common', true), open: new Set(), fold: new Set(load('fold', [])), page: 1 };
+const S = { sel: new Set(), q: '', scope: load('scope', 'skill'), tab: 'unit', els: new Set(), cls: new Set(), stars: new Set(), common: load('common', true), detail: load('detail', true), open: new Set(), fold: new Set(load('fold', [])), page: 1 };
 const PAGE = 40;
 
 // 每招純文字（搜尋用）
@@ -42,7 +45,7 @@ const countFor = (sel) => S.tab === 'unit' ? unitsMatching(sel).length : (S.tab 
 // ───── 畫面 ─────
 const $ = (id) => document.getElementById(id);
 const chipHTML = (k, opts = {}) => {
-  if (k.startsWith('st:')) { const n = k.slice(3); return `<span class="chip st ${STK[n] ?? ''} ${S.sel.has(k) ? 'on' : ''}" data-k="${esc(k)}" title="依這個狀態篩選">${esc(n)}</span>`; }
+  if (k.startsWith('st:')) { const n = k.slice(3); return `<span class="chip st ${STK[n] ?? ''} ${S.sel.has(k) ? 'on' : ''} ${opts.zero ? 'zero' : ''}" data-k="${esc(k)}" title="依這個狀態篩選">${esc(n)}${opts.n !== undefined ? ` <span class="k">${opts.n}</span>` : ''}</span>`; }
   const [c, s] = k.split('|');
   return `<span class="chip ${S.sel.has(k) ? 'on' : ''} ${opts.burn ? 'burnt' : ''} ${opts.zero ? 'zero' : ''}" style="--cc:${CATC[c]}" data-k="${esc(k)}" title="${esc(c)}${opts.burn ? '（魂燃時才有）' : ''}">${esc(s)}${opts.n !== undefined ? ` <span class="k">${opts.n}</span>` : ''}</span>`;
 };
@@ -57,7 +60,13 @@ function renderFilters() {
 function renderCats() {
   $('cats').innerHTML = D.cats.map(([c, all]) => {
     const subs = all.filter((s) => USED.has(`${c}|${s}`));
-    const items = subs.map((s) => { const k = `${c}|${s}`, n = S.sel.has(k) ? null : countFor(new Set([...S.sel, k])); return chipHTML(k, { n: n ?? undefined, zero: n === 0 }); }).join('');
+    const cnt = (k) => S.sel.has(k) ? undefined : countFor(new Set([...S.sel, k]));
+    const items = subs.map((s) => {
+      const k = `${c}|${s}`, n = cnt(k), chip = chipHTML(k, { n, zero: n === 0 });
+      const kids = S.detail ? (KIDS[k] ?? []) : [];
+      if (!kids.length) return chip;
+      return `<div class="subg">${chip}<div class="kids">${kids.map((nm) => { const kn = cnt('st:' + nm); return chipHTML('st:' + nm, { n: kn, zero: kn === 0 }); }).join('')}</div></div>`;
+    }).join('');
     return `<div class="cat ${S.fold.has(c) ? 'fold' : ''}" style="--cc:${CATC[c]}"><h3 data-fold="${esc(c)}">${esc(c)} <span class="n">${subs.length}</span></h3><div class="row">${items}</div></div>`;
   }).join('');
 }
@@ -70,12 +79,15 @@ function descHTML(d) {
   return s.split('\n').map((l) => { const m = l.match(/^(\w):(.*)$/); return m ? `<p class="${m[1]}">${m[2]}</p>` : `<p>${l}</p>`; }).join('');
 }
 // 標籤依大類順序排；「技能類型」不做成色塊，放在技能名旁邊當小字（每招都有，做成色塊太吵）
+// 詳細模式：卡片上已經列出實際狀態名，就不再重複顯示它們所屬的小類
+const covered = (r) => S.detail ? new Set(r.st.map((n) => D.stc?.[n]).filter(Boolean)) : new Set();
 const ORD = Object.fromEntries(D.cats.flatMap(([c, subs], i) => subs.map((s, j) => [`${c}|${s}`, i * 100 + j])));
 const byOrd = (a, b) => (ORD[a] ?? 0) - (ORD[b] ?? 0);
 function skillHTML(s) {
   const isType = (k) => k.startsWith('技能類型|') && k !== '技能類型|無視抗性';
   const ty = s.t.filter(isType).sort(byOrd).map((k) => `<span class="ty ${S.sel.has(k) ? 'on' : ''}" data-k="${esc(k)}">${esc(k.split('|')[1])}</span>`).join('');
-  const tags = [...s.t.filter((k) => !isType(k)).sort(byOrd).map((k) => chipHTML(k)), ...[...s.b].sort(byOrd).map((k) => chipHTML(k, { burn: true })), ...s.st.map((n) => chipHTML('st:' + n))].join('');
+  const cv = covered(s);
+  const tags = [...s.t.filter((k) => !isType(k) && !cv.has(k)).sort(byOrd).map((k) => chipHTML(k)), ...[...s.b].sort(byOrd).map((k) => chipHTML(k, { burn: true })), ...s.st.map((n) => chipHTML('st:' + n))].join('');
   const key = s.s, open = S.open.has(key);
   return `<div class="sk"><div class="top"><span class="slot ${s.t.includes('技能類型|被動') ? 'p' : ''}">S${s.slot}</span><span class="nm">${esc(s.n)}</span>${ty}
     ${s.d ? `<button class="more" data-open="${esc(key)}">${open ? '收合說明 ▴' : '說明 ▾'}</button>` : ''}</div>
@@ -88,7 +100,7 @@ function unitCard(id, hits) {
     <span style="flex:1"></span>${u.common ? '<span class="badge">常用</span>' : ''}</div>${hits.map(skillHTML).join('')}</div>`;
 }
 const entCard = (e, kind) => `<div class="card"><div class="hd"><div><div class="name">${esc(e.n)}</div><div class="meta">${kind === 'bond' ? `${esc(e.cls)}　${esc(e.en)}` : `${e.pc} 件套`}</div></div></div>
-  <div class="ab">${esc(e.ab)}<div class="tags">${[...e.t.map((k) => chipHTML(k)), ...e.st.map((n) => chipHTML('st:' + n))].join('')}</div></div></div>`;
+  <div class="ab">${esc(e.ab)}<div class="tags">${[...e.t.filter((k) => !covered(e).has(k)).map((k) => chipHTML(k)), ...e.st.map((n) => chipHTML('st:' + n))].join('')}</div></div></div>`;
 function renderList() {
   const units = unitsMatching(S.sel);
   const bonds = D.bonds.filter((e) => (!S.cls.size || S.cls.has(e.cls) || e.cls === '通用') && entPass(e, S.sel));
@@ -124,6 +136,8 @@ document.addEventListener('click', (ev) => {
 });
 let qT;
 $('q').addEventListener('input', (e) => { clearTimeout(qT); qT = setTimeout(() => { S.q = e.target.value.trim().toLowerCase(); S.page = 1; render(); }, 150); });
+$('detail').checked = S.detail;
+$('detail').addEventListener('change', (e) => { S.detail = e.target.checked; save('detail', S.detail); render(); });
 $('common').addEventListener('change', (e) => { S.common = e.target.checked; save('common', S.common); S.page = 1; render(); });
 const th = load('theme', null); if (th) document.documentElement.dataset.theme = th;
 if (matchMedia('(max-width: 860px)').matches) $('aside').classList.add('closed');
