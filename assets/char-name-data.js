@@ -121,4 +121,6 @@ window.CHARACTER_ALIASES = [
     { name: '沐夏吉賽爾', nameEN: 'Summer Breeze Giselle', id: 'H193', aliases: ['沐夏吉賽爾', '夏吉賽爾', '木夏吉賽爾', '木盾'] },
     { name: '蜜拉卡', nameEN: 'Mirach', id: 'H190', aliases: ['蜜拉卡', '大光盾', '光盾'] },
     { name: '極速的西爾維納', nameEN: 'Supersonic Silvina', id: 'H189', aliases: ['極速的西爾維納', '西爾維納', '水腿', '賽車手'] },
+    { name: '蒂芬妮', nameEN: 'Tiffany', id: 'H610', aliases: ['蒂芬妮', '毒奶'] },
+    { name: '小惡魔洛蒂', nameEN: 'Little Devil Lottie', id: 'H186', aliases: ['小惡魔洛蒂', '暗洛蒂', '暗正太'] },
 ];
