@@ -124,4 +124,6 @@ window.CHARACTER_ALIASES = [
     { name: '蒂芬妮', nameEN: 'Tiffany', id: 'H610', aliases: ['蒂芬妮', '毒奶'] },
     { name: '小惡魔洛蒂', nameEN: 'Little Devil Lottie', id: 'H186', aliases: ['小惡魔洛蒂', '暗洛蒂', '暗正太'] },
     { name: '熾烈之心露比', nameEN: 'Fiery Heart Rubi', id: 'H196', aliases: ['熾烈之心露比', '光阿姨', '光RE', '光露比'] },
+    { name: '蜜拉貝兒', nameEN: 'Mirabelle', id: 'H806', aliases: ['蜜拉貝兒', '老闆娘', '媽媽'] },
+    { name: '璐茜婭熊熊', nameEN: 'Teddy Lucia', id: 'H811', aliases: ['璐茜婭熊熊'] },
 ];

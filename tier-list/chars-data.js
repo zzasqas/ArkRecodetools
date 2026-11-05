@@ -1,4 +1,4 @@
-// 自動從 chars.csv 轉換，版本：20261015
+// 自動從 chars.csv 轉換，版本：20261105
 // 欄位：name, star, element, role, totalSpd, totalAtk, totalDef, totalHp, critRate, critDmg
 window.CHARS_DATA = [
   {name:"奈蘭希爾",star:5,element:"火",role:"狙擊",totalSpd:124,totalAtk:1284,totalDef:536,totalHp:4976,critRate:15.0,critDmg:150.0},
@@ -139,6 +139,7 @@ window.CHARS_DATA = [
   {name:"露比",star:3,element:"火",role:"重裝",totalSpd:95,totalAtk:758,totalDef:672,totalHp:5826,critRate:15.0,critDmg:150.0},
   {name:"葛瑞絲",star:3,element:"火",role:"重裝",totalSpd:95,totalAtk:963,totalDef:606,totalHp:5138,critRate:23.0,critDmg:150.0},
   {name:"伊娥絲熊熊",star:3,element:"火",role:"術師",totalSpd:95,totalAtk:911,totalDef:617,totalHp:5132,critRate:27.0,critDmg:160.0},
+  {name:"璐茜婭熊熊",star:3,element:"火",role:"術師",totalSpd:100,totalAtk:939,totalDef:617,totalHp:5132,critRate:23.0,critDmg:150.0},
   {name:"瓦妮莎",star:3,element:"水",role:"狙擊",totalSpd:117,totalAtk:822,totalDef:561,totalHp:4693,critRate:27.0,critDmg:150.0},
   {name:"派狄亞",star:3,element:"水",role:"術師",totalSpd:109,totalAtk:1244,totalDef:606,totalHp:3925,critRate:15.0,critDmg:150.0},
   {name:"歐爾嘉",star:3,element:"水",role:"術師",totalSpd:101,totalAtk:1063,totalDef:599,totalHp:4491,critRate:19.0,critDmg:150.0},
@@ -191,10 +192,12 @@ window.CHARS_DATA = [
   {name:"雪江",star:5,element:"火",role:"狙擊",totalSpd:115,totalAtk:1003,totalDef:585,totalHp:5704,critRate:15.0,critDmg:150.0},
   {name:"靜奈",star:5,element:"木",role:"術師",totalSpd:112,totalAtk:1440,totalDef:645,totalHp:4248,critRate:23.0,critDmg:150.0},
   {name:"蜜娜",star:5,element:"火",role:"戰士",totalSpd:112,totalAtk:1208,totalDef:617,totalHp:6488,critRate:15.0,critDmg:150.0},
+  {name:"蜜拉貝兒",star:5,element:"火",role:"戰士",totalSpd:119,totalAtk:1178,totalDef:533,totalHp:9542,critRate:27.0,critDmg:150.0},
   {name:"露西芙爾",star:5,element:"暗",role:"醫療",totalSpd:100,totalAtk:621,totalDef:776,totalHp:6034,critRate:15.0,critDmg:150.0},
   {name:"小惡魔洛蒂",star:5,element:"暗",role:"醫療",totalSpd:102,totalAtk:621,totalDef:802,totalHp:6311,critRate:15.0,critDmg:150.0},
   {name:"沐夏吉賽爾",star:5,element:"木",role:"重裝",totalSpd:98,totalAtk:776,totalDef:758,totalHp:7149,critRate:15.0,critDmg:150.0},
   {name:"蒂芬妮",star:5,element:"木",role:"醫療",totalSpd:106,totalAtk:640,totalDef:721,totalHp:5340,critRate:15.0,critDmg:150.0},
   {name:"蜜拉卡",star:5,element:"光",role:"重裝",totalSpd:99,totalAtk:885,totalDef:734,totalHp:6664,critRate:15.0,critDmg:150.0},
+  {name:"熾烈之心露比",star:5,element:"光",role:"先鋒",totalSpd:122,totalAtk:1158,totalDef:532,totalHp:5016,critRate:42.0,critDmg:150.0},
   {name:"極速的西爾維納",star:5,element:"水",role:"先鋒",totalSpd:118,totalAtk:1057,totalDef:532,totalHp:5542,critRate:15.0,critDmg:150.0},
 ];
