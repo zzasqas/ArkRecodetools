@@ -8,10 +8,10 @@
     <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 角色資料庫 v1.5.0</title>
+    <title>ArkRecode 角色資料庫 v1.6.0</title>
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-inline' 'unsafe-eval'; 
+                   script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval'; 
                    style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';
                    connect-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com;">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -67,9 +67,9 @@
 </head>
 <body>
     <script src="./assets/header.js"></script>
-    <script src="./assets/char-name-data.js"></script>
+    <script src="./assets/char-name-data.js?v=20261110"></script>
     <div id="root"></div>
-    <div class="author-info">ArkRecode Character DB v1.5.0 | by zzas</div>
+    <div class="author-info">ArkRecode Character DB v1.6.0 | by zzas</div>
     <script type="text/babel">
         const { useState, useMemo, useCallback, useEffect } = React;
 
@@ -82,7 +82,7 @@
             { id: 5,  nameCN: '璀璨誓約的露比',    nameEN: 'Radiant Vow Rubi',     aliases: ['水拳','露比'],                  attribute: 'water',  job: 'defender', rarity: 5 },
             { id: 6,  nameCN: '河北彩伽',          nameEN: 'Saika',                aliases: ['河北','EMT'],                   attribute: 'water',  job: 'medic',    rarity: 5 },
             { id: 7,  nameCN: '異變的使徒',        nameEN: 'Divergent Apostle',    aliases: ['草莓','魔神女主'],              attribute: 'dark',   job: 'caster',   rarity: 5 },
-            { id: 8,  nameCN: '聖誕的蜜拉貝兒',    nameEN: 'Christmas Mirabelle',  aliases: ['闆娘','露娜','火聖誕','版娘'],  attribute: 'fire',   job: 'warrior',  rarity: 5 },
+            { id: 8,  nameCN: '聖誕的蜜拉貝兒',    nameEN: 'Christmas Mirabelle',  aliases: ['闆娘','火聖誕','版娘'],  attribute: 'fire',   job: 'warrior',  rarity: 5 },
             { id: 9,  nameCN: '赤鬼伯伯',          nameEN: 'Akaoni',               aliases: ['赤鬼'],                         attribute: 'fire',   job: 'sniper',   rarity: 5 },
             { id: 10, nameCN: '蓋兒',              nameEN: 'Gail',                 aliases: ['蓋兒','暗老頭'],                attribute: 'dark',   job: 'vanguard', rarity: 5 },
             { id: 11, nameCN: 'Aoi Hinamori',      nameEN: 'Aoi Hinamori',         aliases: ['AOI'],                          attribute: 'fire',   job: 'warrior',  rarity: 5 },
@@ -143,11 +143,18 @@
             { id: 66, nameCN: '靜奈',              nameEN: 'Shizuna',                  aliases: [],                           attribute: 'nature', job: 'caster',   rarity: 5 },
             { id: 67, nameCN: '蜜娜',              nameEN: 'Mina',                     aliases: ['密娜'],                     attribute: 'fire',   job: 'warrior',  rarity: 5 },
             { id: 68, nameCN: '露西芙爾',          nameEN: 'Luciphael',                aliases: ['暗醫生','暗小總理'],         attribute: 'dark',   job: 'medic',    rarity: 5 },
-            { id: 69, nameCN: '沐夏吉賽爾',        nameEN: 'Summer Breeze Giselle',    aliases: ['夏吉賽爾','木夏吉賽爾','木盾'], attribute: 'nature', job: 'defender', rarity: 5 },
+            { id: 69, nameCN: '沐夏吉賽爾',        nameEN: 'Summer Breeze Giselle',    aliases: ['夏吉賽爾','木夏吉賽爾','木盾','小木盾'], attribute: 'nature', job: 'defender', rarity: 5 },
             { id: 70, nameCN: '蜜拉卡',            nameEN: 'Mirach',                   aliases: ['大光盾','光盾'],             attribute: 'light',  job: 'defender', rarity: 5 },
             { id: 71, nameCN: '極速的西爾維納',    nameEN: 'Supersonic Silvina',       aliases: ['西爾維納','水腿','賽車手'],   attribute: 'water',  job: 'vanguard', rarity: 5 },
             { id: 72, nameCN: '熾烈之心露比',      nameEN: 'Fiery Heart Rubi',         aliases: ['光阿姨','光RE','光露比'],     attribute: 'light',  job: 'vanguard', rarity: 5 },
             { id: 73, nameCN: '蜜拉貝兒',          nameEN: 'Mirabelle',                aliases: ['老闆娘','媽媽'],             attribute: 'fire',   job: 'warrior',  rarity: 5 },
+            { id: 74, nameCN: '尤莉',              nameEN: 'Yuri',                     aliases: ['暗芙蘭'],                    attribute: 'dark',   job: 'sniper',   rarity: 5 },
+            { id: 75, nameCN: '露娜',              nameEN: 'Luna',                     aliases: ['貓貓','luna'],               attribute: 'fire',   job: 'caster',   rarity: 5 },
+            { id: 76, nameCN: '雪江',              nameEN: 'Yukie',                    aliases: ['新血卡'],                    attribute: 'fire',   job: 'sniper',   rarity: 5 },
+            { id: 77, nameCN: '自信拉娜',          nameEN: 'Resolute Lana',            aliases: ['光鎚','光拉娜'],             attribute: 'light',  job: 'medic',    rarity: 5 },
+            { id: 78, nameCN: '絢爛夏花卡洛琳',    nameEN: 'Midsummer Blossom Carolyn', aliases: ['婚紗卡','婚卡','木LLS','木卡'], attribute: 'nature', job: 'vanguard', rarity: 5 },
+            { id: 79, nameCN: '愛戀泡影的玳蓮',    nameEN: 'Ephemeral Love Darlene',   aliases: ['水奶奶','愛戀玳蓮','婚紗玳蓮','人魚公主'], attribute: 'water', job: 'caster', rarity: 5 },
+            { id: 80, nameCN: '米德',              nameEN: 'Mead',                     aliases: ['星法'],                      attribute: 'light',  job: 'caster',   rarity: 5 },
         ];
 
         // ==================== ICON ====================
@@ -849,7 +856,7 @@
                         <div className="text-center mb-8">
                             <h1 className="text-3xl font-bold text-gray-800 mb-2">ArkRecode 角色資料庫</h1>
                             <p className="text-gray-600">共收錄 {CHARACTER_DATA.length} 個常用角色</p>
-                            <p className="text-xs text-gray-400 mt-1">角色資料已更新至 2026/5/13 版本</p>
+                            <p className="text-xs text-gray-400 mt-1">角色資料已更新至 2026/11/10 版本</p>
                         </div>
 
                         <div className="search-section bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -941,19 +948,17 @@
                                     className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 text-center">
                                     <span className="text-2xl">📊</span>
                                     <span className="text-sm font-semibold">對戰紀錄器</span>
-                                    <span className="text-xs text-blue-400">v2.8.0</span>
                                 </a>
                                 <a href="./character-db.html"
                                     className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border-2 border-purple-400 bg-purple-50 text-purple-700 text-center cursor-default">
                                     <span className="text-2xl">👤</span>
                                     <span className="text-sm font-semibold">角色資料庫</span>
-                                    <span className="text-xs text-purple-400">v1.5.0 ← 目前</span>
+                                    <span className="text-xs text-purple-400">← 目前</span>
                                 </a>
                                 <a href="./equip-optimizer.html"
                                     className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 transition-colors text-teal-700 text-center">
                                     <span className="text-2xl">⚙️</span>
                                     <span className="text-sm font-semibold">配裝計算器</span>
-                                    <span className="text-xs text-teal-400">v1.5.0</span>
                                 </a>
                             </div>
                         </div>
