@@ -1,75 +1,108 @@
-"""從 assets/char-wiki-data.json 生成 research/未上市角色清單.md。
+"""從遊戲 master.db 生成 research/未上市角色清單.md 和 research/未上市角色技能.md。
 
-用法：
-    python scripts/gen_unreleased_list.py
+用法（master.db 取得方式見 CLAUDE.local.md）：
+    python scripts/gen_unreleased_list.py <master.db>
 
-為什麼要有這支：wiki 的 Members/Infotable 是解包 MASTER DB 來的，
-新角色多半在正式上線前就有 id / 屬性 / 職業（極少數突然出的新角或大版本
-更新才會查不到）。所以「下一隻活動角色是誰、什麼屬性職業」不用等上線，
-翻這份清單就有——省掉每次翻 wiki 網頁。
+「未上市」＝ master.db 有、母檔 assets/char-name-data.js 還沒收、wiki 也沒上市日的五星 H 角色。
+看「配套」欄：活動招募/神秘/深淵/支線都有＝接下來幾檔；全空＝還早。
+wiki（assets/char-wiki-data.json）只拿來補英文名和 E7 對應；wiki 2026-11 起擋爬蟲（403），
+sync_wiki_e7.py 跑不動，所以改用 master.db 當主來源（wiki 本來就是解包它來的）。
 
-資料流：wiki（解包 MASTER DB）→ sync_wiki_e7.py → char-wiki-data.json → 本腳本
-更新時機：跑完 sync_wiki_e7.py 之後順手跑一次。
+技能表只放本機：research/ 在 .gitignore，未上市角色技能是解包資料，不公開。
+需要 opencc（pip install opencc-python-reimplemented），簡中→繁中。
 """
 import json
+import re
+import sqlite3
+import sys
 from datetime import date
 from pathlib import Path
+
+from opencc import OpenCC
 
 ROOT = Path(__file__).resolve().parent.parent
 WIKI = ROOT / "assets" / "char-wiki-data.json"
 NAMES = ROOT / "assets" / "char-name-data.js"
-OUT = ROOT / "research" / "未上市角色清單.md"
+OUT_LIST = ROOT / "research" / "未上市角色清單.md"
+OUT_SKILL = ROOT / "research" / "未上市角色技能.md"
 
-ATTR = {"Flame": "火", "Water": "水", "Nature": "木", "Light": "光", "Dark": "暗"}
+ATTR = {"Fire": "火", "Ice": "水", "Earth": "木", "Light": "光", "Dark": "暗"}
 CLS = {"Warrior": "戰士", "Defender": "重裝", "Vanguard": "先鋒",
        "Caster": "術師", "Sniper": "狙擊", "Medic": "醫療"}
-
-wiki = json.loads(WIKI.read_text(encoding="utf-8"))
-js = NAMES.read_text(encoding="utf-8")
-in_master = {e["id"] for e in wiki if f"id: '{e['id']}'" in js}
+t2 = OpenCC("s2tw").convert
 
 
-def row(e):
-    return (f"| {e['id']} | {e['nameEN']} | {ATTR.get(e['attribute'], e['attribute'])} "
-            f"| {CLS.get(e['cls'], e['cls'])} | {e['rarity']}★ | {e.get('e7Name') or '—'} |")
+def clean(s):
+    """技能描述的標記：[文字:ID:型別] → 文字；[整句:AWAKEN] → 〔覺醒：整句〕；<br> → 換行符號。"""
+    s = s or ""
+    for _ in range(3):  # 巢狀最多兩層，由內往外剝
+        s = re.sub(r"\[([^\[\]:]*):[^\[\]:]*:(?!AWAKEN\])[^\[\]]*\]", r"\1", s)
+    s = re.sub(r"\[:AWAKEN\]", "", s)
+    s = re.sub(r"\[([^\[\]]*):AWAKEN\]", r"〔覺醒：\1〕", s)
+    return t2(s.replace("<br>", " ／ ").replace("|", "｜"))
 
 
-unreleased = [e for e in wiki if not e["releaseDate"] and e["attribute"] and e["id"] not in in_master]
-unknown = [e for e in wiki if not e["attribute"] and e["id"] not in in_master]
-backfill = [e for e in wiki
-            if e["releaseDate"] and e["rarity"] == 5 and e["id"] not in in_master]
+def official_name(acts, hid):
+    """活動/版控的 Name 欄是官方繁中（例「活動招募-執法者維爾莉特」），有就用它。"""
+    for key in (f"AcyivitySummon{hid}", f"MysticSummon{hid}", f"Version_{hid}"):
+        if key in acts:
+            return re.split(r"[-，,]", acts[key])[-1].strip()
+    return None
 
-head = "| ID | 英文名 | 屬性 | 職業 | 星級 | E7 對應 |\n|---|---|---|---|---|---|"
-md = f"""# 未上市角色清單
 
-> 由 `scripts/gen_unreleased_list.py` 從 `assets/char-wiki-data.json` 生成（{date.today()}）。
-> **不要手改**，資料變了就重跑腳本。
+def main(db_path):
+    db = sqlite3.connect(db_path)
+    L = dict(db.execute("select Key, Value from CHS"))
+    acts = dict(db.execute("select ID, Name from Activity"))
+    js = NAMES.read_text(encoding="utf-8")
+    wiki = {e["id"]: e for e in json.loads(WIKI.read_text(encoding="utf-8"))}
+    roles = db.execute("select ID, NAME, InitStar, Element, Job from Role "
+                       "where ID glob 'H[0-9][0-9][0-9]' and IsHero = '1' and InitStar = '5' order by ID").fetchall()
+    # 母檔沒收的老角色（H001 等）靠 wiki 的上市日排除；wiki 停在 2026-09，之後上市的都已進母檔
+    todo = [r for r in roles if f"id: '{r[0]}'" not in js and not wiki.get(r[0], {}).get("releaseDate")]
+    skills = {r[0]: r for r in db.execute(
+        "select ID, NAME, Description, SkillType, CoolDown, SoulSkillDescription, ReferanceSkillID from Skill")}
 
-wiki 的 Members/Infotable 是解包 MASTER DB 來的，新角色通常上線前就有 id / 屬性 / 職業。
-下一隻活動角色是誰、什麼屬性職業，翻這裡就有。
-拿到 id 之後照本機的更新角色 SOP 走即可（數值仍要等角色實裝才有）。
+    rows, ready = [], {}
+    for hid, nm, star, el, job in todo:
+        name = official_name(acts, hid) or t2(L.get(nm, nm))
+        mark = lambda p: "✓" if p + hid in acts else ""
+        tags = [mark("AcyivitySummon"), mark("MysticSummon"), mark("Fantasy_"), mark("Branch")]
+        ready[hid] = sum(map(bool, tags))
+        w = wiki.get(hid, {})
+        rows.append((hid, name, w.get("nameEN") or "—", ATTR.get(el, el), CLS.get(job, job),
+                     *tags, w.get("e7Name") or "—"))
+    # 配套越齊越可能先出：排前面
+    rows.sort(key=lambda r: (-ready[r[0]], r[0]))
 
-母檔 `assets/char-name-data.js` 已收 {len(in_master)} 隻；wiki 共 {len(wiki)} 筆。
+    head = "| ID | 名稱 | 英文名 | 屬性 | 職業 | 活動招募 | 神秘招募 | 深淵 | 支線 | E7 對應 |\n|---|---|---|---|---|---|---|---|---|---|"
+    OUT_LIST.write_text(f"""# 未上市角色清單
 
-## 未上市（wiki 已有屬性職業，共 {len(unreleased)} 隻）
+> 由 `scripts/gen_unreleased_list.py` 從遊戲 master.db 生成（{date.today()}）。**不要手改**，資料變了就重跑腳本。
+
+master.db 有、母檔 `assets/char-name-data.js` 還沒收的五星，共 {len(rows)} 隻。
+後四欄是活動配套有沒有建好：四欄都有的通常是接下來幾檔的活動角色；神秘招募＝限定池；全空＝還早（或母檔漏收的老角色）。
+名稱有官方繁中就用官方的，沒有的是簡中轉繁，可能跟正式譯名不同。技能見 `未上市角色技能.md`（本機）。
 
 {head}
-{chr(10).join(row(e) for e in unreleased)}
+{chr(10).join("| " + " | ".join(r) + " |" for r in rows)}
+""", encoding="utf-8")
 
-## 只有 ID、資料還沒爬到（共 {len(unknown)} 隻）
+    out = [f"# 未上市角色技能\n\n> 由 `scripts/gen_unreleased_list.py` 從 master.db 生成（{date.today()}）。"
+           "解包資料，**只放本機不公開**。數字是一級的基礎值，技能升級、覺醒會再加。\n"
+           "> 「魂燃」欄＝消耗魂力後的追加效果；冷卻是回合數。順序跟清單一樣，配套齊的在前。\n"]
+    for r in rows:
+        hid = r[0]
+        out.append(f"\n## {hid} {r[1]}（{r[3]}／{r[4]}）\n\n| 技能 | 名稱 | 類型 | 冷卻 | 效果 | 魂燃 |\n|---|---|---|---|---|---|")
+        for sid in sorted(k for k in skills if re.fullmatch(hid + r"S\d+", k)):
+            _, nm, desc, typ, cd, soul, ref = skills[sid]
+            kind = "被動" if typ == "Passive" else (f"追加（{ref[-2:]} 觸發）" if ref else "主動")
+            out.append(f"| {sid[len(hid):]} | {clean(L.get(nm, nm))} | {kind} | {cd or '—'} | {clean(L.get(desc, desc)) or '—'} | {clean(L.get(soul, soul)) or '—'} |")
+    OUT_SKILL.write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"OK: {OUT_LIST.name} {len(rows)} 隻（配套齊 {sum(v >= 3 for v in ready.values())}）、{OUT_SKILL.name}")
 
-wiki 那邊也還沒填，這種要等實裝才有資料。
 
-{', '.join(f"`{e['id']}` {e['nameEN']}" for e in unknown)}
-
-## 已上市但母檔未收的五星（共 {len(backfill)} 隻）
-
-「母檔」指 `assets/char-name-data.js`。這些多半本機的角色對照表
-已經有（那份另有來源），只是本 repo 沒收；補進母檔後 battle-recorder / character-db
-才看得到。不影響自動化，哪天要補資料再看這裡。
-
-{head}
-{chr(10).join(row(e) for e in sorted(backfill, key=lambda e: e['releaseDate']))}
-"""
-OUT.write_text(md, encoding="utf-8")
-print(f"OK: {OUT}  未上市 {len(unreleased)} / 待爬 {len(unknown)} / 已上市未收五星 {len(backfill)}")
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    main(sys.argv[1])
