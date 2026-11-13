@@ -1183,6 +1183,7 @@ function App() {
                     {icon:'👤', zh:'角色資料庫', en:'Character DB',   href:'../character-db.html'},
                     {icon:'⚙️', zh:'配裝計算器', en:'Equip Optimizer',href:'../equip-optimizer.html'},
                     {icon:'🏆', zh:'社群 Tier List',en:'Tier List',   href:'./tier-list.html', active:true},
+                    {icon:'👥', zh:'角色列表',   en:'Roster Viewer', href:'../roster-viewer.html'},
                   ].map(item=>(
                     <a key={item.href} href={item.href}
                       onClick={e=>{if(item.active){e.preventDefault();setNavOpen(false);}}}
@@ -1218,6 +1219,7 @@ function App() {
           <button onClick={()=>setShowGuide(v=>!v)}
             title="使用說明"
             style={{...btnStyle(showGuide),padding:'2px 7px',fontSize:13,marginLeft:4}}>?</button>
+          <a href="../roster-viewer.html" style={{...btnStyle(),marginLeft:4,textDecoration:'none',whiteSpace:'nowrap'}}>👥 角色列表</a>
           <div className="flex items-center gap-1 ml-auto">
             {!voteMode&&<>
               <button onClick={resetCurrentMode} style={btnStyle(false,'#7f1d1d')}>↺ 重置</button>
