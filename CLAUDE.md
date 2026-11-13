@@ -148,7 +148,7 @@ GA 追蹤由 `assets/analytics.js` 統一處理（Measurement ID：`G-N546VFREGT
 2. CSP 若有設定，`script-src` 需含 `https://www.googletagmanager.com`，`connect-src` 需含 `https://www.google-analytics.com https://www.googletagmanager.com`。使用 `connect-src 'none'` 的嚴格 CSP 頁面尤其注意。
 
 **目前已加入 GA 的頁面**（2026-08-13 確認）：
-`index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`mechanics.html`、`stat-twins.html`、`tier-list/tier-list.html`、`banned-list.html`
+`index.html`、`battle-recorder.html`、`character-db.html`、`equip-optimizer.html`、`daikan.html`、`guild-battle.html`、`rta-dashboard.html`、`rta-char.html`、`roster-viewer.html`、`mechanics.html`、`stat-twins.html`、`tier-list/tier-list.html`、`banned-list.html`、`gvg-char-strength.html`
 
 > ⚠️ **`banned-list.html` 不要手改**——它是由上游工具專案的匯出腳本整份產生的，
 > 每次官方公告新名單就重產覆蓋，手改會被蓋掉。GA 由產生器自動寫進去。
@@ -207,6 +207,11 @@ GA 追蹤由 `assets/analytics.js` 統一處理（Measurement ID：`G-N546VFREGT
 ---
 
 ## 資料檔案格式
+
+### `gvg-char-strength.html` — 團戰角色強度（產生檔，不要手改）
+
+- 由上游工具專案的產生器整份產生，GA／回首頁連結由產生器加；產生指令見 `CLAUDE.local.md`
+- 頭像讀本 repo `assets/char-icons/<中文名>.webp`（缺的退 `char-art/`），縮圖內嵌；新角色沒頭像會畫首字圓點
 
 ### `chars.csv`
 
