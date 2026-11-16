@@ -62,12 +62,12 @@
       '  上班開不了遊戲，眼睜睜看體力爆掉？😩<br><br>',
       '  <strong>交給每日代管</strong> —— 你上線只要專心打對戰跟團戰，雜事我們自動完成。',
       '</div>',
-      '<div class="dp-price">🔖 首月試用 $49；後續 $99/月，季卡/年卡另有優惠</div>',
+      '<div class="dp-price">🔖 首月 $39；之後 $69/月</div>',
       '<div class="dp-btns">',
       '  <a class="dp-btn-main" href="./daikan.html">了解詳情</a>',
-      '  <a class="dp-btn-discord" href="https://discord.com/users/11464856zzas" target="_blank" rel="noopener">Discord 聯絡</a>',
+      '  <a class="dp-btn-discord" href="./daikan.html">Discord 聯絡</a>',
       '</div>',
-      '<div class="dp-disclaimer">已穩定運行半年 · 代管服務，非保證不封號</div>'
+      '<div class="dp-disclaimer">穩定跑了快一年</div>'
     ].join('');
     document.body.appendChild(el);
   }
