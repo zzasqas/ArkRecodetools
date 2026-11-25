@@ -8,7 +8,7 @@
     <meta property="og:description" content="Ark Re:Code 角色養成・配裝工具・對戰紀錄">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="./assets/brand.css">
-    <title>ArkRecode 角色資料庫 v1.6.0</title>
+    <title>ArkRecode 角色資料庫 v1.6.1</title>
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
                    script-src 'self' https://unpkg.com https://cdn.tailwindcss.com https://www.googletagmanager.com 'unsafe-inline' 'unsafe-eval'; 
@@ -67,9 +67,9 @@
 </head>
 <body>
     <script src="./assets/header.js"></script>
-    <script src="./assets/char-name-data.js?v=20261110"></script>
+    <script src="./assets/char-name-data.js?v=20261125"></script>
     <div id="root"></div>
-    <div class="author-info">ArkRecode Character DB v1.6.0 | by zzas</div>
+    <div class="author-info">ArkRecode Character DB v1.6.1 | by zzas</div>
     <script type="text/babel">
         const { useState, useMemo, useCallback, useEffect } = React;
 
@@ -155,6 +155,8 @@
             { id: 78, nameCN: '絢爛夏花卡洛琳',    nameEN: 'Midsummer Blossom Carolyn', aliases: ['婚紗卡','婚卡','木LLS','木卡'], attribute: 'nature', job: 'vanguard', rarity: 5 },
             { id: 79, nameCN: '愛戀泡影的玳蓮',    nameEN: 'Ephemeral Love Darlene',   aliases: ['水奶奶','愛戀玳蓮','婚紗玳蓮','人魚公主'], attribute: 'water', job: 'caster', rarity: 5 },
             { id: 80, nameCN: '米德',              nameEN: 'Mead',                     aliases: ['星法'],                      attribute: 'light',  job: 'caster',   rarity: 5 },
+            { id: 81, nameCN: '慶典女王艾樂萊思',  nameEN: 'Carnival Queen Ermes',     aliases: ['慶典艾樂萊思','木艾樂萊思'], attribute: 'nature', job: 'warrior',  rarity: 5 },
+            { id: 82, nameCN: '漂泊者埃帕蒂',      nameEN: 'Wanderer Apathy',          aliases: ['大左','火埃帕蒂','火蒂'],    attribute: 'fire',   job: 'caster',   rarity: 5 },
         ];
 
         // ==================== ICON ====================

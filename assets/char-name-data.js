@@ -127,4 +127,5 @@ window.CHARACTER_ALIASES = [
     { name: '蜜拉貝兒', nameEN: 'Mirabelle', id: 'H806', aliases: ['蜜拉貝兒', '老闆娘', '媽媽'] },
     { name: '璐茜婭熊熊', nameEN: 'Teddy Lucia', id: 'H811', aliases: ['璐茜婭熊熊'] },
     { name: '慶典女王艾樂萊思', nameEN: 'Carnival Queen Ermes', id: 'H195', aliases: ['慶典女王艾樂萊思', '慶典艾樂萊思', '木艾樂萊思'] },
+    { name: '漂泊者埃帕蒂', nameEN: 'Wanderer Apathy', id: 'H199', aliases: ['漂泊者埃帕蒂', '大左', '火埃帕蒂', '火蒂'] },
 ];
